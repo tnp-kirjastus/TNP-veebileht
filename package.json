@@ -2,25 +2,52 @@
   "name": "tnp-store",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@10.9.2",
+  "engines": { "node": ">=20.9 <25" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "clsx": "^2.1.1",
+    "dompurify": "^3.4.11",
+    "isomorphic-dompurify": "^3.18.0",
+    "jose": "^6.2.3",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.22.0",
     "next": "16.2.9",
+    "next-intl": "^4.13.1",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0",
+    "resend": "^6.16.0",
+    "sharp": "^0.35.2",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "@tailwindcss/typography": "^0.5.20",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }

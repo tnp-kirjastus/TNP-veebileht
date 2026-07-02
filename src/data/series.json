@@ -1,0 +1,486 @@
+[
+  {
+    "name": "Looduse lood",
+    "slug": "looduse-lood"
+  },
+  {
+    "name": "Kuldsed elulood",
+    "slug": "kuldsed-elulood"
+  },
+  {
+    "name": "Album",
+    "slug": "album"
+  },
+  {
+    "name": "Elu jõud. Tuntud eestlaste elulood",
+    "slug": "elu-joud-tuntud-eestlaste-elulood"
+  },
+  {
+    "name": "Luule",
+    "slug": "luule"
+  },
+  {
+    "name": "Väike mõisaraamat",
+    "slug": "vaike-moisaraamat"
+  },
+  {
+    "name": "Poiss sai 50",
+    "slug": "poiss-sai-50"
+  },
+  {
+    "name": "Tänapäeva noorsooromaan",
+    "slug": "tanapaeva-noorsooromaan"
+  },
+  {
+    "name": "Tänapäeva romaan",
+    "slug": "tanapaeva-romaan"
+  },
+  {
+    "name": "Hanna ja Aleksi lood",
+    "slug": "hanna-ja-aleksi-lood"
+  },
+  {
+    "name": "Tänapäeva noorsooromaan 2012",
+    "slug": "tanapaeva-noorsooromaan-2012"
+  },
+  {
+    "name": "Kohtunik Di",
+    "slug": "kohtunik-di"
+  },
+  {
+    "name": "Minu esimene raamat",
+    "slug": "minu-esimene-raamat"
+  },
+  {
+    "name": "Terviseraamat",
+    "slug": "terviseraamat"
+  },
+  {
+    "name": "Mängureeglid",
+    "slug": "mangureeglid"
+  },
+  {
+    "name": "Tänapäeva noorsooromaan 2011",
+    "slug": "tanapaeva-noorsooromaan-2011"
+  },
+  {
+    "name": "Väike Nicolas",
+    "slug": "vaike-nicolas"
+  },
+  {
+    "name": "Vääna jäljekütid",
+    "slug": "vaana-jaljekutid"
+  },
+  {
+    "name": "Prantsuse köide",
+    "slug": "prantsuse-koide"
+  },
+  {
+    "name": "Deepak Chopra usundid",
+    "slug": "deepak-chopra-usundid"
+  },
+  {
+    "name": "Punane raamat",
+    "slug": "punane-raamat"
+  },
+  {
+    "name": "Erich Maria Remarque",
+    "slug": "erich-maria-remarque"
+  },
+  {
+    "name": "Šoti kriminaaljutud",
+    "slug": "soti-kriminaaljutud"
+  },
+  {
+    "name": "Avatud Eesti Raamat",
+    "slug": "avatud-eesti-raamat"
+  },
+  {
+    "name": "Loe mind",
+    "slug": "loe-mind"
+  },
+  {
+    "name": "Inspektor Morse'i juhtumid",
+    "slug": "inspektor-morsei-juhtumid"
+  },
+  {
+    "name": "Dilbert",
+    "slug": "dilbert"
+  },
+  {
+    "name": "Eesti",
+    "slug": "eesti"
+  },
+  {
+    "name": "Eesti linnad",
+    "slug": "eesti-linnad"
+  },
+  {
+    "name": "Bert",
+    "slug": "bert"
+  },
+  {
+    "name": "Klass",
+    "slug": "klass"
+  },
+  {
+    "name": "Rebecca Lindeberg",
+    "slug": "rebecca-lindeberg"
+  },
+  {
+    "name": "Salajane",
+    "slug": "salajane"
+  },
+  {
+    "name": "dalai-laama",
+    "slug": "dalai-laama"
+  },
+  {
+    "name": "Sari 42",
+    "slug": "sari-42"
+  },
+  {
+    "name": "Erast Fandorini uurimised",
+    "slug": "erast-fandorini-uurimised"
+  },
+  {
+    "name": "Pilakäsiraamatud",
+    "slug": "pilakasiraamatud"
+  },
+  {
+    "name": "Paula elu",
+    "slug": "paula-elu"
+  },
+  {
+    "name": "Pärlikogu",
+    "slug": "parlikogu"
+  },
+  {
+    "name": "Anne raamat",
+    "slug": "anne-raamat"
+  },
+  {
+    "name": "Värin",
+    "slug": "varin"
+  },
+  {
+    "name": "Piia Präänik",
+    "slug": "piia-praanik"
+  },
+  {
+    "name": "Nero Wolfe",
+    "slug": "nero-wolfe"
+  },
+  {
+    "name": "Tõbi",
+    "slug": "tobi"
+  },
+  {
+    "name": "Lummajate kroonika",
+    "slug": "lummajate-kroonika"
+  },
+  {
+    "name": "Äripäeva raamat",
+    "slug": "aripaeva-raamat"
+  },
+  {
+    "name": "Adrian Mole",
+    "slug": "adrian-mole"
+  },
+  {
+    "name": "Agatha Raisin",
+    "slug": "agatha-raisin"
+  },
+  {
+    "name": "Täiskasvanute värviraamat",
+    "slug": "taiskasvanute-varviraamat"
+  },
+  {
+    "name": "[geim]",
+    "slug": "geim"
+  },
+  {
+    "name": "CSI",
+    "slug": "csi"
+  },
+  {
+    "name": "Aastaraamat Kes?Mis?Kus?",
+    "slug": "aastaraamat-kesmiskus"
+  },
+  {
+    "name": "Nõod Karlssonid",
+    "slug": "nood-karlssonid"
+  },
+  {
+    "name": "Cabeswateri kroonikad",
+    "slug": "cabeswateri-kroonikad"
+  },
+  {
+    "name": "Labürindijooksja",
+    "slug": "laburindijooksja"
+  },
+  {
+    "name": "Bodensteini ja Kirchhoffi lood",
+    "slug": "bodensteini-ja-kirchhoffi-lood"
+  },
+  {
+    "name": "Maigret",
+    "slug": "maigret"
+  },
+  {
+    "name": "Thor Heyerdahl",
+    "slug": "thor-heyerdahl"
+  },
+  {
+    "name": "Kreeka müüdid",
+    "slug": "kreeka-muudid"
+  },
+  {
+    "name": "Krolli juurdlused",
+    "slug": "krolli-juurdlused"
+  },
+  {
+    "name": "Tintini seiklused",
+    "slug": "tintini-seiklused"
+  },
+  {
+    "name": "Anni-lood",
+    "slug": "anni-lood"
+  },
+  {
+    "name": "Albert Campioni mõistatused",
+    "slug": "albert-campioni-moistatused"
+  },
+  {
+    "name": "Näljamängud",
+    "slug": "naljamangud"
+  },
+  {
+    "name": "Väike raamat",
+    "slug": "vaike-raamat"
+  },
+  {
+    "name": "Suur luuleraamat",
+    "slug": "suur-luuleraamat"
+  },
+  {
+    "name": "Korfu-triloogia",
+    "slug": "korfu-triloogia"
+  },
+  {
+    "name": "Säravad naised",
+    "slug": "saravad-naised"
+  },
+  {
+    "name": "Roy Grace'i juurdlused",
+    "slug": "roy-gracei-juurdlused"
+  },
+  {
+    "name": "Hannah Swenseni mõrvamüsteerium",
+    "slug": "hannah-swenseni-morvamusteerium"
+  },
+  {
+    "name": "Nõidkapteni needus",
+    "slug": "noidkapteni-needus"
+  },
+  {
+    "name": "Nunn Pelagia uurimised",
+    "slug": "nunn-pelagia-uurimised"
+  },
+  {
+    "name": "Purumere triloogia",
+    "slug": "purumere-triloogia"
+  },
+  {
+    "name": "Seltsimees laps",
+    "slug": "seltsimees-laps"
+  },
+  {
+    "name": "Perry Mason",
+    "slug": "perry-mason"
+  },
+  {
+    "name": "Žanride projekt",
+    "slug": "zanride-projekt"
+  },
+  {
+    "name": "Armastatud elulood",
+    "slug": "armastatud-elulood"
+  },
+  {
+    "name": "Rei Shimura",
+    "slug": "rei-shimura"
+  },
+  {
+    "name": "Komissar Marko Kurismaa juhtumid",
+    "slug": "komissar-marko-kurismaa-juhtumid"
+  },
+  {
+    "name": "Antony Beevor",
+    "slug": "antony-beevor"
+  },
+  {
+    "name": "Tuhat teed",
+    "slug": "tuhat-teed"
+  },
+  {
+    "name": "Vestlusi vene kultuurist",
+    "slug": "vestlusi-vene-kultuurist"
+  },
+  {
+    "name": "Kadunud vaated",
+    "slug": "kadunud-vaated"
+  },
+  {
+    "name": "Kognitiiv-käitumuslik teraapia",
+    "slug": "kognitiiv-kaitumuslik-teraapia"
+  },
+  {
+    "name": "Eesti rahva elulood",
+    "slug": "eesti-rahva-elulood"
+  },
+  {
+    "name": "Leskede klubi",
+    "slug": "leskede-klubi"
+  },
+  {
+    "name": "Masahiro Shibata",
+    "slug": "masahiro-shibata"
+  },
+  {
+    "name": "Hopspelleri amulett",
+    "slug": "hopspelleri-amulett"
+  },
+  {
+    "name": "24 tundi",
+    "slug": "24-tundi"
+  },
+  {
+    "name": "Provintsikriminull",
+    "slug": "provintsikriminull"
+  },
+  {
+    "name": "Loomakriminull",
+    "slug": "loomakriminull"
+  },
+  {
+    "name": "Lõhutud maa",
+    "slug": "lohutud-maa"
+  },
+  {
+    "name": "Doktor Dolittle'i lood|Prantsuse köide",
+    "slug": "doktor-dolittlei-loodprantsuse-koide"
+  },
+  {
+    "name": "Winston",
+    "slug": "winston"
+  },
+  {
+    "name": "Prouad",
+    "slug": "prouad"
+  },
+  {
+    "name": "Sõbrannad",
+    "slug": "sobrannad"
+  },
+  {
+    "name": "Edwardi-aegne mõrvamüsteerium",
+    "slug": "edwardi-aegne-morvamusteerium"
+  },
+  {
+    "name": "Kroonikad",
+    "slug": "kroonikad"
+  },
+  {
+    "name": "Hawthorne & Horowitz",
+    "slug": "hawthorne-horowitz"
+  },
+  {
+    "name": "Enola Holmes",
+    "slug": "enola-holmes"
+  },
+  {
+    "name": "Iiri mõrvad",
+    "slug": "iiri-morvad"
+  },
+  {
+    "name": "Vene riigi ajalugu",
+    "slug": "vene-riigi-ajalugu"
+  },
+  {
+    "name": "Marlow mõrvaklubi",
+    "slug": "marlow-morvaklubi"
+  },
+  {
+    "name": "Miss Merkel",
+    "slug": "miss-merkel"
+  },
+  {
+    "name": "Naksitrallid",
+    "slug": "naksitrallid"
+  },
+  {
+    "name": "Tänapäev noorsooromaan",
+    "slug": "tanapaev-noorsooromaan"
+  },
+  {
+    "name": "Raamatukogu detektiivid",
+    "slug": "raamatukogu-detektiivid"
+  },
+  {
+    "name": "Sõdalased",
+    "slug": "sodalased"
+  },
+  {
+    "name": "Viskivabriku mõrvad",
+    "slug": "viskivabriku-morvad"
+  },
+  {
+    "name": "Moon",
+    "slug": "moon"
+  },
+  {
+    "name": "Hieronymus",
+    "slug": "hieronymus"
+  },
+  {
+    "name": "Capri krimi",
+    "slug": "capri-krimi"
+  },
+  {
+    "name": "Uurija Cross",
+    "slug": "uurija-cross"
+  },
+  {
+    "name": "Grantchesteri saladused",
+    "slug": "grantchesteri-saladused"
+  },
+  {
+    "name": "Pagarikoja Hanzel & Pretzel krimka",
+    "slug": "pagarikoja-hanzel-pretzel-krimka"
+  },
+  {
+    "name": "Maxton Hall",
+    "slug": "maxton-hall"
+  },
+  {
+    "name": "Karl Axel Björk",
+    "slug": "karl-axel-bjork"
+  },
+  {
+    "name": "Lugemishullud",
+    "slug": "lugemishullud"
+  },
+  {
+    "name": "Bibliotheca Potatoris",
+    "slug": "bibliotheca-potatoris"
+  },
+  {
+    "name": "Super-Charlie",
+    "slug": "super-charlie"
+  },
+  {
+    "name": "Joomahullu päevaraamat",
+    "slug": "joomahullu-paevaraamat"
+  }
+]

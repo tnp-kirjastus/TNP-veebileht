@@ -1,0 +1,5 @@
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminSession } from "@/lib/admin-auth";
+export default async function OrdersAdminPage(){await requireAdminSession(["admin"]);const db=createAdminClient();const{data}=await db.schema("commerce").from("orders").select("id,order_number,status,total,currency,created_at,customer_name").order("created_at",{ascending:false}).limit(100);return <><AdminPageHeader title="Tellimused" description="Maksed, täitmine ja erandite käsitlemine."/><div className="overflow-x-auto mt-8 border border-line bg-panel"><table className="w-full text-left text-sm"><thead className="bg-soft"><tr><th className="p-4">Number</th><th>Klient</th><th>Olek</th><th>Kokku</th><th>Aeg</th></tr></thead><tbody>{(data??[]).map(o=><tr key={o.id} className="border-t border-line"><td className="p-4 font-bold">{o.order_number}</td><td>{o.customer_name}</td><td>{o.status}</td><td>{Number(o.total).toFixed(2)} {o.currency}</td><td>{new Date(o.created_at).toLocaleString("et-EE")}</td></tr>)}</tbody></table></div></>}
+

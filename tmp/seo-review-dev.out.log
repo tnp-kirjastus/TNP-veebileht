@@ -1,0 +1,35 @@
+
+> tnp-store@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://90.190.183.48:3000
+- Environments: .env.local
+✓ Ready in 746ms
+
+ GET / 200 in 162ms (next.js: 7ms, application-code: 155ms)
+ GET / 200 in 155ms (next.js: 8ms, application-code: 147ms)
+ GET /api/cart 200 in 7.3s (next.js: 213ms, application-code: 7.1s)
+ GET /raamatud 200 in 270ms (next.js: 44ms, application-code: 225ms)
+ GET /api/cart 200 in 3.9s (next.js: 4ms, application-code: 3.9s)
+ GET /raamat/kollaborandid 200 in 3.7s (next.js: 2.3s, application-code: 1380ms)
+ GET /api/cart 200 in 7.1s (next.js: 9ms, application-code: 7.1s)
+ POST /api/cart 404 in 7.1s (next.js: 5ms, application-code: 7.1s)
+ POST /api/cart 404 in 7.1s (next.js: 11ms, application-code: 7.1s)
+ GET / 200 in 146ms (next.js: 5ms, application-code: 142ms)
+ GET /api/cart 200 in 74ms (next.js: 8ms, application-code: 67ms)
+ GET /robots.txt 200 in 663ms (next.js: 656ms, application-code: 7ms)
+ GET /sitemap.xml 200 in 7.7s (next.js: 631ms, application-code: 7.1s)
+ GET / 200 in 100ms (next.js: 5ms, application-code: 95ms)
+ GET /raamatud?category=valismaa-ilukirjandus 200 in 96ms (next.js: 3ms, application-code: 93ms)
+ GET /raamatud?sort=price-asc 200 in 157ms (next.js: 8ms, application-code: 149ms)
+ GET /raamatud?page=2 200 in 103ms (next.js: 4ms, application-code: 99ms)
+ GET /ostukorv 200 in 88ms (next.js: 30ms, application-code: 59ms)
+ GET /ostukorv/kassa 200 in 910ms (next.js: 821ms, application-code: 89ms)
+ GET /llms.txt 404 in 69ms (next.js: 30ms, application-code: 39ms)
+ GET /raamat/does-not-exist 404 in 83ms (next.js: 19ms, application-code: 64ms)
+ GET /sitemap.xml 200 in 7.1s (next.js: 3ms, application-code: 7.1s)
+ GET /raamat/kollaborandid 200 in 125ms (next.js: 16ms, application-code: 109ms)
+ GET /api/cart 200 in 13ms (next.js: 3ms, application-code: 10ms)
+[?25h
