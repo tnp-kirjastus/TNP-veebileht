@@ -40,15 +40,15 @@ export default function HomePage() {
             </div>
 
             <div className="min-h-[520px] grid grid-cols-[1fr_1fr] grid-rows-[1.18fr_.82fr] gap-[18px] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[repeat(3,270px)]" aria-label="Esiletõstetud raamatud">
-              <a href="/raamatud?category=ajalugu-ja-poliitika" className="row-[span_2] flex flex-col items-start justify-start gap-6 overflow-hidden border border-line bg-[#dfebdf] p-[28px] group max-[760px]:row-auto">
+              <a href="/raamatud?category=ajalugu" className="row-[span_2] flex flex-col items-start justify-start gap-6 overflow-hidden border border-line bg-[#dfebdf] p-[28px] group max-[760px]:row-auto">
                 <div className="max-w-full"><span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">Ajalugu</span><h2 className="font-heading text-[30px] leading-[1.08] mt-2">Eesti lood ja kadunud vaated</h2><p className="text-[#465057] text-sm font-semibold mt-[10px]">Ajalooraamatud, mälestused ja kohalikud lood.</p></div>
                 <img src="/books/eesti-moisad-836x1024.jpg" alt="Eesti mõisad" className="w-[min(80%,360px)] max-h-[62%] self-center mt-auto transform rotate-[3deg] translate-y-2 transition-all duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04] group-hover:translate-y-0" />
               </a>
-              <a href="/raamatud?category=lasteraamatud" className="flex items-center justify-between gap-4 overflow-hidden border border-line bg-[#dbe9ee] p-[28px] group">
+              <a href="/raamatud?category=laste-ja-noorteraamatud" className="flex items-center justify-between gap-4 overflow-hidden border border-line bg-[#dbe9ee] p-[28px] group">
                 <div className="flex-shrink-0 max-w-[55%]"><span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">Lastele</span><h2 className="font-heading text-[30px] leading-[1.08] mt-2">Suvised seiklused</h2><p className="text-[#465057] text-sm font-semibold mt-[10px]">Rõõmsad lood väiksemale lugejale.</p></div>
                 <img src="/books/naksitrallid2013-190x254.jpg" alt="Naksitrallid" className="w-[min(40%,200px)] max-h-[85%] object-contain flex-shrink-0 filter drop-shadow-[_-14px_18px_18px_rgba(28,22,16,0.22)] transform rotate-[3deg] transition-transform duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04]" />
               </a>
-              <a href="/raamatud?category=hobid" className="flex items-center justify-between gap-4 overflow-hidden border border-line bg-[#f2e1c7] p-[28px] group">
+              <a href="/raamat/90-rododendronit" className="flex items-center justify-between gap-4 overflow-hidden border border-line bg-[#f2e1c7] p-[28px] group">
                 <div className="flex-shrink-0 max-w-[55%]"><span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">Kodu ja hobi</span><h2 className="font-heading text-[30px] leading-[1.08] mt-2">Praktilised lemmikud</h2><p className="text-[#465057] text-sm font-semibold mt-[10px]">Aed, käsitöö ja kodused oskused.</p></div>
                 <img src="/books/90-rododendronit-e1466156951724-190x300.jpg" alt="90 rododendronit" className="w-[min(40%,200px)] max-h-[85%] object-contain flex-shrink-0 filter drop-shadow-[_-14px_18px_18px_rgba(28,22,16,0.22)] transform rotate-[3deg] transition-transform duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04]" />
               </a>

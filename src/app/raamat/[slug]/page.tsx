@@ -11,6 +11,14 @@ import type { Metadata } from "next";
 import { getCategories, getPersonByName, getProductBySlug, getRelatedProducts, getSameSeriesProducts, getSameAuthorProducts, isOnSale, formatEuro, formatDate, type Product } from "@/lib/data";
 import { plainText, sanitizeRichText } from "@/lib/sanitize";
 import { siteUrl } from "@/lib/env";
+import { getCoverUrl } from "@/lib/media-url";
+
+function coverAbsoluteUrl(coverImage: string | null): string | null {
+  const url = getCoverUrl(coverImage);
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return new URL(url, siteUrl()).toString();
+}
 
 export const revalidate = 86400;
 
@@ -27,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: product.title_et,
       description,
       type: "book",
-      images: product.cover_image ? [{ url: `/covers/${product.cover_image}`, alt: product.title_et }] : [],
+      images: product.cover_image ? [{ url: coverAbsoluteUrl(product.cover_image) ?? "", alt: product.title_et }] : [],
     },
   };
 }
@@ -47,6 +55,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = getProductBySlug(slug);
   if (!product) notFound();
   const onSale = isOnSale(product);
+  const salePercent = onSale && product.sale_price ? Math.round(((product.price - product.sale_price) / product.price) * 100) : 0;
   const authorNames = product.people.author?.join(", ") || "";
 
   const relatedCat = getRelatedProducts(product, 5).map(mapProduct);
@@ -58,28 +67,46 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const primaryAuthor = product.people.author?.[0];
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Book",
+    "@type": "Product",
     name: product.title_et,
-    isbn: product.sku,
-    author: product.people.author?.map((name) => ({ "@type": "Person", name })),
-    image: product.cover_image ? new URL(`/covers/${product.cover_image}`, siteUrl()).toString() : undefined,
+    sku: product.sku,
+    gtin13: product.sku,
+    image: product.cover_image ? coverAbsoluteUrl(product.cover_image) ?? undefined : undefined,
     description: plainText(product.description_et),
+    brand: { "@type": "Brand", name: "Tänapäev" },
     offers: {
       "@type": "Offer",
       priceCurrency: "EUR",
       price: effectivePrice.toFixed(2),
       availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       url: new URL(`/raamat/${product.slug}`, siteUrl()).toString(),
+      seller: { "@type": "Organization", name: "Kirjastus Tänapäev", url: siteUrl().toString() },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: "3.50",
+          currency: "EUR",
+        },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "EE" },
+        deliveryTime: { "@type": "ShippingDeliveryTime", handlingTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 2, unitCode: "DAY" } },
+      },
     },
+    ...(product.series_name ? { isPartOf: { "@type": "Collection", name: product.series_name } } : {}),
+    ...(product.pages ? { material: product.binding ?? undefined, depth: { "@type": "QuantitativeValue", value: product.pages, unitText: "lehekülge" } } : {}),
+    ...(product.people.author?.length ? { manufacturer: { "@type": "Organization", name: product.people.author.join(", ") } } : {}),
   };
 
   return (
     <LayoutContained>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       {/* Product hero — breadcrumbs INSIDE the same section */}
-      <section className="grid grid-cols-[1fr_1fr] gap-12 py-[10px] pb-[50px] items-stretch max-[900px]:grid-cols-1">
+      <section className="relative grid grid-cols-[1fr_1fr] gap-12 py-[10px] pb-[50px] items-stretch max-[900px]:grid-cols-1">
+        {onSale && salePercent > 0 && (
+          <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-10">-{salePercent}%</span>
+        )}
         <div className="grid place-items-center bg-soft px-10 py-[60px] max-[900px]:py-8 max-[600px]:px-6 max-[600px]:py-[30px]">
-          {product.cover_image ? <img src={`/covers/${product.cover_image}`} alt={product.title_et} className="max-h-[800px] w-auto max-w-[90%] filter drop-shadow-[_-18px_24px_28px_rgba(36,26,16,0.28)] max-[900px]:max-h-[600px] max-[600px]:max-h-[450px]" loading="eager" /> : <div className="aspect-[3/4] w-[75%] bg-muted/10 flex items-center justify-center text-muted text-center p-4">{product.title_et}</div>}
+          {product.cover_image ? <img src={getCoverUrl(product.cover_image) ?? ""} alt={product.title_et} className="max-h-[800px] w-auto max-w-[90%] filter drop-shadow-[_-18px_24px_28px_rgba(36,26,16,0.28)] max-[900px]:max-h-[600px] max-[600px]:max-h-[450px]" loading="eager" /> : <div className="aspect-[3/4] w-[75%] bg-muted/10 flex items-center justify-center text-muted text-center p-4">{product.title_et}</div>}
         </div>
         <div className="flex flex-col justify-center gap-4">
           <Breadcrumbs crumbs={[{ label: "Esileht", href: "/" }, { label: "Raamatud", href: "/raamatud" }, { label: product.title_et }]} />

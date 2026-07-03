@@ -30,7 +30,7 @@ export default async function BlogAdminPage({
           <h1 className="font-heading text-4xl">Blogi / Uudised</h1>
           <p className="text-muted mt-2">Halda mustandeid, avaldamist ja uudiste SEO-d.</p>
         </div>
-        <Link href="/haldus/blogi/uus" className="min-h-12 px-6 bg-ink text-white font-bold inline-flex items-center hover:bg-ink/80 transition-colors">+ Uus postitus</Link>
+        <Link href="/haldus/blogi/uus" className="min-h-12 px-6 bg-[#151718] !text-white font-bold inline-flex items-center hover:bg-[#151718]/80 transition-colors">+ Lisa uus postitus</Link>
       </div>
 
       <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">

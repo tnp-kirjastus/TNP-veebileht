@@ -35,6 +35,7 @@ export function revalidateProduct(slug: string) {
   revalidatePath("/raamatud");
   revalidatePath(`/raamat/${slug}`);
   revalidatePath("/arhiiv");
+  revalidatePath("/sitemap.xml");
 }
 
 export function revalidateCampaign() {

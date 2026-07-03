@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { useCartDrawer } from "@/lib/cart-drawer-context";
+import { getCoverUrlClient } from "@/lib/media-url";
 
 export interface ProductCardData {
   slug: string;
@@ -66,8 +67,11 @@ export function ProductCard({
   }
 
   return (
-    <article className="flex flex-col h-full py-[40px] px-5 hover:bg-ink/[0.07] group min-w-0">
-      <div className={`relative ${imgWidth} mx-auto`}>
+    <article className="relative flex flex-col h-full py-[40px] px-5 hover:bg-ink/[0.07] group min-w-0">
+      {isOnSale && salePercent > 0 && (
+        <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-20">-{salePercent}%</span>
+      )}
+      <div className={`${imgWidth} mx-auto`}>
         <Link
           href={`/raamat/${product.slug}`}
           className={`overflow-hidden block
@@ -76,19 +80,18 @@ export function ProductCard({
           hover:-translate-y-1 transition-all duration-[350ms] cursor-pointer group/card`}
         >
           {coverImage ? (
-            <img src={`/covers/${coverImage}`} alt={title} className="block w-full h-auto" loading="lazy" />
+            <img src={getCoverUrlClient(coverImage) ?? ""} alt={title} className="block w-full h-auto" loading="lazy" />
           ) : (
             <div className="aspect-[3/4] bg-soft flex items-center justify-center text-muted text-sm p-3 text-center">{title}</div>
           )}
         </Link>
-        {isOnSale && salePercent > 0 && (
-          <span className="absolute top-3 left-3 bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-20">-{salePercent}%</span>
-        )}
       </div>
 
       <div className="mt-auto pt-[34px]">
         <h3 className={`font-heading ${titleSize} leading-[1.18]`}>
-          {title}
+          <Link href={`/raamat/${product.slug}`} className="hover:text-accent transition-colors">
+            {title}
+          </Link>
           {isUpcoming && <span className="inline-block ml-[6px] text-[11px] font-extrabold text-leaf uppercase align-middle">Ilmumas</span>}
         </h3>
         {author && <p className="mt-1 text-muted text-sm">{author}</p>}

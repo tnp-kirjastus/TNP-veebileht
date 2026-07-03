@@ -27,7 +27,7 @@ const productSchema = z.object({
   is_upcoming: z.coerce.boolean().optional(),
   is_archived: z.coerce.boolean().optional(),
   is_featured: z.coerce.boolean().optional(),
-  cover_image: z.string().trim().max(500).optional(),
+  cover_image: z.string().trim().max(1000).optional(),
   series_id: z.string().uuid().optional(),
   category_ids: z.string().optional(),
   people_authors: z.string().optional(),
@@ -57,6 +57,9 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   const v = parsed.data;
   const db = createAdminClient();
 
+  const coverImageRaw = v.cover_image?.trim();
+  const coverImageFinal = coverImageRaw === "[CLEAR]" ? null : (coverImageRaw || null);
+
   const productRecord = {
     sku: v.sku,
     title_et: v.title_et,
@@ -76,7 +79,7 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     is_upcoming: v.is_upcoming ?? false,
     is_archived: v.is_archived ?? false,
     is_featured: v.is_featured ?? false,
-    cover_image: v.cover_image || null,
+    cover_image: coverImageFinal,
     series_id: v.series_id || null,
     updated_at: new Date().toISOString(),
   };
@@ -127,7 +130,7 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   }
 
   await audit(session.user.id, v.id ? "product.updated" : "product.created", "commerce.product", productId, {
-    after: { title: v.title_et, sku: v.sku, slug: productSlug },
+    after: { title: v.title_et, sku: v.sku, slug: productSlug, cover_image: String(coverImageFinal ?? "") },
   });
 
   revalidateProduct(productSlug);

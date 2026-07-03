@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CategoryForm } from "./CategoryForm";
@@ -18,7 +19,10 @@ export default async function CategoriesAdminPage() {
               <span className="font-bold">{String(c.name_et ?? "")}</span>
               <span className="text-xs text-muted font-mono ml-3">{String(c.slug ?? "")}</span>
             </div>
-            <span className="text-xs text-muted">Jrk: {Number(c.sort_order ?? i)}</span>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-muted">Jrk: {Number(c.sort_order ?? i)}</span>
+              <Link href={`/raamatud?category=${encodeURIComponent(String(c.slug ?? ""))}`} className="text-accent font-bold text-sm hover:underline">Vaata raamatuid →</Link>
+            </div>
           </div>
         ))}
       </div>

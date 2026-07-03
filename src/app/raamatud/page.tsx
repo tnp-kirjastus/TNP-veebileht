@@ -20,10 +20,13 @@ interface SearchParams {
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
   const params = await searchParams;
+  const hasFilters = !!(params.q || params.sort || params.page || params.origin || params.sale || params.upcoming || params.author || params.translator || params.designer || params.illustrator || params.editor);
+  const canonicalPath = params.category ? `/raamatud?category=${encodeURIComponent(params.category)}` : "/raamatud";
   return {
     title: params.q ? `Otsing: ${params.q}` : params.category ? `${params.category} — Raamatud` : "Raamatud",
     description: "Sirvi raamatuid kategooriate, autorite ja pakkumiste järgi.",
     robots: params.q ? { index: false, follow: true } : undefined,
+    alternates: hasFilters ? { canonical: canonicalPath } : undefined,
   };
 }
 

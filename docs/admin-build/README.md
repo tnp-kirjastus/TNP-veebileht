@@ -19,11 +19,12 @@ These tasks implement [ADMIN_AREA_SPEC.md](../../ADMIN_AREA_SPEC.md).
 3. [02-product-management.md](./02-product-management.md)
 4. [03-bulk-product-editing.md](./03-bulk-product-editing.md)
 5. [04-catalogue-import.md](./04-catalogue-import.md)
-6. [05-campaigns-and-taxonomy.md](./05-campaigns-and-taxonomy.md)
-7. [06-blog-and-news.md](./06-blog-and-news.md)
-8. [07-homepage-management.md](./07-homepage-management.md)
-9. [08-customer-accounts.md](./08-customer-accounts.md)
-10. [09-quality-and-release.md](./09-quality-and-release.md)
+6. [04a-cover-media-import.md](./04a-cover-media-import.md)
+7. [05-campaigns-and-taxonomy.md](./05-campaigns-and-taxonomy.md)
+8. [06-blog-and-news.md](./06-blog-and-news.md)
+9. [07-homepage-management.md](./07-homepage-management.md)
+10. [08-customer-accounts.md](./08-customer-accounts.md)
+11. [09-quality-and-release.md](./09-quality-and-release.md)
 
 Product management must be stable before bulk editing and import are allowed to mutate production data. Homepage and editorial work can proceed in parallel after the shared admin foundation is complete.
 
@@ -38,4 +39,3 @@ Product management must be stable before bulk editing and import are allowed to 
 - Unit/integration tests cover business rules.
 - A Vercel Preview is verified before production promotion.
 - Documentation and migration notes are updated.
-

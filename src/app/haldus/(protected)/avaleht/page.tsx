@@ -62,8 +62,8 @@ export default function HomepageAdminPage() {
 
   const [cards, setCards] = useState<HeroCard[]>([
     { id: "1", label: "Ajalugu", heading: "Eesti ajaloo suurteosed", description: "Avasta meie ajalooraamatute kollektsiooni.", linkHref: "/raamatud?category=ajalugu", desktopImage: "", mobileImage: "", position: 1 },
-    { id: "2", label: "Lastele", heading: "Lasteraamatud igas vanuses", description: "Põnevad lood ja kaunid illustratsioonid.", linkHref: "/raamatud?category=lasteraamatud", desktopImage: "", mobileImage: "", position: 2 },
-    { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=kasi-toeo", desktopImage: "", mobileImage: "", position: 3 },
+    { id: "2", label: "Lastele", heading: "Lasteraamatud igas vanuses", description: "Põnevad lood ja kaunid illustratsioonid.", linkHref: "/raamatud?category=laste-ja-noorteraamatud", desktopImage: "", mobileImage: "", position: 2 },
+    { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=kasiraamatud", desktopImage: "", mobileImage: "", position: 3 },
   ]);
 
   const [sections, setSections] = useState<Section[]>([

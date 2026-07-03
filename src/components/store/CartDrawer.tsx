@@ -5,6 +5,7 @@
 import { useCart } from "@/lib/cart-context";
 import { useState } from "react";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
+import { getCoverUrlClient } from "@/lib/media-url";
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { items, removeItem, updateQuantity, total, error } = useCart();
@@ -52,7 +53,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             items.map(item => (
               <div key={item.slug} className="grid grid-cols-[76px_1fr_auto] gap-[14px] py-4 border-b border-line">
                 {item.coverImage ? (
-                  <img src={`/covers/${item.coverImage}`} alt={item.title}
+                  <img src={getCoverUrlClient(item.coverImage) ?? ""} alt={item.title}
                     className="w-[76px] h-[106px] object-contain bg-soft border border-line p-[7px]" />
                 ) : (
                   <div className="w-[76px] h-[106px] bg-soft border border-line" />

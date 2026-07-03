@@ -15,13 +15,14 @@ interface ProductRow extends Record<string, unknown> {
 export default async function ProductsAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string; origin?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; status?: string; origin?: string; tab?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const query = (params.q ?? "").trim();
   const statusFilter = params.status ?? "";
   const originFilter = params.origin ?? "";
+  const activeTab = params.tab ?? "active";
   const perPage = 25;
   const from = (page - 1) * perPage;
 
@@ -33,8 +34,15 @@ export default async function ProductsAdminPage({
     builder = builder.or(`title_et.ilike.%${query}%,sku.ilike.%${query}%`);
   }
 
-  if (statusFilter === "active") builder = builder.eq("is_archived", false).eq("is_upcoming", false);
-  else if (statusFilter === "upcoming") builder = builder.eq("is_upcoming", true).eq("is_archived", false);
+  if (activeTab === "archived") {
+    builder = builder.eq("is_archived", true);
+  } else if (activeTab === "all") {
+    // no filter
+  } else {
+    builder = builder.eq("is_archived", false).eq("is_upcoming", false);
+  }
+
+  if (statusFilter === "upcoming") builder = builder.eq("is_upcoming", true).eq("is_archived", false);
   else if (statusFilter === "archived") builder = builder.eq("is_archived", true);
   else if (statusFilter === "sale") builder = builder.not("sale_price", "is", null);
 
@@ -83,9 +91,11 @@ export default async function ProductsAdminPage({
     const s = overrides.status ?? statusFilter;
     const o = overrides.origin ?? originFilter;
     const pg = overrides.page ?? String(page);
+    const t = overrides.tab ?? activeTab;
     if (q) parts.push(`q=${encodeURIComponent(q)}`);
     if (s) parts.push(`status=${encodeURIComponent(s)}`);
     if (o) parts.push(`origin=${encodeURIComponent(o)}`);
+    if (t && t !== "active") parts.push(`tab=${encodeURIComponent(t)}`);
     if (pg && Number(pg) > 1) parts.push(`page=${encodeURIComponent(pg)}`);
     return `/haldus/tooted${parts.length ? "?" + parts.join("&") : ""}`;
   }
@@ -111,14 +121,27 @@ export default async function ProductsAdminPage({
         }
       />
 
+      {/* Tab bar */}
+      <div className="flex border-b border-line mb-6">
+        <Link href={buildHref({ tab: "active", page: "1", status: "", origin: "" })}
+          className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${activeTab === "active" ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
+          Aktiivsed
+        </Link>
+        <Link href={buildHref({ tab: "archived", page: "1", status: "", origin: "" })}
+          className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${activeTab === "archived" ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
+          Arhiveeritud
+        </Link>
+        <Link href={buildHref({ tab: "all", page: "1", status: "", origin: "" })}
+          className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${activeTab === "all" ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
+          Kõik tooted
+        </Link>
+      </div>
+
       <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">
         <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i v\u00f5i URL-i nime j\u00e4rgi\u2026"
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
         <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">K\u00f5ik olekud</option>
-          <option value="active">Aktiivne</option>
-          <option value="upcoming">Ilmumas</option>
-          <option value="archived">Arhiveeritud</option>
           <option value="sale">Soodus</option>
         </select>
         <select name="origin" defaultValue={originFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
@@ -126,9 +149,10 @@ export default async function ProductsAdminPage({
           <option value="estonian">Eesti</option>
           <option value="foreign">V\u00e4lismaine</option>
         </select>
+        <input type="hidden" name="tab" value={activeTab} />
         <button type="submit" className="h-11 px-5 border border-line bg-soft text-sm font-bold hover:bg-line/30">Filtreeri</button>
         {(query || statusFilter || originFilter) && (
-          <Link href="/haldus/tooted" className="h-11 px-4 inline-flex items-center text-sm text-muted hover:text-ink font-bold">T\u00fchista</Link>
+          <Link href={buildHref({ tab: activeTab, page: "1", status: "", origin: "", q: "" })} className="h-11 px-4 inline-flex items-center text-sm text-muted hover:text-ink font-bold">T\u00fchista</Link>
         )}
       </form>
 

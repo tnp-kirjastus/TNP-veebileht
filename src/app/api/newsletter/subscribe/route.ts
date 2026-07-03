@@ -19,8 +19,8 @@ export async function POST(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "Päringu päritolu ei ole lubatud." }, { status: 403 });
   const clientKey = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()
     ?? request.headers.get("cf-connecting-ip")?.trim() ?? "unknown";
-  if (!await consumeRateLimit("newsletter", clientKey, 300, 5)) {
-    return NextResponse.json({ error: "Liiga palju päringuid. Proovi hiljem uuesti." }, { status: 429 });
+  if (!await consumeRateLimit("newsletter", clientKey, 60, 10)) {
+    return NextResponse.json({ error: "Liiga palju päringuid. Proovi hetke pärast uuesti." }, { status: 429 });
   }
 
   const contentType = request.headers.get("content-type") ?? "";

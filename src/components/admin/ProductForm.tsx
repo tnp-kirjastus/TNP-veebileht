@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useRef, useCallback } from "react";
 import { saveProduct } from "@/app/haldus/product-actions";
 import { FormField } from "./FormField";
+import { getCoverUrlClient } from "@/lib/media-url";
 
 interface SeriesData { id: string; slug: string; name_et: string; }
 
@@ -43,6 +44,23 @@ function computeStatus(product: EditableProduct): ProductStatus {
   return "active";
 }
 
+const TABS = ["identity", "content", "commerce", "meta", "cover", "people", "seo"] as const;
+type Tab = (typeof TABS)[number];
+
+type CoverAction = "keep" | "replace" | "remove";
+
+function tabLabel(tab: Tab): string {
+  switch (tab) {
+    case "identity": return "Identiteet";
+    case "content": return "Sisu";
+    case "commerce": return "Hind ja ladu";
+    case "meta": return "Metaandmed";
+    case "cover": return "Kaanepilt";
+    case "people": return "Autorid";
+    case "seo": return "SEO";
+  }
+}
+
 export function ProductForm({
   product = {},
   series,
@@ -52,29 +70,129 @@ export function ProductForm({
 }) {
   const [state, action, pending] = useActionState(saveProduct, undefined);
   const [status, setStatus] = useState<ProductStatus>(product.status ?? computeStatus(product));
+  const [activeTab, setActiveTab] = useState<Tab>("identity");
+  const [coverAction, setCoverAction] = useState<CoverAction>("keep");
+  const [coverObjectKey, setCoverObjectKey] = useState<string>(product.cover_image ?? "");
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadWarning, setUploadWarning] = useState("");
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [dropActive, setDropActive] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const originalCover = product.cover_image ?? null;
+  const currentCoverUrl = coverAction === "remove"
+    ? null
+    : coverObjectKey
+      ? getCoverUrlClient(coverObjectKey)
+      : null;
+  const originalCoverUrl = originalCover ? getCoverUrlClient(originalCover) : null;
+
+  const acceptedTypes = ".jpg,.jpeg,.png,.webp,.avif,.tif,.tiff";
+  const maxFileSize = 50 * 1024 * 1024;
+
+  const handleUpload = useCallback(async (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const allowed = ["jpg", "jpeg", "png", "webp", "avif", "tif", "tiff"];
+    if (!allowed.includes(ext)) {
+      setUploadError("Toetatud on JPG, PNG, WebP, AVIF ja TIFF.");
+      return;
+    }
+    if (file.size > maxFileSize) {
+      setUploadError("Fail on liiga suur (max 50 MB).");
+      return;
+    }
+
+    setUploadBusy(true);
+    setUploadError("");
+    setUploadWarning("");
+
+    const localPreview = URL.createObjectURL(file);
+    setUploadPreview(localPreview);
+
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("productId", product.id ?? "new");
+
+      const res = await fetch("/api/admin/media", { method: "POST", body: fd });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setUploadError(json.error ?? "Üleslaadimine ebaõnnestus.");
+        URL.revokeObjectURL(localPreview);
+        setUploadPreview(null);
+        return;
+      }
+
+      setCoverObjectKey(json.objectKey);
+      setCoverAction("replace");
+      setUploadPreview(null);
+      URL.revokeObjectURL(localPreview);
+      if (json.warning) setUploadWarning(json.warning);
+    } catch {
+      setUploadError("Võrguviga üleslaadimisel.");
+      setUploadPreview(null);
+    } finally {
+      setUploadBusy(false);
+    }
+  }, [product.id]);
+
+  function handleRemove() {
+    setCoverObjectKey("");
+    setCoverAction("remove");
+    setUploadPreview(null);
+    setUploadError("");
+    setUploadWarning("");
+  }
+
+  function handleRevertToOriginal() {
+    setCoverObjectKey(originalCover ?? "");
+    setCoverAction("keep");
+    setUploadPreview(null);
+    setUploadError("");
+    setUploadWarning("");
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDropActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleUpload(file);
+  }
+
+  const coverImageValue =
+    coverAction === "remove" ? "[CLEAR]" : coverObjectKey;
 
   const tabClass = (active: boolean) =>
     active
-      ? "px-4 py-2.5 font-bold text-sm border-b-2 border-ink"
-      : "px-4 py-2.5 font-bold text-sm text-muted hover:text-ink border-b-2 border-transparent";
+      ? "px-4 py-2.5 font-bold text-sm border-b-2 border-ink cursor-pointer"
+      : "px-4 py-2.5 font-bold text-sm text-muted hover:text-ink border-b-2 border-transparent cursor-pointer";
+
+  function scrollToTab(tab: Tab) {
+    setActiveTab(tab);
+    const el = document.getElementById(`tab-${tab}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <form action={action} className="max-w-5xl">
       {product.id && <input type="hidden" name="id" value={product.id} />}
+      <input type="hidden" name="cover_image" value={coverImageValue} />
 
       <div className="border border-line bg-panel">
         {/* Tab bar */}
-        <div className="flex border-b border-line bg-soft overflow-x-auto">
-          {(["identity", "content", "commerce", "meta", "people", "seo"] as const).map((tab) => (
-            <button key={tab} type="button" className={tabClass(false)}>
-              {tab === "identity" ? "Identiteet" : tab === "content" ? "Sisu" : tab === "commerce" ? "Hind ja ladu" : tab === "meta" ? "Metaandmed" : tab === "people" ? "Inimesed" : "SEO"}
+        <div className="flex border-b border-line bg-soft overflow-x-auto sticky top-0 z-10">
+          {TABS.map((tab) => (
+            <button key={tab} type="button" className={tabClass(activeTab === tab)} onClick={() => scrollToTab(tab)}>
+              {tabLabel(tab)}
             </button>
           ))}
         </div>
 
         <div className="p-6 grid gap-6">
           {/* Identity */}
-          <fieldset>
+          <fieldset id="tab-identity">
             <legend className="font-heading text-xl mb-4">Identiteet</legend>
             <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
               <FormField label="ISBN / SKU" required>
@@ -95,7 +213,7 @@ export function ProductForm({
           </fieldset>
 
           {/* Content */}
-          <fieldset className="border-t border-line pt-6">
+          <fieldset id="tab-content" className="border-t border-line pt-6">
             <legend className="font-heading text-xl mb-4">Sisu</legend>
             <div className="grid gap-5">
               <FormField label="Kirjeldus (eesti keeles) — HTML lubatud">
@@ -108,7 +226,7 @@ export function ProductForm({
           </fieldset>
 
           {/* Commerce */}
-          <fieldset className="border-t border-line pt-6">
+          <fieldset id="tab-commerce" className="border-t border-line pt-6">
             <legend className="font-heading text-xl mb-4">Hind ja laoseis</legend>
             <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
               <FormField label="Hind (€)" required>
@@ -138,7 +256,7 @@ export function ProductForm({
           </fieldset>
 
           {/* Metadata */}
-          <fieldset className="border-t border-line pt-6">
+          <fieldset id="tab-meta" className="border-t border-line pt-6">
             <legend className="font-heading text-xl mb-4">Metaandmed</legend>
             <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
               <FormField label="Köide">
@@ -173,9 +291,118 @@ export function ProductForm({
             </div>
           </fieldset>
 
-          {/* People */}
-          <fieldset className="border-t border-line pt-6">
-            <legend className="font-heading text-xl mb-4">Inimesed</legend>
+          {/* Cover image */}
+          <fieldset id="tab-cover" className="border-t border-line pt-6">
+            <legend className="font-heading text-xl mb-4">Kaanepilt</legend>
+
+            <div className="grid grid-cols-[auto_1fr] gap-6 items-start max-md:grid-cols-1">
+              {/* Preview column */}
+              <div className="w-[200px]">
+                {currentCoverUrl ? (
+                  <img
+                    src={currentCoverUrl}
+                    alt="Kaanepildi eelvaade"
+                    className="w-full border border-line object-contain max-h-[300px]"
+                  />
+                ) : originalCoverUrl ? (
+                  <img
+                    src={originalCoverUrl}
+                    alt="Praegune kaanepilt"
+                    className="w-full border border-line object-contain max-h-[300px] opacity-40"
+                  />
+                ) : (
+                  <div className="w-full aspect-[3/4] border border-dashed border-line bg-soft flex items-center justify-center text-muted text-xs text-center p-3">
+                    Kaanepilt puudub
+                  </div>
+                )}
+
+                {coverAction === "remove" && (
+                  <p className="text-xs text-accent font-bold mt-2 text-center">Eemaldatakse</p>
+                )}
+                {coverAction === "replace" && (
+                  <p className="text-xs text-leaf font-bold mt-2 text-center">Asendatakse</p>
+                )}
+              </div>
+
+              {/* Controls column */}
+              <div className="grid gap-4">
+                {/* Upload zone */}
+                <div
+                  className={`border-2 border-dashed p-6 text-center transition-colors ${
+                    dropActive ? "border-ink bg-soft" : "border-line hover:border-ink/60"
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setDropActive(true); }}
+                  onDragLeave={() => setDropActive(false)}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept={acceptedTypes}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }}
+                    className="hidden"
+                    id="cover-file-input"
+                  />
+                  <label htmlFor="cover-file-input" className="cursor-pointer block">
+                    <p className="text-sm font-bold text-ink">
+                      {uploadBusy ? "Laadin üles…" : "Lohista fail siia või klõpsa valimiseks"}
+                    </p>
+                    <p className="text-xs text-muted mt-1">
+                      JPG, PNG, WebP, AVIF, TIFF — kuni 50 MB
+                    </p>
+                  </label>
+
+                  {uploadBusy && (
+                    <div className="mt-3 w-full bg-soft h-2 overflow-hidden">
+                      <div className="h-full bg-ink animate-pulse w-full" />
+                    </div>
+                  )}
+                </div>
+
+                {uploadPreview && uploadBusy && (
+                  <div className="border border-line p-3">
+                    <img src={uploadPreview} alt="Eelvaade" className="max-h-40 object-contain mx-auto" />
+                  </div>
+                )}
+
+                {uploadError && (
+                  <p className="text-xs text-accent font-bold">{uploadError}</p>
+                )}
+                {uploadWarning && (
+                  <p className="text-xs text-amber-600 font-bold">{uploadWarning}</p>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 flex-wrap">
+                  {originalCover && coverAction !== "keep" && (
+                    <button type="button" onClick={handleRevertToOriginal}
+                      className="min-h-10 px-4 border border-line text-sm font-bold hover:bg-soft">
+                      Taasta algne
+                    </button>
+                  )}
+                  {originalCover && coverAction !== "remove" && (
+                    <button type="button" onClick={handleRemove}
+                      className="min-h-10 px-4 border border-line text-sm font-bold text-accent hover:bg-accent/5">
+                      Eemalda kaanepilt
+                    </button>
+                  )}
+                </div>
+
+                {coverObjectKey && coverAction !== "remove" && (
+                  <p className="text-xs text-muted font-mono break-all">
+                    {coverObjectKey.startsWith("products/") ? "Storage: " : "Fail: "}
+                    {coverObjectKey.length > 60
+                      ? coverObjectKey.slice(0, 30) + "…" + coverObjectKey.slice(-30)
+                      : coverObjectKey}
+                  </p>
+                )}
+              </div>
+            </div>
+          </fieldset>
+
+          {/* People / Authors */}
+          <fieldset id="tab-people" className="border-t border-line pt-6">
+            <legend className="font-heading text-xl mb-4">Autorid ja tegijad</legend>
             <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
               <FormField label="Autor(id) — nimed komaga">
                 <input name="people_authors" defaultValue={product.person_ids?.["author"]?.join(", ") ?? ""} className="border border-line bg-paper p-3 font-normal text-sm" />
@@ -193,19 +420,11 @@ export function ProductForm({
                 <input name="people_illustrators" defaultValue={product.person_ids?.["illustrator"]?.join(", ") ?? ""} className="border border-line bg-paper p-3 font-normal text-sm" />
               </FormField>
             </div>
-            <p className="text-xs text-muted mt-3">Sisesta inimese nimi. Kui inimest ei leita, tuleb ta esmalt luua Inimesed vaates.</p>
-          </fieldset>
-
-          {/* Cover image */}
-          <fieldset className="border-t border-line pt-6">
-            <legend className="font-heading text-xl mb-4">Kaanepilt</legend>
-            <FormField label="Kaanepildi failinimi (nt mybook.jpg)">
-              <input name="cover_image" maxLength={500} defaultValue={product.cover_image ?? ""} className="border border-line bg-paper p-3 font-normal text-sm" />
-            </FormField>
+            <p className="text-xs text-muted mt-3">Sisesta inimese nimi. Kui inimest ei leita, tuleb ta esmalt luua Autorid vaates.</p>
           </fieldset>
 
           {/* SEO */}
-          <fieldset className="border-t border-line pt-6">
+          <fieldset id="tab-seo" className="border-t border-line pt-6">
             <legend className="font-heading text-xl mb-4">SEO</legend>
             <div className="grid grid-cols-1 gap-5">
               <FormField label="SEO pealkiri (max 70)">
@@ -223,7 +442,7 @@ export function ProductForm({
       {state?.success && <p role="status" className="text-leaf font-bold mt-4">Toode salvestatud!</p>}
 
       <div className="flex gap-3 mt-6">
-        <button type="submit" disabled={pending} className="min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+        <button type="submit" disabled={pending || uploadBusy} className="min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
           {pending ? "Salvestan…" : product.id ? "Salvesta muudatused" : "Loo toode"}
         </button>
         {product.id && (

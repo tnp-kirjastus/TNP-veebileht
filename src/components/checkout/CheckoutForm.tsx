@@ -46,23 +46,38 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
   const [pending, setPending] = useState(false);
 
   const [machines, setMachines] = useState<Record<string, GroupedMachines[]> | null>(null);
+  const [machinesError, setMachinesError] = useState(false);
   const [machineSearch, setMachineSearch] = useState("");
   const [machineDropdownOpen, setMachineDropdownOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<ParcelMachine | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  const loadMachines = useCallback(() => {
     let cancelled = false;
+    setMachinesError(false);
     fetch("/api/shipping/parcel-machines")
       .then((r) => r.json())
       .then((data: Record<string, GroupedMachines[]>) => {
-        if (!cancelled) setMachines(data);
+        if (!cancelled) {
+          setMachines(data);
+          setMachinesError(false);
+        }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          setMachinesError(true);
+          setMachines({});
+        }
+      });
 
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState calls are inside async fetch callbacks
+    return loadMachines();
+  }, [loadMachines]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -312,7 +327,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                     <input
                       ref={searchInputRef}
                       type="text"
-                      readOnly
                       role="combobox"
                       aria-expanded={machineDropdownOpen}
                       aria-controls="parcel-machine-listbox"
@@ -333,14 +347,12 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                       }
                       onFocus={() => {
                         setMachineDropdownOpen(true);
-                        setMachineSearch("");
                       }}
                       onChange={(e) => {
                         setMachineSearch(e.target.value);
                         if (!machineDropdownOpen) setMachineDropdownOpen(true);
                       }}
                       onClick={() => {
-                        setMachineSearch("");
                         setMachineDropdownOpen(true);
                       }}
                       className="border border-line p-3 font-normal cursor-pointer"
@@ -352,7 +364,13 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                       {machines === null && (
                         <div className="p-4 text-sm text-muted">Laadin pakiautomaate...</div>
                       )}
-                      {machines !== null && filteredMachines.length === 0 && (
+                      {machinesError && (
+                        <div className="p-4 text-sm text-center">
+                          <p className="text-accent font-bold mb-2">Pakiautomaatide laadimine ebaõnnestus.</p>
+                          <button type="button" onClick={loadMachines} className="underline text-accent hover:text-accent-dark font-bold text-xs">Proovi uuesti</button>
+                        </div>
+                      )}
+                      {!machinesError && machines !== null && filteredMachines.length === 0 && (
                         <div className="p-4 text-sm text-muted">
                           {machineSearch.trim()
                             ? "Ühtegi pakiautomaati ei leitud."
@@ -421,6 +439,17 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                     <span className="text-muted"> — ostukorvi summa ületab tasuta tarne piiri</span>
                   </>
                 )}
+              </div>
+
+              <div className="text-sm text-muted">
+                <p>
+                  <strong className="text-ink">Eeldatav tarneaeg:</strong>{" "}
+                  {isParcelMachine ? "2–4 tööpäeva" : "1–3 tööpäeva"} pärast makse kinnitust.
+                </p>
+                <p className="mt-1">
+                  Makse turvab <strong className="text-ink">Maksekeskus</strong>. Tagastamisõigus kehtib
+                  14 päeva jooksul alates kättesaamisest.
+                </p>
               </div>
             </fieldset>
           )}
