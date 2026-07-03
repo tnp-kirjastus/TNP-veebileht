@@ -94,8 +94,8 @@ async function main() {
     .select("product_id, categories(name_et)");
   if (pcRows) {
     for (const row of pcRows) {
-      const cats = row.categories as unknown;
-      const catName = (Array.isArray(cats) ? (cats[0] as Record<string, unknown>)?.name_et : (cats as Record<string, unknown>)?.name_et) as string | undefined;
+      const cats = row.categories;
+      const catName = (Array.isArray(cats) ? cats[0]?.name_et : cats?.name_et);
       if (catName && row.product_id) {
         const list = productCategoriesMap.get(row.product_id) || [];
         list.push(catName);
@@ -110,8 +110,8 @@ async function main() {
   if (ppRows) {
     for (const row of ppRows) {
       if (!row.product_id) continue;
-      const person = row.people as unknown;
-      const personName = (Array.isArray(person) ? (person[0] as Record<string, unknown>)?.name : (person as Record<string, unknown>)?.name) as string | undefined;
+      const person = row.people;
+      const personName = (Array.isArray(person) ? person[0]?.name : person?.name);
       if (!personName) continue;
       const role = String(row.role ?? "author");
       const map = productPeopleMap.get(row.product_id) || {};
@@ -128,8 +128,8 @@ async function main() {
     .not("series_id", "is", null);
   if (psRows) {
     for (const row of psRows) {
-      const s = row.series as unknown;
-      const seriesData = (Array.isArray(s) ? s[0] : s) as Record<string, unknown> | null;
+      const s = row.series;
+      const seriesData = Array.isArray(s) ? s[0] : s;
       if (seriesData) {
         productSeriesMap.set(row.id, {
           series_slug: String(seriesData.slug ?? ""),
