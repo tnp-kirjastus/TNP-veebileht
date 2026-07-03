@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useActionState } from "react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import { formatEuro } from "@/lib/data";
+import { formatEuro } from "@/lib/product-utils";
 import { bulkEditProducts, searchProducts } from "@/app/haldus/bulk-actions";
 
 interface ProductBrief {
