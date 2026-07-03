@@ -20,10 +20,11 @@ export async function GET() {
     }
 
     return NextResponse.json(result);
-  } catch {
+  } catch (err) {
+    console.error("parcel_machines_fetch_failed", err instanceof Error ? err.message : String(err));
     return NextResponse.json(
-      { omniva: [], smartpost: [] },
-      { status: 200 }
+      { error: "Pakiautomaatide laadimine ebaõnnestus." },
+      { status: 502 }
     );
   }
 }
