@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PersonForm } from "./PersonForm";
@@ -8,7 +9,7 @@ export default async function PeopleAdminPage() {
 
   return (
     <>
-      <AdminPageHeader title="Inimesed" description={`${count ?? 0} inimest (kuvatakse esimesed 200).`} />
+      <AdminPageHeader title="Autorid" description={`${count ?? 0} inimest (kuvatakse esimesed 200).`} />
       <PersonForm />
       <div className="mt-8 grid gap-3">
         {(data ?? []).map((p: Record<string, unknown>) => (
@@ -17,6 +18,7 @@ export default async function PeopleAdminPage() {
               <span className="font-bold">{String(p.name ?? "")}</span>
               <span className="text-xs text-muted font-mono ml-3">{String(p.slug ?? "")}</span>
             </div>
+            <Link href={`/raamatud?author=${encodeURIComponent(String(p.slug ?? p.name ?? ""))}`} className="text-accent font-bold text-sm hover:underline">Vaata raamatuid →</Link>
           </div>
         ))}
       </div>

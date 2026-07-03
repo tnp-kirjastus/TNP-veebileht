@@ -24,11 +24,12 @@ interface CartContextType {
   itemCount: number;
   total: number;
   error: string | null;
+  hydrated: boolean;
 }
 
 const CartContext = createContext<CartContextType>({
   items: [], addItem: () => {}, removeItem: () => {}, updateQuantity: () => {},
-  clearCart: () => {}, itemCount: 0, total: 0, error: null,
+  clearCart: () => {}, itemCount: 0, total: 0, error: null, hydrated: false,
 });
 
 const STORAGE_KEY = "tnp-cart";
@@ -76,6 +77,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((cause) => { if (cause?.name !== "AbortError") {/* API unavailable, local storage is fine */} });
     return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sync = useCallback(async (slug: string, quantity: number) => {
@@ -145,7 +147,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const total = items.reduce((sum, i) => sum + (i.salePrice ?? i.price) * i.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, itemCount, total, error }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, itemCount, total, error, hydrated }}>
       {children}
     </CartContext.Provider>
   );

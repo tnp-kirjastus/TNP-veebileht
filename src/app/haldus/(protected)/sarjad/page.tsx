@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SeriesForm } from "./SeriesForm";
@@ -17,7 +18,10 @@ export default async function SeriesAdminPage() {
               <span className="font-bold">{String(s.name_et ?? "")}</span>
               <span className="text-xs text-muted font-mono ml-3">{String(s.slug ?? "")}</span>
             </div>
-            {s.cover_image ? <span className="text-xs text-muted">Pilt: {String(s.cover_image)}</span> : null}
+            <div className="flex items-center gap-4">
+              {s.cover_image ? <span className="text-xs text-muted">Pilt: {String(s.cover_image)}</span> : null}
+              <Link href={`/sarjad/${String(s.slug ?? "")}`} className="text-accent font-bold text-sm hover:underline">Vaata raamatuid →</Link>
+            </div>
           </div>
         ))}
       </div>

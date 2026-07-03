@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-context";
 
 export function CheckoutGuard({ children }: { children: React.ReactNode }) {
-  const { items } = useCart();
+  const { items, hydrated } = useCart();
   const router = useRouter();
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (hydrated && items.length === 0) {
       router.replace("/ostukorv");
     }
-  }, [items, router]);
+  }, [items, hydrated, router]);
+
+  if (!hydrated) return null;
 
   if (items.length === 0) return null;
 

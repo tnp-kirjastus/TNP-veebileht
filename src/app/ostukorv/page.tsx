@@ -5,6 +5,7 @@
 import { LayoutContained } from "@/components/layout";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { useCart } from "@/lib/cart-context";
+import { getCoverUrlClient } from "@/lib/media-url";
 import Link from "next/link";
 
 const FREE_SHIPPING = 40;
@@ -32,7 +33,7 @@ export default function CartPage() {
             {items.map((item) => (
               <div key={item.slug} className="grid grid-cols-[76px_1fr_auto] gap-[14px] py-4 border-b border-line">
                 {item.coverImage ? (
-                  <img src={`/covers/${item.coverImage}`} alt={item.title}
+                  <img src={getCoverUrlClient(item.coverImage) ?? ""} alt={item.title}
                     className="w-[76px] h-[106px] object-contain bg-soft border border-line p-[7px]" />
                 ) : (
                   <div className="w-[76px] h-[106px] bg-soft border border-line" />

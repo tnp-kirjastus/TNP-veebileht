@@ -1,117 +1,120 @@
-import products from "@/data/products.json";
-import categories from "@/data/categories.json";
-import series from "@/data/series.json";
-import people from "@/data/people.json";
+import "server-only";
 
-export interface Product {
-  id: number;
-  sku: string;
-  title_et: string;
-  title_en: string | null;
-  slug: string;
-  description_et: string | null;
-  price: number;
-  sale_price: number | null;
-  sale_start: string | null;
-  sale_end: string | null;
-  stock: number;
-  binding: string | null;
-  pages: number | null;
-  release_date: string | null;
-  origin: "estonian" | "foreign";
-  is_upcoming: boolean;
-  is_archived: boolean;
-  cover_image: string | null;
-  series_name: string | null;
-  series_slug: string | null;
-  categories: string[];
-  people: Record<string, string[]>;
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { Product, Category, Series, Person } from "./data-types";
+
+export type { Product, Category, Series, Person } from "./data-types";
+
+let _cache: {
+  products: Product[];
+  categories: Category[];
+  series: Series[];
+  people: Person[];
+  loadedAt: number;
+} | null = null;
+
+const CACHE_TTL_MS = 60_000;
+
+function loadData() {
+  const now = Date.now();
+  if (_cache && now - _cache.loadedAt < CACHE_TTL_MS) return _cache;
+
+  const dataDir = join(process.cwd(), "src", "data");
+  _cache = {
+    products: JSON.parse(readFileSync(join(dataDir, "products.json"), "utf-8")),
+    categories: JSON.parse(readFileSync(join(dataDir, "categories.json"), "utf-8")),
+    series: JSON.parse(readFileSync(join(dataDir, "series.json"), "utf-8")),
+    people: JSON.parse(readFileSync(join(dataDir, "people.json"), "utf-8")),
+    loadedAt: now,
+  };
+  return _cache;
 }
 
-export interface Category {
-  name: string;
-  slug: string;
+export function clearDataCache() {
+  _cache = null;
 }
 
-export interface Series {
-  name: string;
-  slug: string;
+function allProducts(): Product[] {
+  return loadData().products as Product[];
 }
 
-export interface Person {
-  name: string;
-  slug: string;
+function allCategories(): Category[] {
+  return loadData().categories as Category[];
 }
 
-const allProducts = products as Product[];
-const allCategories = categories as Category[];
-const allSeries = series as Series[];
-const allPeople = people as Person[];
+function allSeries(): Series[] {
+  return loadData().series as Series[];
+}
 
-const activeProducts = allProducts.filter((p) => !p.is_archived);
+function allPeople(): Person[] {
+  return loadData().people as Person[];
+}
+
+const activeProducts = (): Product[] => allProducts().filter((p) => !p.is_archived);
 
 export function getActiveProducts(): Product[] {
-  return activeProducts;
+  return activeProducts();
 }
 
 export function getArchivedProducts(): Product[] {
-  return allProducts.filter((p) => p.is_archived);
+  return allProducts().filter((p) => p.is_archived);
 }
 
 export function getProductBySlug(slug: string): Product | undefined {
-  return allProducts.find((p) => p.slug === slug);
+  return allProducts().find((p) => p.slug === slug);
 }
 
 export function getProductsByCategory(categoryName: string): Product[] {
-  const category = allCategories.find((item) =>
+  const category = allCategories().find((item) =>
     item.slug === categoryName || item.name.toLocaleLowerCase("et") === categoryName.toLocaleLowerCase("et")
   );
   const name = category?.name ?? categoryName;
-  return activeProducts.filter((p) => p.categories.includes(name));
+  return activeProducts().filter((p) => p.categories.includes(name));
 }
 
 export function getProductsBySeries(seriesSlug: string): Product[] {
-  return activeProducts.filter((p) => p.series_slug === seriesSlug);
+  return activeProducts().filter((p) => p.series_slug === seriesSlug);
 }
 
 export function getProductsByAuthor(authorName: string): Product[] {
-  return activeProducts.filter(
+  return activeProducts().filter(
     (p) => p.people.author?.some((a) => a === authorName)
   );
 }
 
 export function getProductsByPersonRole(role: string, personName: string): Product[] {
-  return activeProducts.filter(
+  return activeProducts().filter(
     (p) => p.people[role]?.some((n: string) => n === personName)
   );
 }
 
 export function getNewProducts(limit = 10): Product[] {
-  return [...activeProducts]
+  return [...activeProducts()]
     .filter((p) => p.release_date)
     .sort((a, b) => (b.release_date || "").localeCompare(a.release_date || ""))
     .slice(0, limit);
 }
 
 export function getSaleProducts(): Product[] {
-  return activeProducts.filter(isOnSale);
+  return activeProducts().filter(isOnSale);
 }
 
 export function getUpcomingProducts(): Product[] {
-  return activeProducts.filter((p) => p.is_upcoming);
+  return activeProducts().filter((p) => p.is_upcoming);
 }
 
 export function getEstonianProducts(): Product[] {
-  return activeProducts.filter((p) => p.origin === "estonian");
+  return activeProducts().filter((p) => p.origin === "estonian");
 }
 
 export function getForeignProducts(): Product[] {
-  return activeProducts.filter((p) => p.origin === "foreign");
+  return activeProducts().filter((p) => p.origin === "foreign");
 }
 
 export function searchProducts(query: string): Product[] {
   const q = query.toLowerCase();
-  return activeProducts.filter(
+  return activeProducts().filter(
     (p) =>
       p.title_et.toLowerCase().includes(q) ||
       p.sku.includes(q) ||
@@ -147,7 +150,7 @@ export function isOnSale(p: Product): boolean {
 }
 
 export function filterProductsByPerson(products: Product[], role: string, slugOrName: string): Product[] {
-  const person = allPeople.find((item) => item.slug === slugOrName || item.name === slugOrName);
+  const person = allPeople().find((item) => item.slug === slugOrName || item.name === slugOrName);
   const name = person?.name ?? slugOrName;
   return products.filter((product) => product.people[role]?.includes(name));
 }
@@ -158,31 +161,31 @@ export function getSalePercent(p: Product): number {
 }
 
 export function getCategories(): Category[] {
-  return allCategories;
+  return allCategories();
 }
 
 export function getSeries(): Series[] {
-  return allSeries;
+  return allSeries();
 }
 
 export function getPeople(): Person[] {
-  return allPeople;
+  return allPeople();
 }
 
 export function getPersonByName(name: string): Person | undefined {
-  return allPeople.find((p) => p.name === name);
+  return allPeople().find((p) => p.name === name);
 }
 
 export function getPersonBySlug(slug: string): Person | undefined {
-  return allPeople.find((p) => p.slug === slug);
+  return allPeople().find((p) => p.slug === slug);
 }
 
 export function getSeriesBySlug(slug: string): Series | undefined {
-  return allSeries.find((s) => s.slug === slug);
+  return allSeries().find((s) => s.slug === slug);
 }
 
 export function getRelatedProducts(product: Product, limit = 5): Product[] {
-  return activeProducts
+  return activeProducts()
     .filter((p) => {
       if (p.id === product.id) return false;
       const sharedCats = p.categories.filter((c) => product.categories.includes(c));
@@ -193,7 +196,7 @@ export function getRelatedProducts(product: Product, limit = 5): Product[] {
 
 export function getSameSeriesProducts(product: Product, limit = 5): Product[] {
   if (!product.series_slug) return [];
-  return activeProducts
+  return activeProducts()
     .filter((p) => p.id !== product.id && p.series_slug === product.series_slug)
     .slice(0, limit);
 }
@@ -201,7 +204,7 @@ export function getSameSeriesProducts(product: Product, limit = 5): Product[] {
 export function getSameAuthorProducts(product: Product, limit = 5): Product[] {
   const authors = product.people.author;
   if (!authors || authors.length === 0) return [];
-  return activeProducts
+  return activeProducts()
     .filter((p) => p.id !== product.id && p.people.author?.some((a: string) => authors.includes(a)))
     .slice(0, limit);
 }

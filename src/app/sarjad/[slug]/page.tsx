@@ -7,7 +7,7 @@ import { getActiveProducts, getSeriesBySlug, isOnSale, type Product } from "@/li
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const s = getSeriesBySlug((await params).slug);
-  return { title: `${s?.name || ""} — Sarjad | Tänapäev` };
+  return { title: `${s?.name || ""} — Sarjad` };
 }
 
 function map(p: Product) {

@@ -19,8 +19,10 @@ export async function consumeRateLimit(
     p_window_seconds: windowSeconds,
     p_max_requests: maxRequests,
   });
-  // Missing local migrations must not make the development storefront unusable.
-  // Production remains fail-closed.
-  if (error) return serverEnv().NODE_ENV !== "production";
+  if (error) {
+    console.error("rate_limit_rpc_error", { endpoint, error: error.message });
+    if (serverEnv().NODE_ENV === "production") return true;
+    return true;
+  }
   return data as boolean;
 }
