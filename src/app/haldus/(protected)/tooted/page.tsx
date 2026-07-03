@@ -1,4 +1,185 @@
+import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
-export default async function ProductsAdminPage() { const db=createAdminClient(); const {data}=await db.schema("commerce").from("products").select("id,sku,title_et,price,sale_price,stock,release_date,is_upcoming,is_archived").order("updated_at",{ascending:false}).limit(100); return <><AdminPageHeader title="Tooted" description="Kataloogi hinnad, laoseis ja avaldamise olek." /><div className="overflow-x-auto mt-8 border border-line bg-panel"><table className="w-full text-left text-sm"><thead className="bg-soft"><tr><th className="p-4">Raamat</th><th>ISBN</th><th>Hind</th><th>Ladu</th><th>Olek</th></tr></thead><tbody>{(data??[]).map(p=><tr key={p.id} className="border-t border-line"><td className="p-4 font-bold">{p.title_et}</td><td>{p.sku}</td><td>{Number(p.sale_price??p.price).toFixed(2)} €</td><td>{p.stock}</td><td>{p.is_archived?"Arhiiv":p.is_upcoming?"Ilmumas":"Aktiivne"}</td></tr>)}</tbody></table></div></>; }
+import { formatEuro } from "@/lib/data";
 
+interface ProductRow extends Record<string, unknown> {
+  id: string;
+  titleCell: string;
+  priceCell: string;
+  stockCell: string;
+  statusCell: string;
+  dateCell: string;
+}
+
+export default async function ProductsAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; q?: string; status?: string; origin?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const query = (params.q ?? "").trim();
+  const statusFilter = params.status ?? "";
+  const originFilter = params.origin ?? "";
+  const perPage = 25;
+  const from = (page - 1) * perPage;
+
+  const db = createAdminClient();
+
+  let builder = db.schema("commerce").from("products").select("id,sku,title_et,slug,price,sale_price,stock,release_date,is_upcoming,is_archived", { count: "exact" });
+
+  if (query) {
+    builder = builder.or(`title_et.ilike.%${query}%,sku.ilike.%${query}%`);
+  }
+
+  if (statusFilter === "active") builder = builder.eq("is_archived", false).eq("is_upcoming", false);
+  else if (statusFilter === "upcoming") builder = builder.eq("is_upcoming", true).eq("is_archived", false);
+  else if (statusFilter === "archived") builder = builder.eq("is_archived", true);
+  else if (statusFilter === "sale") builder = builder.not("sale_price", "is", null);
+
+  if (originFilter) builder = builder.eq("origin", originFilter);
+
+  const { data, count } = await builder.order("title_et", { ascending: true }).range(from, from + perPage - 1);
+
+  const products: ProductRow[] = (data ?? []).map((p: Record<string, unknown>) => {
+    const salePrice = p.sale_price != null ? Number(p.sale_price) : null;
+    const price = Number(p.price ?? 0);
+    const stock = Number(p.stock ?? 0);
+    const archived = Boolean(p.is_archived);
+    const upcoming = Boolean(p.is_upcoming);
+    const isOnSale = salePrice != null && salePrice < price;
+
+    let statusCell = "";
+    if (archived) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-gray-100 text-gray-500">Arhiveeritud</span>`;
+    else if (upcoming) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-amber-100 text-amber-800">Ilmumas</span>`;
+    else if (isOnSale) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-red-100 text-red-700">Soodus</span>`;
+    else statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-green-100 text-green-700">Aktiivne</span>`;
+
+    return {
+      id: String(p.id),
+      titleCell: `<a href="/haldus/tooted/${p.id}" class="font-bold hover:text-accent">${String(p.title_et)}</a><div class="text-xs text-muted mt-0.5">${String(p.sku)}</div>`,
+      priceCell: isOnSale
+        ? `<span class="text-muted line-through text-xs">${formatEuro(price)}</span><span class="text-accent font-bold ml-2">${formatEuro(salePrice!)}</span>`
+        : `<span class="font-bold">${formatEuro(price)}</span>`,
+      stockCell: archived ? statusCell : stock === 0 ? statusCell : stock <= 5 ? statusCell : String(stock),
+      statusCell,
+      dateCell: p.release_date
+        ? new Date(String(p.release_date)).toLocaleDateString("et-EE")
+        : "\u2014",
+    };
+  });
+
+  if (statusFilter === "sale") {
+    products.sort((a, b) => 0);
+  }
+
+  const totalCount = count ?? 0;
+  const totalPages = Math.ceil(totalCount / perPage);
+
+  function buildHref(overrides: Record<string, string>) {
+    const parts: string[] = [];
+    const q = overrides.q ?? query;
+    const s = overrides.status ?? statusFilter;
+    const o = overrides.origin ?? originFilter;
+    const pg = overrides.page ?? String(page);
+    if (q) parts.push(`q=${encodeURIComponent(q)}`);
+    if (s) parts.push(`status=${encodeURIComponent(s)}`);
+    if (o) parts.push(`origin=${encodeURIComponent(o)}`);
+    if (pg && Number(pg) > 1) parts.push(`page=${encodeURIComponent(pg)}`);
+    return `/haldus/tooted${parts.length ? "?" + parts.join("&") : ""}`;
+  }
+
+  function Cell({ html }: { html: string }) {
+    return <td className="p-4" dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+
+  return (
+    <>
+      <AdminPageHeader
+        title="Tooted"
+        description={`${totalCount} toodet kataloogis.`}
+        action={
+          <div className="flex gap-3">
+            <Link href="/haldus/tooted/partii" className="inline-flex items-center gap-2 min-h-12 px-6 border border-line font-bold hover:bg-soft transition-colors">
+              Partii muutmine
+            </Link>
+            <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 bg-ink text-white font-bold hover:bg-ink/80 transition-colors">
+              + Uus toode
+            </Link>
+          </div>
+        }
+      />
+
+      <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">
+        <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i v\u00f5i URL-i nime j\u00e4rgi\u2026"
+          className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
+        <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
+          <option value="">K\u00f5ik olekud</option>
+          <option value="active">Aktiivne</option>
+          <option value="upcoming">Ilmumas</option>
+          <option value="archived">Arhiveeritud</option>
+          <option value="sale">Soodus</option>
+        </select>
+        <select name="origin" defaultValue={originFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
+          <option value="">K\u00f5ik p\u00e4ritolud</option>
+          <option value="estonian">Eesti</option>
+          <option value="foreign">V\u00e4lismaine</option>
+        </select>
+        <button type="submit" className="h-11 px-5 border border-line bg-soft text-sm font-bold hover:bg-line/30">Filtreeri</button>
+        {(query || statusFilter || originFilter) && (
+          <Link href="/haldus/tooted" className="h-11 px-4 inline-flex items-center text-sm text-muted hover:text-ink font-bold">T\u00fchista</Link>
+        )}
+      </form>
+
+      <div className="overflow-x-auto border border-line bg-panel">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-soft">
+            <tr>
+              <th className="p-4 font-extrabold text-xs uppercase tracking-wider text-muted">Raamat</th>
+              <th className="p-4 font-extrabold text-xs uppercase tracking-wider text-muted">Hind</th>
+              <th className="p-4 font-extrabold text-xs uppercase tracking-wider text-muted">Ladu</th>
+              <th className="p-4 font-extrabold text-xs uppercase tracking-wider text-muted">Olek</th>
+              <th className="p-4 font-extrabold text-xs uppercase tracking-wider text-muted">Ilmumine</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.length === 0 ? (
+              <tr><td colSpan={5} className="p-12 text-center text-muted">\u00dchtki toodet ei leitud.</td></tr>
+            ) : (
+              products.map((p) => (
+                <tr key={p.id} className="border-t border-line hover:bg-soft/50 transition-colors">
+                  <Cell html={p.titleCell} />
+                  <Cell html={p.priceCell} />
+                  <Cell html={p.stockCell} />
+                  <Cell html={p.statusCell} />
+                  <td className="p-4 text-xs text-muted">{p.dateCell}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 gap-4 flex-wrap">
+          <p className="text-xs text-muted">Lehek\u00fclg {page} / {totalPages} ({totalCount} toodet)</p>
+          <div className="flex gap-1">
+            {page > 1 && <Link href={buildHref({ page: String(page - 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">\u2190 Eelmine</Link>}
+            {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
+              const pageNum = page <= 4 ? i + 1 : page + i - 3;
+              if (pageNum < 1 || pageNum > totalPages) return null;
+              return (
+                <Link key={pageNum} href={buildHref(pageNum === 1 ? {} : { page: String(pageNum) })}
+                  className={`px-4 py-2 border text-sm font-bold ${pageNum === page ? "bg-ink text-white border-ink" : "border-line hover:bg-soft"}`}>
+                  {pageNum}
+                </Link>
+              );
+            })}
+            {page < totalPages && <Link href={buildHref({ page: String(page + 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">J\u00e4rgmine \u2192</Link>}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

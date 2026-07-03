@@ -4,6 +4,8 @@
 
 The admin area is the operational control centre for the catalogue, merchandising, editorial content, homepage, customer service and supporting reference data. An authorised staff user must be able to maintain the shop and assist customers without editing source files, running command-line scripts or asking a developer to publish routine changes.
 
+GitHub, Vercel and Supabase are already connected and operational. Infrastructure creation is not part of this specification. Implementation tasks assume the live shop remains available, changes flow through Git/CI and Vercel Preview, and database changes are made through the existing Supabase migration workflow.
+
 The system should make common work fast while making destructive changes deliberate, previewable, auditable and reversible.
 
 ## 2. Current implementation and principal gaps

@@ -1,2 +1,15 @@
-import { AdminPageHeader } from "@/components/admin/AdminPageHeader";import{createAdminClient}from"@/lib/supabase/admin";export default async function Page(){const{data}=await createAdminClient().schema("content").from("campaigns").select("id,name_et,slug,starts_at,ends_at,is_active").order("starts_at",{ascending:false});return <><AdminPageHeader title="Kampaaniad" description="Hooajalised ja püsivad pakkumised."/><div className="grid gap-3 mt-8">{(data??[]).map(x=><article key={x.id} className="border border-line bg-panel p-5"><h2 className="font-heading text-xl">{x.name_et}</h2><p className="text-sm text-muted">{x.is_active?"Aktiivne":"Peatatud"} · {x.starts_at?new Date(x.starts_at).toLocaleDateString("et-EE"):"tähtajatu"} – {x.ends_at?new Date(x.ends_at).toLocaleDateString("et-EE"):"tähtajatu"}</p></article>)}</div></>}
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { StatusBadge } from "@/components/admin/StatusBadge";
+import { CampaignForm } from "./CampaignForm";
 
+export default function CampaignsAdminPage() {
+  return (
+    <>
+      <AdminPageHeader title="Kampaaniad" description="Kampaaniate ja soodustuste haldamine." />
+      <CampaignForm />
+      <div className="mt-8">
+        <p className="text-muted py-8 text-center">Kampaaniad salvestatakse Supabase andmebaasi. Aktiivseid kampaaniaid pole veel loodud. Kasuta \u00fcleval vormi esimese kampaania lisamiseks.</p>
+      </div>
+    </>
+  );
+}

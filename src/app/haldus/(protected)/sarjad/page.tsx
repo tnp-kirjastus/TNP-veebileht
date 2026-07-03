@@ -1,2 +1,26 @@
-import { AdminPageHeader } from "@/components/admin/AdminPageHeader";import{createAdminClient}from"@/lib/supabase/admin";export default async function Page(){const{data}=await createAdminClient().schema("content").from("series").select("id,name_et,slug,description_et").order("name_et");return <><AdminPageHeader title="Sarjad" description="Raamatusarjade sisu ja seosed."/><div className="grid grid-cols-3 gap-4 mt-8 max-[1100px]:grid-cols-2 max-sm:grid-cols-1">{(data??[]).map(x=><article key={x.id} className="border border-line bg-panel p-5"><h2 className="font-heading text-xl">{x.name_et}</h2><p className="text-sm text-muted mt-2 line-clamp-2">{x.description_et||x.slug}</p></article>)}</div></>}
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { SeriesForm } from "./SeriesForm";
 
+export default async function SeriesAdminPage() {
+  const db = createAdminClient();
+  const { data, count } = await db.schema("content").from("series").select("*", { count: "exact" }).order("name_et", { ascending: true });
+
+  return (
+    <>
+      <AdminPageHeader title="Sarjad" description={`${count ?? 0} sarja.`} />
+      <SeriesForm />
+      <div className="mt-8 grid gap-3">
+        {(data ?? []).map((s: Record<string, unknown>) => (
+          <div key={String(s.id)} className="flex items-center justify-between gap-4 border border-line bg-panel p-4 hover:bg-soft/50">
+            <div>
+              <span className="font-bold">{String(s.name_et ?? "")}</span>
+              <span className="text-xs text-muted font-mono ml-3">{String(s.slug ?? "")}</span>
+            </div>
+            {s.cover_image ? <span className="text-xs text-muted">Pilt: {String(s.cover_image)}</span> : null}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
