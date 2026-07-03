@@ -14,7 +14,7 @@ export default async function CampaignsAdminPage() {
       <CampaignForm />
       <div className="mt-8">
         {(campaigns ?? []).length === 0 ? (
-          <p className="text-muted py-8 text-center">Aktiivseid kampaaniaid pole veel loodud. Kasuta \u00fcleval vormi esimese kampaania lisamiseks.</p>
+          <p className="text-muted py-8 text-center">Aktiivseid kampaaniaid pole veel loodud. Kasuta üleval vormi esimese kampaania lisamiseks.</p>
         ) : (
           <div className="grid gap-3">
               {(campaigns ?? []).map((c: Record<string, unknown>) => {

@@ -5,6 +5,7 @@ import { ProductGrid } from "@/components/store/ProductGrid";
 import { NewsletterSection } from "@/components/store/NewsletterSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { t } from "@/lib/translations";
+import { getHomepageHero } from "@/lib/homepage";
 import { getNewProducts, getSaleProducts, getUpcomingProducts, getActiveProducts, isOnSale, type Product } from "@/lib/data";
 
 export const revalidate = 3600;
@@ -14,11 +15,15 @@ function mapProduct(p: Product) {
   return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, isOnSale: onSale, salePercent: onSale && p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0 };
 }
 
-export default function HomePage() {
+export default async function HomePage() {
   const newBooks = getNewProducts(10).map(mapProduct);
   const campaignBooks = getSaleProducts().slice(0, 5).map(mapProduct);
   const upcomingBooks = getUpcomingProducts().slice(0, 5).map(mapProduct);
   const discountBooks = getActiveProducts().filter(p => isOnSale(p)).slice(5, 10).map(mapProduct);
+  const heroConfig = await getHomepageHero();
+  const heroHeading = heroConfig?.heading || t.home.hero_title;
+  const heroSubtext = heroConfig?.subtext || "Suur valik ilukirjandust, lasteraamatuid, ajaloo- ja praktilisi teoseid.";
+  const showSearch = heroConfig?.showSearch !== false;
 
   return (
     <LayoutFull>
@@ -28,14 +33,16 @@ export default function HomePage() {
           <div className="grid grid-cols-[.92fr_1.08fr] gap-[34px] items-stretch max-[1120px]:grid-cols-1">
             <div className="min-h-[520px] flex flex-col justify-center py-[28px] px-[28px] max-[1120px]:min-h-0">
               <div>
-                <h1 className="font-heading text-[clamp(56px,6vw,71px)] leading-[0.94] max-w-[680px]">{t.home.hero_title}</h1>
-                <p className="mt-[14px] max-w-[640px] text-muted text-[17px] leading-[1.4]">Suur valik ilukirjandust, lasteraamatuid, ajaloo- ja praktilisi teoseid.</p>
+                <h1 className="font-heading text-[clamp(56px,6vw,71px)] leading-[0.94] max-w-[680px]">{heroHeading}</h1>
+                <p className="mt-[14px] max-w-[640px] text-muted text-[17px] leading-[1.4]">{heroSubtext}</p>
+                {showSearch && (
                 <form action="/raamatud" method="GET" className="mt-[56px] grid grid-cols-[1fr_auto] max-w-[640px] border border-line bg-panel filter drop-shadow-[4px_8px_16px_rgba(36,26,16,0.12)] overflow-hidden max-[760px]:grid-cols-1">
                   <input name="q" type="search" placeholder="Otsi pealkirja, autorit või kategooriat" autoComplete="off" className="min-w-0 h-[58px] bg-transparent px-6 outline-none max-[760px]:h-[54px]" />
                   <button type="submit" aria-label="Otsi" className="w-[58px] h-[58px] bg-transparent text-ink grid place-items-center hover:text-accent transition-colors max-[760px]:w-full max-[760px]:h-[48px]">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                   </button>
                 </form>
+                )}
               </div>
             </div>
 

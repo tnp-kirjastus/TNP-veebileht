@@ -25,7 +25,7 @@ export async function bulkEditProducts(_state: { error?: string; result?: Record
 
   const { ids, action, value } = parsed.data;
   const idList = ids.split(",").map((id) => id.trim()).filter(Boolean);
-  if (idList.length === 0) return { error: "Vali \u00fcks v\u00f5i enam toodet." };
+  if (idList.length === 0) return { error: "Vali üks või enam toodet." };
 
   const db = createAdminClient();
   const batchId = crypto.randomUUID();

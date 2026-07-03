@@ -80,8 +80,8 @@ async function main() {
   const { data: categories } = await db.schema("commerce").from("categories").select("name_et,slug").order("sort_order");
   console.log(`  Fetched ${categories?.length ?? 0} categories`);
 
-  // 3. Series
-  const { data: series } = await db.schema("commerce").from("series").select("name_et,slug");
+  // 3. Series (from content.series where FK references)
+  const { data: series } = await db.schema("content").from("series").select("name_et,slug");
   console.log(`  Fetched ${series?.length ?? 0} series`);
 
   // 4. People
