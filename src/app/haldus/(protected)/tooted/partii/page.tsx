@@ -30,8 +30,8 @@ const actionLabels: Record<BulkAction, string> = {
   set_stock: "M\u00e4\u00e4ra laoseis",
   adjust_stock: "Muuda laoseisu (+/-)",
   set_origin: "M\u00e4\u00e4ra p\u00e4ritolu",
-  set_featured: "Lisa esilet\u00f5stetuks",
-  clear_featured: "Eemalda esilet\u00f5stetud",
+  set_featured: "Lisa esiletõstetuks",
+  clear_featured: "Eemalda esiletõstetud",
 };
 
 export default function BulkEditPage() {
@@ -80,7 +80,7 @@ export default function BulkEditPage() {
     <>
       <AdminPageHeader
         title="Partii muutmine"
-        description={`Vali tooted ja rakenda \u00fchne muudatus. ${selectedIds.size} toodet valitud.`}
+        description={`Vali tooted ja rakenda ühne muudatus. ${selectedIds.size} toodet valitud.`}
         breadcrumbs={[{ label: "\u00dclevaade", href: "/haldus" }, { label: "Tooted", href: "/haldus/tooted" }, { label: "Partii muutmine" }]}
       />
 
@@ -106,7 +106,7 @@ export default function BulkEditPage() {
               </select>
             ) : (
               <input type="number" step="0.01" value={actionValue} onChange={(e) => setActionValue(e.target.value)}
-                placeholder={selectedAction === "adjust_stock" ? "+5 v\u00f5i -3" : "0"}
+                placeholder={selectedAction === "adjust_stock" ? "+5 või -3" : "0"}
                 className="h-11 border border-line bg-paper px-3 text-sm w-40" />
             )}
           </div>
@@ -117,14 +117,14 @@ export default function BulkEditPage() {
         </button>
         <button type="button" onClick={() => setSelectedIds(new Set())} disabled={selectedIds.size === 0}
           className="h-11 px-4 border border-line font-bold text-sm text-muted hover:text-ink disabled:opacity-30">
-          T\u00fchista valik
+          Tühista valik
         </button>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
         <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") doSearch(search); }}
-          placeholder="Otsi tooteid pealkirja v\u00f5i ISBN-i j\u00e4rgi\u2026"
+          placeholder="Otsi tooteid pealkirja või ISBN-i järgi\u2026"
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
         <button type="button" onClick={() => doSearch(search)} disabled={loading}
           className="h-11 px-5 bg-ink text-white text-sm font-bold hover:bg-ink/80 disabled:opacity-50">
@@ -185,7 +185,7 @@ export default function BulkEditPage() {
               <input type="hidden" name="action" value={selectedAction} />
               <input type="hidden" name="value" value={actionValue} />
               <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowConfirm(false)} className="px-5 py-2.5 border border-line text-sm font-bold hover:bg-soft">T\u00fchista</button>
+                <button type="button" onClick={() => setShowConfirm(false)} className="px-5 py-2.5 border border-line text-sm font-bold hover:bg-soft">Tühista</button>
                 <button type="submit" disabled={pending} className="px-5 py-2.5 bg-ink text-white text-sm font-bold hover:bg-ink/80 disabled:opacity-50">
                   {pending ? "Rakendan\u2026" : `Rakenda ${selectedIds.size} tootele`}
                 </button>

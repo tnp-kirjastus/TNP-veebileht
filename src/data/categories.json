@@ -1,94 +1,126 @@
 [
-  {
-    "name": "Eesti mitteilukirjandus",
-    "slug": "eesti-mitteilukirjandus"
-  },
-  {
-    "name": "Elulood",
-    "slug": "elulood"
-  },
-  {
-    "name": "Välismaa mitteilukirjandus",
-    "slug": "valismaa-mitteilukirjandus"
-  },
-  {
-    "name": "Ajalugu",
-    "slug": "ajalugu"
-  },
-  {
-    "name": "Eesti ilukirjandus",
-    "slug": "eesti-ilukirjandus"
-  },
-  {
-    "name": "Välismaa ilukirjandus",
-    "slug": "valismaa-ilukirjandus"
-  },
-  {
-    "name": "Käsiraamatud",
-    "slug": "kasiraamatud"
-  },
-  {
-    "name": "Laste- ja noorteraamatud",
-    "slug": "laste-ja-noorteraamatud"
-  },
-  {
-    "name": "Huumor",
-    "slug": "huumor"
-  },
-  {
-    "name": "Kinkeraamatud",
-    "slug": "kinkeraamatud"
-  },
-  {
-    "name": "Teatmeteosed",
-    "slug": "teatmeteosed"
-  },
-  {
-    "name": "Äriraamatud",
-    "slug": "ariraamatud"
-  },
-  {
-    "name": "välismaa mitteilukirjandus",
-    "slug": "valismaa-mitteilukirjandus"
-  },
-  {
-    "name": "Tänapäeva noorsooromaan",
-    "slug": "tanapaeva-noorsooromaan"
-  },
-  {
-    "name": "Säravad naised",
-    "slug": "saravad-naised"
-  },
-  {
-    "name": "Agatha Raisin",
-    "slug": "agatha-raisin"
-  },
-  {
-    "name": "Bodensteini ja Kirchhoffi lood",
-    "slug": "bodensteini-ja-kirchhoffi-lood"
-  },
-  {
-    "name": "Leskede klubi",
-    "slug": "leskede-klubi"
-  },
-  {
-    "name": "Punane raamat",
-    "slug": "punane-raamat"
-  },
-  {
-    "name": "Inspektor Morse'i juhtumid",
-    "slug": "inspektor-morsei-juhtumid"
-  },
-  {
-    "name": "Prantsuse köide",
-    "slug": "prantsuse-koide"
-  },
-  {
-    "name": "Looduse lood",
-    "slug": "looduse-lood"
-  },
-  {
-    "name": "välismaa ilukirjandus",
-    "slug": "valismaa-ilukirjandus"
-  }
+	{
+		"name": "Ajalugu ja poliitika",
+		"slug": "ajalugu-ja-poliitika"
+	},
+	{
+		"name": "Ajaviitekirjandus",
+		"slug": "ajaviitekirjandus"
+	},
+	{
+		"name": "Ilukirjandus",
+		"slug": "laste-ilukirjandus"
+	},
+	{
+		"name": "Teatmeteosed",
+		"slug": "teatmeteosed"
+	},
+	{
+		"name": "Psühholoogia",
+		"slug": "psuhholoogia"
+	},
+	{
+		"name": "Käsitöö",
+		"slug": "kasitoo"
+	},
+	{
+		"name": "Elulood ja memuaarid",
+		"slug": "elulood-ja-memuaarid"
+	},
+	{
+		"name": "Kaasaegne ilukirjandus",
+		"slug": "kaasaegne-ilukirjandus"
+	},
+	{
+		"name": "Teatmekirjandus",
+		"slug": "laste-teatmekirjandus"
+	},
+	{
+		"name": "Teater, muusika, film",
+		"slug": "teater-muusika-film"
+	},
+	{
+		"name": "Suhted ja perekond",
+		"slug": "suhted-ja-perekond"
+	},
+	{
+		"name": "Sport",
+		"slug": "sport"
+	},
+	{
+		"name": "Ilukirjandus",
+		"slug": "ilukirjandus"
+	},
+	{
+		"name": "Põnevus ja krimi",
+		"slug": "ponevus-ja-krimi"
+	},
+	{
+		"name": "Lastekirjanduskeskus soovitab",
+		"slug": "lastekirjanduskeskus-soovitab"
+	},
+	{
+		"name": "Kirjandus",
+		"slug": "kirjandus"
+	},
+	{
+		"name": "Tervis",
+		"slug": "tervis"
+	},
+	{
+		"name": "Reisimine",
+		"slug": "reisimine"
+	},
+	{
+		"name": "Lasteraamatud",
+		"slug": "lasteraamatud"
+	},
+	{
+		"name": "Ulme ja fantaasia",
+		"slug": "ulme-ja-fantaasia"
+	},
+	{
+		"name": "Lemmikloomad",
+		"slug": "lemmikloomad"
+	},
+	{
+		"name": "Kultuur",
+		"slug": "kultuur"
+	},
+	{
+		"name": "Noortekirjandus",
+		"slug": "noortekirjandus"
+	},
+	{
+		"name": "Varia",
+		"slug": "varia"
+	},
+	{
+		"name": "Loodus",
+		"slug": "loodus"
+	},
+	{
+		"name": "Luule",
+		"slug": "luule"
+	},
+	{
+		"name": "Keha ja hing",
+		"slug": "keha-ja-hing"
+	},
+	{
+		"name": "Huumor",
+		"slug": "huumor"
+	},
+	{
+		"name": "Hobid",
+		"slug": "hobid"
+	},
+	{
+		"name": "Kinkeraamatud",
+		"slug": "kinkeraamatud"
+	},
+	{
+		"name": "Arhiiv / läbi müüdud",
+		"slug": "arhiiv"
+	}
 ]

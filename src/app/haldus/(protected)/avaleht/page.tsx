@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useActionState } from "react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { FormField } from "@/components/admin/FormField";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { saveHeroSettings, getHomepageSettings } from "@/app/haldus/homepage-actions";
 
 interface HeroConfig {
   versionName: string;
@@ -41,24 +43,28 @@ interface Section {
   isVisible: boolean;
 }
 
+const defaultHero: HeroConfig = {
+  versionName: "",
+  eyebrow: "",
+  heading: "Raamatud, mis kutsuvad edasi lugema.",
+  subtext: "Suur valik ilukirjandust, lasteraamatuid, ajaloo- ja praktilisi teoseid.",
+  ctaLabel: "",
+  ctaHref: "",
+  secondaryLabel: "",
+  secondaryHref: "",
+  desktopImage: "",
+  mobileImage: "",
+  bgClass: "bg-[#f2eee6]",
+  showSearch: true,
+  isPublished: false,
+};
+
 export default function HomepageAdminPage() {
   const [tab, setTab] = useState<"hero" | "cards" | "sections">("hero");
+  const [loaded, setLoaded] = useState(false);
 
-  const [hero, setHero] = useState<HeroConfig>({
-    versionName: "",
-    eyebrow: "",
-    heading: "",
-    subtext: "",
-    ctaLabel: "",
-    ctaHref: "",
-    secondaryLabel: "",
-    secondaryHref: "",
-    desktopImage: "",
-    mobileImage: "",
-    bgClass: "bg-[#f2eee6]",
-    showSearch: true,
-    isPublished: false,
-  });
+  const [hero, setHero] = useState<HeroConfig>(defaultHero);
+  const [state, action, pending] = useActionState(saveHeroSettings, undefined);
 
   const [cards, setCards] = useState<HeroCard[]>([
     { id: "1", label: "Ajalugu", heading: "Eesti ajaloo suurteosed", description: "Avasta meie ajalooraamatute kollektsiooni.", linkHref: "/raamatud?category=ajalugu", desktopImage: "", mobileImage: "", position: 1 },
@@ -71,6 +77,21 @@ export default function HomepageAdminPage() {
     { id: "2", heading: "Ilmumas", source: "upcoming", productCount: 4, viewAllHref: "/raamatud", isVisible: true },
     { id: "3", heading: "Pakkumised", source: "sale", productCount: 4, viewAllHref: "/pakkumised", isVisible: true },
   ]);
+
+  useEffect(() => {
+    getHomepageSettings().then((data) => {
+      if (data.hero) {
+        setHero((prev) => ({ ...prev, ...data.hero }));
+      }
+      setLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (state?.success) {
+      setHero((prev) => ({ ...prev, isPublished: true }));
+    }
+  }, [state]);
 
   function updateHeroField(field: keyof HeroConfig, value: string | boolean) {
     setHero((prev) => ({ ...prev, [field]: value }));
@@ -88,68 +109,65 @@ export default function HomepageAdminPage() {
     <>
       <AdminPageHeader
         title="Avalehe haldus"
-        description="Hero ala, esiletõstetud kaartide ja kodulehe sektsioonide redigeerimine."
-        breadcrumbs={[{ label: "Ülevaade", href: "/haldus" }, { label: "Avaleht" }]}
+        description="Päise ala, esilet\u00f5stetud kaartide ja kodulehe sektsioonide redigeerimine."
+        breadcrumbs={[{ label: "\u00dclevaade", href: "/haldus" }, { label: "Avaleht" }]}
       />
 
       <div className="flex border-b border-line mb-6">
         {(["hero", "cards", "sections"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${tab === t ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-            {t === "hero" ? "Hero ala" : t === "cards" ? "Esiletõstetud kaardid" : "Sektsioonid"}
+            {t === "hero" ? "Päise haldus" : t === "cards" ? "Esilet\u00f5stetud kaardid" : "Sektsioonid"}
           </button>
         ))}
       </div>
 
-      {/* Hero editor */}
+      {/* Päise editor */}
       {tab === "hero" && (
         <div className="max-w-3xl grid gap-5">
           <div className="flex items-center gap-3 mb-2">
             <StatusBadge variant={hero.isPublished ? "published" : "draft"} />
-            <label className="flex items-center gap-2 text-sm font-bold">
-              <input type="checkbox" checked={hero.isPublished} onChange={(e) => updateHeroField("isPublished", e.target.checked)} className="accent-ink h-4 w-4" />
-              Avaldatud
-            </label>
+            <span className="text-sm text-muted">{!loaded ? "Laen\u2026" : hero.isPublished ? "Avaldatud" : "Mustand"}</span>
           </div>
 
           <FormField label="Versiooni nimi">
-            <input value={hero.versionName} onChange={(e) => updateHeroField("versionName", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Nt: Suvine kampaania 2026" />
+            <input name="versionName" value={hero.versionName} onChange={(e) => updateHeroField("versionName", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Nt: Suvine kampaania 2026" />
           </FormField>
 
           <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
             <FormField label="Eelpealkiri (eyebrow)">
-              <input value={hero.eyebrow} onChange={(e) => updateHeroField("eyebrow", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Nt: Uus kataloog" />
+              <input name="eyebrow" value={hero.eyebrow} onChange={(e) => updateHeroField("eyebrow", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Nt: Uus kataloog" />
             </FormField>
             <FormField label="Pealkiri">
-              <input value={hero.heading} onChange={(e) => updateHeroField("heading", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Peamine pealkiri" />
+              <input name="heading" value={hero.heading} onChange={(e) => updateHeroField("heading", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Peamine pealkiri" />
             </FormField>
           </div>
 
           <FormField label="Alatekst">
-            <textarea value={hero.subtext} onChange={(e) => updateHeroField("subtext", e.target.value)} rows={3} className="border border-line bg-paper p-3 text-sm font-normal" />
+            <textarea name="subtext" value={hero.subtext} onChange={(e) => updateHeroField("subtext", e.target.value)} rows={3} className="border border-line bg-paper p-3 text-sm font-normal" />
           </FormField>
 
           <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
             <FormField label="Peamine nupp (silt)">
-              <input value={hero.ctaLabel} onChange={(e) => updateHeroField("ctaLabel", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Nt: Vaata kataloogi" />
+              <input name="ctaLabel" value={hero.ctaLabel} onChange={(e) => updateHeroField("ctaLabel", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Nt: Vaata kataloogi" />
             </FormField>
             <FormField label="Peamine nupp (URL)">
-              <input value={hero.ctaHref} onChange={(e) => updateHeroField("ctaHref", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="/raamatud" />
+              <input name="ctaHref" value={hero.ctaHref} onChange={(e) => updateHeroField("ctaHref", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="/raamatud" />
             </FormField>
             <FormField label="Teisene nupp (silt)">
-              <input value={hero.secondaryLabel} onChange={(e) => updateHeroField("secondaryLabel", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
+              <input name="secondaryLabel" value={hero.secondaryLabel} onChange={(e) => updateHeroField("secondaryLabel", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
             </FormField>
             <FormField label="Teisene nupp (URL)">
-              <input value={hero.secondaryHref} onChange={(e) => updateHeroField("secondaryHref", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
+              <input name="secondaryHref" value={hero.secondaryHref} onChange={(e) => updateHeroField("secondaryHref", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
             </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
             <FormField label="Lauaarvuti pilt (failinimi)">
-              <input value={hero.desktopImage} onChange={(e) => updateHeroField("desktopImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
+              <input name="desktopImage" value={hero.desktopImage} onChange={(e) => updateHeroField("desktopImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
             </FormField>
             <FormField label="Mobiili pilt (failinimi)">
-              <input value={hero.mobileImage} onChange={(e) => updateHeroField("mobileImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
+              <input name="mobileImage" value={hero.mobileImage} onChange={(e) => updateHeroField("mobileImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
             </FormField>
           </div>
 
@@ -158,9 +176,27 @@ export default function HomepageAdminPage() {
             Näita otsingukasti
           </label>
 
-          <button className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
-            Salvesta hero seaded
-          </button>
+          {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
+          {state?.success && <p className="text-leaf text-sm font-bold">Päise salvestatud!</p>}
+
+          <form action={action} className="grid gap-5">
+            <input type="hidden" name="versionName" value={hero.versionName} />
+            <input type="hidden" name="eyebrow" value={hero.eyebrow} />
+            <input type="hidden" name="heading" value={hero.heading} />
+            <input type="hidden" name="subtext" value={hero.subtext} />
+            <input type="hidden" name="ctaLabel" value={hero.ctaLabel} />
+            <input type="hidden" name="ctaHref" value={hero.ctaHref} />
+            <input type="hidden" name="secondaryLabel" value={hero.secondaryLabel} />
+            <input type="hidden" name="secondaryHref" value={hero.secondaryHref} />
+            <input type="hidden" name="desktopImage" value={hero.desktopImage} />
+            <input type="hidden" name="mobileImage" value={hero.mobileImage} />
+            <input type="hidden" name="bgClass" value={hero.bgClass} />
+            <input type="hidden" name="showSearch" value={String(hero.showSearch)} />
+            <input type="hidden" name="isPublished" value="true" />
+            <button type="submit" disabled={pending} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+              {pending ? "Salvestan\u2026" : "Salvesta p\u00e4ise seaded"}
+            </button>
+          </form>
         </div>
       )}
 
@@ -215,7 +251,7 @@ export default function HomepageAdminPage() {
                 <h3 className="font-heading text-lg">{section.heading || "Uus sektsioon"}</h3>
                 <label className="flex items-center gap-2 text-sm font-bold">
                   <input type="checkbox" checked={section.isVisible} onChange={(e) => updateSection(section.id, "isVisible", e.target.checked)} className="accent-ink h-4 w-4" />
-                  Nähtav
+                  N\u00e4htav
                 </label>
               </div>
               <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-1">
@@ -228,7 +264,7 @@ export default function HomepageAdminPage() {
                     <option value="upcoming">Ilmumas</option>
                     <option value="sale">Soodustusega</option>
                     <option value="category">Kategooriast</option>
-                    <option value="manual">Käsitsi valitud</option>
+                    <option value="manual">K\u00e4sitsi valitud</option>
                   </select>
                 </FormField>
                 <FormField label="Toodete arv">

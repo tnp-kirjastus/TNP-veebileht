@@ -138,21 +138,21 @@ export default async function ProductsAdminPage({
       </div>
 
       <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">
-        <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i v\u00f5i URL-i nime j\u00e4rgi\u2026"
+        <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i või URL-i nime järgi\u2026"
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
         <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
-          <option value="">K\u00f5ik olekud</option>
+          <option value="">Kõik olekud</option>
           <option value="sale">Soodus</option>
         </select>
         <select name="origin" defaultValue={originFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
-          <option value="">K\u00f5ik p\u00e4ritolud</option>
+          <option value="">Kõik päritolud</option>
           <option value="estonian">Eesti</option>
           <option value="foreign">V\u00e4lismaine</option>
         </select>
         <input type="hidden" name="tab" value={activeTab} />
         <button type="submit" className="h-11 px-5 border border-line bg-soft text-sm font-bold hover:bg-line/30">Filtreeri</button>
         {(query || statusFilter || originFilter) && (
-          <Link href={buildHref({ tab: activeTab, page: "1", status: "", origin: "", q: "" })} className="h-11 px-4 inline-flex items-center text-sm text-muted hover:text-ink font-bold">T\u00fchista</Link>
+          <Link href={buildHref({ tab: activeTab, page: "1", status: "", origin: "", q: "" })} className="h-11 px-4 inline-flex items-center text-sm text-muted hover:text-ink font-bold">Tühista</Link>
         )}
       </form>
 
@@ -187,7 +187,7 @@ export default async function ProductsAdminPage({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-6 gap-4 flex-wrap">
-          <p className="text-xs text-muted">Lehek\u00fclg {page} / {totalPages} ({totalCount} toodet)</p>
+          <p className="text-xs text-muted">Lehekülg {page} / {totalPages} ({totalCount} toodet)</p>
           <div className="flex gap-1">
             {page > 1 && <Link href={buildHref({ page: String(page - 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">\u2190 Eelmine</Link>}
             {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
