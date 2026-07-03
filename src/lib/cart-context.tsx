@@ -50,12 +50,19 @@ function saveToStorage(items: CartItem[]) {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(loadFromStorage);
+  const [items, setItems] = useState<CartItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const inited = useRef(false);
 
   useEffect(() => {
-    if (inited.current) return;
+    const stored = loadFromStorage();
+    if (stored.length > 0) setItems(stored);
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (inited.current || !hydrated) return;
     inited.current = true;
     const controller = new AbortController();
     fetch("/api/cart", { signal: controller.signal })
@@ -90,11 +97,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     slug: string; title: string; author: string;
     price: number; salePrice?: number | null; coverImage?: string | null;
   }) => {
+    let newQuantity = 1;
     setItems(prev => {
       const existing = prev.find(i => i.slug === product.slug);
       let next: CartItem[];
       if (existing) {
-        next = prev.map(i => i.slug === product.slug ? { ...i, quantity: i.quantity + 1 } : i);
+        newQuantity = existing.quantity + 1;
+        next = prev.map(i => i.slug === product.slug ? { ...i, quantity: newQuantity } : i);
       } else {
         next = [...prev, {
           slug: product.slug, title: product.title, author: product.author,
@@ -105,11 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       saveToStorage(next);
       return next;
     });
-    setItems(prev => {
-      const existing = prev.find(i => i.slug === product.slug);
-      void sync(product.slug, (existing?.quantity ?? 0) + 1);
-      return prev;
-    });
+    void sync(product.slug, newQuantity);
   }, [sync]);
 
   const removeItem = useCallback((slug: string) => {

@@ -71,16 +71,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Ostukorv muutus. Kontrolli koguseid ja proovi uuesti." }, { status: 409 });
       }
       const db = createAdminClient();
-      const { data: order, error } = await db.schema("commerce").rpc("create_order_from_cart", { p_session_id: sessionId, p_customer: parsed.data, p_idempotency_key: parsed.data.idempotencyKey });
+      const subtotal = cart.items.reduce((sum, item) => sum + item.effectivePrice * item.quantity, 0);
+      const shippingCost = calculateShippingCost(parsed.data.shipping_method, subtotal);
+      const orderTotal = subtotal + shippingCost;
+      const { data: order, error } = await db.schema("commerce").rpc("create_order_from_cart", {
+        p_session_id: sessionId, p_customer: parsed.data, p_idempotency_key: parsed.data.idempotencyKey,
+        p_shipping_cost: shippingCost, p_total: orderTotal,
+      });
       if (!error && order) {
         try {
-          const subtotal = Number(order.total);
-          const shippingCost = calculateShippingCost(parsed.data.shipping_method, subtotal);
-          const orderTotal = subtotal + shippingCost;
-          const payment = await createPayment({ id: order.order_id, orderNumber: order.order_number, totalCents: euroDecimalToCents(orderTotal.toFixed(2)), currency: "EUR", confirmationToken: order.confirmation_token, customer: { name: parsed.data.name, email: parsed.data.email, country: "ee", locale: "et" }, ip: clientKey === "unknown" ? "127.0.0.1" : clientKey });
+          const payment = await createPayment({ id: order.order_id, orderNumber: order.order_number, totalCents: euroDecimalToCents(String(orderTotal)), currency: "EUR", confirmationToken: order.confirmation_token, customer: { name: parsed.data.name, email: parsed.data.email, country: "ee", locale: "et" }, ip: clientKey === "unknown" ? "127.0.0.1" : clientKey });
           await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", order.order_id);
           return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token });
-        } catch {
+        } catch (err) {
+          console.error("maksekeskus_create_failed", err instanceof Error ? err.message : String(err));
           return NextResponse.json({ error: "Makse algatamine ebaõnnestus. Proovi uuesti." }, { status: 502 });
         }
       }
@@ -154,7 +158,8 @@ export async function POST(request: Request) {
       ip: clientKey === "unknown" ? "127.0.0.1" : clientKey,
     });
     return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken });
-  } catch {
+  } catch (err) {
+    console.error("maksekeskus_create_failed", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Makse algatamine ebaõnnestus. Proovi uuesti." }, { status: 502 });
   }
 }

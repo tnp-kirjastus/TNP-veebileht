@@ -70,11 +70,17 @@ export async function createPayment(order: PaymentOrder) {
         transaction_url: {
           return_url: new URL("/api/maksekeskus/return", base).toString(),
           cancel_url: new URL("/api/maksekeskus/return", base).toString(),
-          notification_url: new URL("/api/maksekeskus/webhook", base).toString(),
+          notifications_url: new URL("/api/maksekeskus/webhook", base).toString(),
         },
       }),
     });
-    if (!response.ok) throw new Error(`payment_create_${response.status}`);
+    if (!response.ok) {
+      let body = "";
+      try { body = await response.text(); } catch { /* ignore */ }
+      const preview = body.length > 500 ? body.slice(0, 500) + "..." : body;
+      console.error("maksekeskus_create_error", { status: response.status, body: preview });
+      throw new Error(`payment_create_${response.status}`);
+    }
     const result = transactionResponse.parse(await response.json());
     const redirect = result.payment_methods.other.find((method) => method.name === "redirect");
     if (!redirect) throw new Error("payment_redirect_missing");
