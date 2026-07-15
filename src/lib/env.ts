@@ -14,6 +14,8 @@ const schema = z.object({
   CRON_SECRET: optionalSecret,
   REVALIDATE_SECRET: optionalSecret,
   RESEND_API_KEY: optionalSecret,
+  MAKSEKESKUS_ENV: z.enum(["live", "test"]).default("live"),
+  MAKSEKESKUS_API_BASE: z.url().optional(),
   MAKSEKESKUS_SHOP_ID: optionalSecret,
   MAKSEKESKUS_SECRET: optionalSecret,
   MAKSEKESKUS_PUBLISHABLE_KEY: optionalSecret,

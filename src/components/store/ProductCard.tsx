@@ -69,7 +69,7 @@ export function ProductCard({
   return (
     <article className="relative flex flex-col h-full py-[40px] px-5 hover:bg-ink/[0.07] group min-w-0">
       {isOnSale && salePercent > 0 && (
-        <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-20">-{salePercent}%</span>
+        <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-[1]">-{salePercent}%</span>
       )}
       <div className={`${imgWidth} mx-auto`}>
         <Link

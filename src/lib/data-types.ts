@@ -16,16 +16,21 @@ export interface Product {
   origin: "estonian" | "foreign";
   is_upcoming: boolean;
   is_archived: boolean;
+  allow_preorder: boolean;
   cover_image: string | null;
   series_name: string | null;
   series_slug: string | null;
   categories: string[];
   people: Record<string, string[]>;
+  editions?: { type: string; date: string }[];
+  latest_release_date?: string;
 }
 
 export interface Category {
   name: string;
   slug: string;
+  parent?: string;
+  children?: Category[];
 }
 
 export interface Series {

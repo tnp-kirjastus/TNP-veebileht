@@ -27,6 +27,7 @@ const productSchema = z.object({
   is_upcoming: z.coerce.boolean().optional(),
   is_archived: z.coerce.boolean().optional(),
   is_featured: z.coerce.boolean().optional(),
+  allow_preorder: z.coerce.boolean().optional(),
   cover_image: z.string().trim().max(1000).optional(),
   series_id: z.string().uuid().optional(),
   category_ids: z.string().optional(),
@@ -37,6 +38,7 @@ const productSchema = z.object({
   people_illustrators: z.string().optional(),
   seo_title: z.string().trim().max(70).optional(),
   seo_description: z.string().trim().max(170).optional(),
+  editions: z.string().optional(),
   status: z.enum(["draft", "active", "upcoming", "archived"]).default("active"),
 });
 
@@ -60,6 +62,14 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   const coverImageRaw = v.cover_image?.trim();
   const coverImageFinal = coverImageRaw === "[CLEAR]" ? null : (coverImageRaw || null);
 
+  let editionsParsed: { type: string; date: string }[] = [];
+  if (v.editions) {
+    try {
+      editionsParsed = JSON.parse(v.editions);
+      editionsParsed = editionsParsed.filter((e) => e.type && e.date);
+    } catch { /* keep empty */ }
+  }
+
   const productRecord = {
     sku: v.sku,
     title_et: v.title_et,
@@ -79,8 +89,10 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     is_upcoming: v.is_upcoming ?? false,
     is_archived: v.is_archived ?? false,
     is_featured: v.is_featured ?? false,
+    allow_preorder: v.allow_preorder ?? true,
     cover_image: coverImageFinal,
     series_id: v.series_id || null,
+    editions: editionsParsed.length > 0 ? editionsParsed : null,
     updated_at: new Date().toISOString(),
   };
 
@@ -89,8 +101,8 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     : await db.schema("commerce").from("products").insert(productRecord).select("id,slug").single();
 
   if (result.error) {
-    if (result.error.code === "23505") return { error: `Unikaalne v\u00e4li on juba kasutusel (ISBN v\u00f5i URL-i nimi).` };
-    return { error: `Salvestamine eba\u00f5nnestus: ${result.error.message}` };
+    if (result.error.code === "23505") return { error: "Unikaalne v\u00e4li on juba kasutusel (ISBN v\u00f5i URL-i nimi)." };
+    return { error: "Salvestamine eba\u00f5nnestus. Proovi uuesti." };
   }
 
   const productId = result.data.id;
@@ -119,14 +131,37 @@ export async function saveProduct(_state: { error?: string; productId?: string }
 
   await db.schema("commerce").from("product_people").delete().eq("product_id", productId);
 
+  const allNames: string[] = [];
+  const roleMap = new Map<string, string[]>();
   for (const { key, role } of personRoles) {
     const names = parsePersonList(raw[key] as string);
-    for (const name of names) {
-      const { data: person } = await db.schema("people").from("people").select("id").eq("name", name).maybeSingle();
-      if (person) {
-        await db.schema("commerce").from("product_people").insert({ product_id: productId, person_id: person.id, role });
+    if (names.length > 0) {
+      for (const name of names) {
+        const roles = roleMap.get(name) ?? [];
+        roles.push(role);
+        roleMap.set(name, roles);
+      }
+      allNames.push(...names);
+    }
+  }
+
+  const personRows: { product_id: string; person_id: string; role: string }[] = [];
+  if (allNames.length > 0) {
+    const { data: people } = await db.schema("people").from("people")
+      .select("id, name")
+      .in("name", allNames);
+    const personMap = new Map(((people ?? []) as { id: string; name: string }[]).map((p) => [p.name, p.id]));
+    for (const [name, roles] of roleMap) {
+      const personId = personMap.get(name);
+      if (personId) {
+        for (const role of roles) {
+          personRows.push({ product_id: productId, person_id: personId, role });
+        }
       }
     }
+  }
+  if (personRows.length > 0) {
+    await db.schema("commerce").from("product_people").insert(personRows);
   }
 
   await audit(session.user.id, v.id ? "product.updated" : "product.created", "commerce.product", productId, {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CartProvider } from "@/lib/cart-context";
 import { CartDrawerProvider } from "@/lib/cart-drawer-context";
 import { CartDrawerWrapper } from "@/components/store/CartDrawerWrapper";
+import { AccentTheme } from "@/components/AccentTheme";
 import { siteUrl } from "@/lib/env";
 import "./globals.css";
 
@@ -15,7 +16,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="et">
-      <head><meta charSet="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /></head>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <AccentTheme />
+      </head>
       <body className="min-h-full flex flex-col">
         <a href="#main-content" className="fixed left-3 top-3 z-[100] -translate-y-24 bg-ink px-4 py-3 font-bold text-white focus:translate-y-0">Liigu põhisisu juurde</a>
         <CartProvider>

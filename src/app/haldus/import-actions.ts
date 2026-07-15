@@ -41,6 +41,18 @@ interface ImportResult {
 
 const COVER_COLUMN_ALIASES = ["cover_file", "cover_url", "Pilt", "Toote Kaanepilt"];
 
+function slugify(text: string): string {
+  const t: Record<string, string> = { "\u00f5": "o", "\u00e4": "a", "\u00f6": "o", "\u00fc": "u", "\u0161": "s", "\u017e": "z", "\u00d5": "O", "\u00c4": "A", "\u00d6": "O", "\u00dc": "U", "\u0160": "S", "\u017d": "Z" };
+  let r = String(text);
+  for (const [k, v] of Object.entries(t)) r = r.replace(new RegExp(k, "g"), v);
+  return r.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+
+function parsePipeList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return String(raw).split("|").map((s) => s.trim()).filter(Boolean);
+}
+
 interface ExistingProduct {
   id: string;
   sku: string;
@@ -50,6 +62,12 @@ interface ExistingProduct {
   sale_price: number | null;
   stock: number;
   cover_image: string | null;
+  binding: string | null;
+  pages: number | null;
+  release_date: string | null;
+  origin: string;
+  is_archived: boolean;
+  is_upcoming: boolean;
 }
 
 function findCoverColumn(mapping: Record<string, string>): string | null {
@@ -165,12 +183,18 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
   const coverCol = findCoverColumn(mapping);
 
   const db = createAdminClient();
-  const { data: existing } = await db.schema("commerce").from("products").select("id,sku,slug,title_et,price,sale_price,stock,cover_image");
+  const allExisting: ExistingProduct[] = [];
+  let eFrom = 0;
+  while (true) {
+    const { data } = await db.schema("commerce").from("products").select("id,sku,slug,title_et,price,sale_price,stock,cover_image,binding,pages,release_date,origin,is_archived,is_upcoming").range(eFrom, eFrom + 999);
+    if (!data || data.length === 0) break;
+    allExisting.push(...data as ExistingProduct[]);
+    if (data.length < 1000) break;
+    eFrom += 1000;
+  }
   const existingBySku = new Map<string, ExistingProduct>();
-  if (existing) {
-    for (const p of existing as ExistingProduct[]) {
-      if (p.sku) existingBySku.set(String(p.sku).trim().toUpperCase(), p);
-    }
+  for (const p of allExisting) {
+    if (p.sku) existingBySku.set(String(p.sku).trim().toUpperCase(), p);
   }
 
   const results: ImportResult[] = [];
@@ -195,7 +219,7 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
     const changes: Array<{ field: string; before: unknown; after: unknown }> = [];
 
     let mediaStatus: MediaStatus = "unchanged";
-    let mediaInfo: {
+    const mediaInfo: {
       sourceFile: string | null;
       width: number | null;
       height: number | null;
@@ -284,6 +308,61 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
       changes.push({ field: "title_et", before: oldTitle, after: title });
     }
 
+    const salePriceFieldC = mapping.sale_price || mapping.salePrice || null;
+    if (salePriceFieldC && row[salePriceFieldC] != null) {
+      const newSp = parseFloat(String(row[salePriceFieldC]).replace(",", "."));
+      const oldSp = existingProduct.sale_price != null ? Number(existingProduct.sale_price) : null;
+      if (!isNaN(newSp) && newSp !== oldSp) {
+        changes.push({ field: "sale_price", before: oldSp ?? "", after: newSp });
+      }
+    }
+
+    const bindingFieldC = mapping.binding || null;
+    if (bindingFieldC && row[bindingFieldC] != null) {
+      const newVal = String(row[bindingFieldC]).trim();
+      const oldVal = String(existingProduct.binding ?? "");
+      if (newVal !== oldVal) {
+        changes.push({ field: "binding", before: oldVal, after: newVal });
+      }
+    }
+
+    const pagesFieldC = mapping.pages || null;
+    if (pagesFieldC && row[pagesFieldC] != null) {
+      const newVal = parseInt(String(row[pagesFieldC]), 10);
+      const oldVal = existingProduct.pages != null ? Number(existingProduct.pages) : null;
+      if (!isNaN(newVal) && newVal !== oldVal) {
+        changes.push({ field: "pages", before: oldVal ?? "", after: newVal });
+      }
+    }
+
+    const releaseDateFieldC = mapping.release_date || mapping.releaseDate || null;
+    if (releaseDateFieldC && row[releaseDateFieldC] != null) {
+      const newVal = String(row[releaseDateFieldC]).trim();
+      const oldVal = String(existingProduct.release_date ?? "");
+      if (newVal !== oldVal) {
+        changes.push({ field: "release_date", before: oldVal, after: newVal });
+      }
+    }
+
+    const originFieldC = mapping.origin || null;
+    if (originFieldC && row[originFieldC] != null) {
+      const raw = String(row[originFieldC]).toLowerCase();
+      const newVal = raw.includes("eesti") ? "estonian" : "foreign";
+      const oldVal = String(existingProduct.origin ?? "estonian");
+      if (newVal !== oldVal) {
+        changes.push({ field: "origin", before: oldVal, after: newVal });
+      }
+    }
+
+    const isArchivedFieldC = mapping.is_archived || mapping.isArchived || null;
+    if (isArchivedFieldC && row[isArchivedFieldC] != null) {
+      const raw = String(row[isArchivedFieldC]).toLowerCase();
+      const newVal = raw === "x" || raw === "true" || raw === "yes" || raw === "jah";
+      if (newVal !== Boolean(existingProduct.is_archived)) {
+        changes.push({ field: "is_archived", before: String(existingProduct.is_archived), after: String(newVal) });
+      }
+    }
+
     if (mediaStatus === "replace" || mediaStatus === "new") {
       changes.push({ field: "cover_image", before: existingProduct.cover_image || "", after: mediaInfo.sourceFile || "(uus fail)" });
     }
@@ -327,13 +406,105 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     }
   }
 
-  const coverCol = findCoverColumn(mapping);
-  const db = createAdminClient();
-  const batchId = crypto.randomUUID();
-  let applied = 0;
-  let mediaProcessed = 0;
-  const mediaErrors: string[] = [];
-  const coverChanges: Array<{ sku: string; before: string | null; after: string | null }> = [];
+    const coverCol = findCoverColumn(mapping);
+    const db = createAdminClient();
+    const batchId = crypto.randomUUID();
+    let applied = 0;
+    let mediaProcessed = 0;
+    const mediaErrors: string[] = [];
+    const coverChanges: Array<{ sku: string; before: string | null; after: string | null }> = [];
+
+    const catField = mapping.categories || null;
+    const authorField = mapping.authors || mapping["Toote Autor"] || null;
+    const translatorField = mapping.translators || mapping["Toote T\u00f5lk"] || null;
+    const designerField = mapping.designers || mapping["Toote Disainer"] || mapping["Toote Kujundaja"] || null;
+    const illustratorField = mapping.illustrators || mapping["Toote Illustreerija"] || null;
+    const editorField = mapping.editors || mapping["Toote Toimetaja"] || null;
+    const seriesField = mapping.series || mapping["Toote Sari"] || null;
+    const salePriceField = mapping.sale_price || mapping.salePrice || null;
+    const bindingField = mapping.binding || null;
+    const pagesField = mapping.pages || null;
+    const releaseDateField = mapping.release_date || mapping.releaseDate || null;
+    const originField = mapping.origin || null;
+    const isArchivedField = mapping.is_archived || mapping.isArchived || null;
+    const saleStartField = mapping.sale_start || mapping.saleStart || null;
+    const saleEndField = mapping.sale_end || mapping.saleEnd || null;
+
+    // Pre-fetch taxonomy lookup maps
+    const catLookup = new Map<string, string>();
+    const seriesLookup = new Map<string, string>();
+    const personLookup = new Map<string, string>();
+
+    const fieldExists = catField || authorField || translatorField || designerField || illustratorField || editorField || seriesField;
+
+    if (fieldExists) {
+      const { data: allCats } = await db.schema("commerce").from("categories").select("id, name_et");
+      if (allCats) for (const c of allCats as Record<string, unknown>[]) catLookup.set(String(c.name_et ?? ""), String(c.id));
+
+      const sAll = [];
+      let sFrom = 0;
+      while (true) {
+        const { data } = await db.schema("content").from("series").select("id, name_et").range(sFrom, sFrom + 999);
+        if (!data || data.length === 0) break;
+        sAll.push(...data as Record<string, unknown>[]);
+        if (data.length < 1000) break;
+        sFrom += 1000;
+      }
+      for (const s of sAll) seriesLookup.set(String(s.name_et ?? ""), String(s.id));
+
+      const pAll = [];
+      let pFrom = 0;
+      while (true) {
+        const { data } = await db.schema("people").from("people").select("id, name, slug").range(pFrom, pFrom + 999);
+        if (!data || data.length === 0) break;
+        pAll.push(...data as Record<string, unknown>[]);
+        if (data.length < 1000) break;
+        pFrom += 1000;
+      }
+      for (const p of pAll) {
+        personLookup.set(String(p.name ?? ""), String(p.id));
+        personLookup.set(String(p.slug ?? ""), String(p.id));
+      }
+    }
+
+    // Pre-fetch existing product_people to avoid duplicates
+    const existingPp = new Map<string, Set<string>>();
+    if (authorField || translatorField || designerField || illustratorField || editorField) {
+      const ppAll = [];
+      let ppFrom = 0;
+      while (true) {
+        const { data } = await db.schema("commerce").from("product_people").select("product_id, person_id, role").range(ppFrom, ppFrom + 999);
+        if (!data || data.length === 0) break;
+        ppAll.push(...data as Record<string, unknown>[]);
+        if (data.length < 1000) break;
+        ppFrom += 1000;
+      }
+      for (const pp of ppAll) {
+        const key = `${pp.product_id}:${pp.person_id}:${pp.role}`;
+        if (!existingPp.has(String(pp.product_id))) existingPp.set(String(pp.product_id), new Set());
+        existingPp.get(String(pp.product_id))!.add(key);
+      }
+    }
+
+    // Pre-fetch existing product_categories to avoid duplicates
+    const existingPc = new Map<string, Set<string>>();
+    if (catField) {
+      const pcAll = [];
+      let pcFrom = 0;
+      while (true) {
+        const { data } = await db.schema("commerce").from("product_categories").select("product_id, category_id").range(pcFrom, pcFrom + 999);
+        if (!data || data.length === 0) break;
+        pcAll.push(...data as Record<string, unknown>[]);
+        if (data.length < 1000) break;
+        pcFrom += 1000;
+      }
+      for (const pc of pcAll) {
+        if (!existingPc.has(String(pc.product_id))) existingPc.set(String(pc.product_id), new Set());
+        existingPc.get(String(pc.product_id))!.add(String(pc.category_id));
+      }
+    }
+
+    const productIdsBySku = new Map<string, string>();
 
   for (const row of rows) {
     const sku = String(row[skuField] ?? "").trim();
@@ -364,6 +535,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     }
 
     try {
+      let productId: string;
       if (existing) {
         const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
         if (!isNaN(price)) update.price = price;
@@ -371,24 +543,185 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         if (description) update.description_et = sanitizeRichText(description);
         if (newCoverKey) update.cover_image = newCoverKey;
 
+        if (salePriceField && row[salePriceField] != null) {
+          const sp = parseFloat(String(row[salePriceField]).replace(",", "."));
+          if (!isNaN(sp)) update.sale_price = sp;
+        }
+        if (saleStartField && row[saleStartField] != null) {
+          const v = String(row[saleStartField]).trim();
+          if (v) update.sale_start = v;
+        }
+        if (saleEndField && row[saleEndField] != null) {
+          const v = String(row[saleEndField]).trim();
+          if (v) update.sale_end = v;
+        }
+        if (bindingField && row[bindingField] != null) {
+          const v = String(row[bindingField]).trim();
+          if (v) update.binding = v;
+        }
+        if (pagesField && row[pagesField] != null) {
+          const pn = parseInt(String(row[pagesField]), 10);
+          if (!isNaN(pn)) update.pages = pn;
+        }
+        if (releaseDateField && row[releaseDateField] != null) {
+          const v = String(row[releaseDateField]).trim();
+          if (v) update.release_date = v;
+        }
+        if (originField && row[originField] != null) {
+          const v = String(row[originField]).toLowerCase();
+          if (v.includes("eesti")) update.origin = "estonian";
+          else if (v) update.origin = "foreign";
+        }
+        if (isArchivedField && row[isArchivedField] != null) {
+          const v = String(row[isArchivedField]).toLowerCase();
+          update.is_archived = v === "x" || v === "true" || v === "yes" || v === "jah";
+        }
+
+        // Series
+        if (seriesField && row[seriesField] != null) {
+          const seriesName = String(row[seriesField]).trim();
+          if (seriesName) {
+            let sid = seriesLookup.get(seriesName);
+            if (!sid) {
+              const seriesSlug = slugify(seriesName);
+              const { data: newSeries } = await db.schema("content").from("series")
+                .upsert({ slug: seriesSlug, name_et: seriesName }, { onConflict: "slug" })
+                .select("id").single();
+              if (newSeries) { sid = String(newSeries.id); seriesLookup.set(seriesName, sid); }
+            }
+            update.series_id = sid || null;
+          }
+        }
+
         const { error: updErr } = await db.schema("commerce").from("products").update(update).eq("id", existing.id);
-        if (updErr) throw new Error(`DB uuendamine ebaõnnestus: ${updErr.message}`);
+        if (updErr) throw new Error(`DB uuendamine eba\u00f5nnestus: ${updErr.message}`);
+        productId = existing.id;
       } else {
-        const insert = {
+        let seriesId: string | null = null;
+        if (seriesField && row[seriesField] != null) {
+          const seriesName = String(row[seriesField]).trim();
+          if (seriesName) {
+            let sid = seriesLookup.get(seriesName);
+            if (!sid) {
+              const seriesSlug = slugify(seriesName);
+              const { data: newSeries } = await db.schema("content").from("series")
+                .upsert({ slug: seriesSlug, name_et: seriesName }, { onConflict: "slug" })
+                .select("id").single();
+              if (newSeries) { sid = String(newSeries.id); seriesLookup.set(seriesName, sid); }
+            }
+            seriesId = sid || null;
+          }
+        }
+
+        let originVal = "estonian";
+        if (originField && row[originField] != null) {
+          const v = String(row[originField]).toLowerCase();
+          if (!v.includes("eesti")) originVal = "foreign";
+        }
+
+        const insert: Record<string, unknown> = {
           sku,
           title_et: title,
           slug: sku.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
           price: isNaN(price) ? 0 : price,
           stock: isNaN(stock) ? 0 : Math.max(0, stock),
           description_et: description ? sanitizeRichText(description) : null,
-          origin: "estonian" as const,
+          origin: originVal,
           cover_image: newCoverKey || null,
+          series_id: seriesId,
           updated_at: new Date().toISOString(),
         };
 
+        if (salePriceField && row[salePriceField] != null) {
+          const sp = parseFloat(String(row[salePriceField]).replace(",", "."));
+          if (!isNaN(sp)) insert.sale_price = sp;
+        }
+        if (saleStartField && row[saleStartField] != null) {
+          const v = String(row[saleStartField]).trim();
+          if (v) insert.sale_start = v;
+        }
+        if (saleEndField && row[saleEndField] != null) {
+          const v = String(row[saleEndField]).trim();
+          if (v) insert.sale_end = v;
+        }
+        if (bindingField && row[bindingField] != null) {
+          const v = String(row[bindingField]).trim();
+          if (v) insert.binding = v;
+        }
+        if (pagesField && row[pagesField] != null) {
+          const pn = parseInt(String(row[pagesField]), 10);
+          if (!isNaN(pn)) insert.pages = pn;
+        }
+        if (releaseDateField && row[releaseDateField] != null) {
+          const v = String(row[releaseDateField]).trim();
+          if (v) insert.release_date = v;
+        }
+        if (isArchivedField && row[isArchivedField] != null) {
+          const v = String(row[isArchivedField]).toLowerCase();
+          insert.is_archived = v === "x" || v === "true" || v === "yes" || v === "jah";
+        }
+
         const { data: inserted, error: insErr } = await db.schema("commerce").from("products").insert(insert).select("id,slug").single();
-        if (insErr) throw new Error(`DB lisamine ebaõnnestus: ${insErr.message}`);
+        if (insErr) throw new Error(`DB lisamine eba\u00f5nnestus: ${insErr.message}`);
+        productId = String(inserted.id);
       }
+
+      productIdsBySku.set(sku, productId);
+
+      // --- Categories ---
+      if (catField && row[catField] != null) {
+        const catNames = parsePipeList(String(row[catField]));
+        const pcSet = existingPc.get(productId) || new Set();
+        for (const name of catNames) {
+          const cid = catLookup.get(name);
+          if (!cid) continue;
+          if (pcSet.has(cid)) continue;
+          await db.schema("commerce").from("product_categories").upsert(
+            { product_id: productId, category_id: cid },
+            { onConflict: "product_id,category_id", ignoreDuplicates: true }
+          ).maybeSingle();
+          pcSet.add(cid);
+        }
+        if (!existingPc.has(productId)) existingPc.set(productId, pcSet);
+      }
+
+      // --- People ---
+      const peopleRoles: Array<{ field: string | null; role: string }> = [
+        { field: authorField, role: "author" },
+        { field: translatorField, role: "translator" },
+        { field: designerField, role: "designer" },
+        { field: illustratorField, role: "illustrator" },
+        { field: editorField, role: "editor" },
+      ];
+
+      const ppSet = existingPp.get(productId) || new Set();
+      for (const { field, role } of peopleRoles) {
+        if (!field || row[field] == null) continue;
+        const names = parsePipeList(String(row[field]));
+        for (const name of names) {
+          let pid = personLookup.get(name) || personLookup.get(slugify(name));
+          if (!pid) {
+            const personSlug = slugify(name);
+            const { data: newPerson } = await db.schema("people").from("people")
+              .upsert({ slug: personSlug, name }, { onConflict: "slug" })
+              .select("id").single();
+            if (newPerson) {
+              pid = String(newPerson.id);
+              personLookup.set(name, pid);
+              personLookup.set(personSlug, pid);
+            }
+          }
+          if (!pid) continue;
+          const key = `${productId}:${pid}:${role}`;
+          if (ppSet.has(key)) continue;
+          await db.schema("commerce").from("product_people").upsert(
+            { product_id: productId, person_id: pid, role },
+            { onConflict: "product_id,person_id,role", ignoreDuplicates: true }
+          ).maybeSingle();
+          ppSet.add(key);
+        }
+      }
+      if (!existingPp.has(productId)) existingPp.set(productId, ppSet);
 
       if (newCoverKey !== beforeCover) {
         coverChanges.push({ sku, before: beforeCover, after: newCoverKey });
@@ -399,7 +732,9 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         try {
           const { removeUnreferencedObject } = await import("@/lib/media");
           await removeUnreferencedObject(newCoverKey);
-        } catch {}
+        } catch (cleanupErr) {
+          console.error("import cleanup: failed to remove orphaned upload", newCoverKey, cleanupErr);
+        }
       }
       mediaErrors.push(`${sku}: ${err instanceof Error ? err.message : "Salvestamine ebaõnnestus"}`);
     }

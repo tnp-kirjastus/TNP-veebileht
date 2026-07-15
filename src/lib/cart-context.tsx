@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react";
 
 export interface CartItem {
   slug: string;
@@ -10,6 +10,8 @@ export interface CartItem {
   salePrice: number | null;
   coverImage: string | null;
   quantity: number;
+  isUpcoming?: boolean;
+  allowPreorder?: boolean;
 }
 
 interface CartContextType {
@@ -17,6 +19,7 @@ interface CartContextType {
   addItem: (product: {
     slug: string; title: string; author: string;
     price: number; salePrice?: number | null; coverImage?: string | null;
+    isUpcoming?: boolean; allowPreorder?: boolean;
   }) => void;
   removeItem: (slug: string) => void;
   updateQuantity: (slug: string, qty: number) => void;
@@ -50,17 +53,18 @@ function saveToStorage(items: CartItem[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* quota exceeded */ }
 }
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-  const inited = useRef(false);
+function useClientHydrated(): boolean {
+  const subscribe = useCallback(() => () => {}, []);
+  const getSnapshot = useCallback(() => true, []);
+  const getServerSnapshot = useCallback(() => false, []);
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
 
-  useEffect(() => {
-    const stored = loadFromStorage();
-    if (stored.length > 0) setItems(stored);
-    setHydrated(true);
-  }, []);
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [items, setItems] = useState<CartItem[]>(() => loadFromStorage());
+  const [error, setError] = useState<string | null>(null);
+  const hydrated = useClientHydrated();
+  const inited = useRef(false);
 
   useEffect(() => {
     if (inited.current || !hydrated) return;
@@ -98,6 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback((product: {
     slug: string; title: string; author: string;
     price: number; salePrice?: number | null; coverImage?: string | null;
+    isUpcoming?: boolean; allowPreorder?: boolean;
   }) => {
     let newQuantity = 1;
     setItems(prev => {
@@ -111,6 +116,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           slug: product.slug, title: product.title, author: product.author,
           price: product.price, salePrice: product.salePrice ?? null,
           coverImage: product.coverImage ?? null, quantity: 1,
+          isUpcoming: product.isUpcoming, allowPreorder: product.allowPreorder,
         }];
       }
       saveToStorage(next);

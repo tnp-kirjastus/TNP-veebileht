@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Category { id: string; slug: string; name_et: string; children?: Category[]; }
+interface CategoryItem { id: string; slug: string; name_et: string; children?: CategoryItem[]; }
 
 const QUICK_FILTERS = [
   { key: "all" },
@@ -12,14 +12,39 @@ const QUICK_FILTERS = [
   { key: "foreign", param: "origin", value: "foreign" },
   { key: "sale", param: "sale", value: "true" },
   { key: "upcoming", param: "upcoming", value: "true" },
+  { key: "archive", param: "archive", value: "true" },
 ] as const;
 
 const QUICK_LABELS: Record<string, string> = {
-  all: "Näita kõiki", new: "Uued raamatud", estonian: "Eesti autorid", foreign: "Välismaa autorid", sale: "Soodus", upcoming: "Ilmumas",
+  all: "Näita kõiki",
+  new: "Uued raamatud",
+  estonian: "Eesti autorid",
+  foreign: "Välismaa autorid",
+  sale: "Soodus",
+  upcoming: "Ilmumas",
+  archive: "Arhiiv / läbimüüdud",
 };
 
-export function FilterSidebar({ categories, activeCategory, currentParams }: {
-  categories: Category[]; activeCategory?: string; currentParams: Record<string, string | string[] | undefined>;
+function getSelectedCategories(currentParams: Record<string, string | string[] | undefined>): string[] {
+  const cat = currentParams.category;
+  if (!cat) return [];
+  if (Array.isArray(cat)) return cat;
+  return [cat];
+}
+
+function getAllChildSlugs(cat: CategoryItem): string[] {
+  if (!cat.children?.length) return [];
+  const slugs: string[] = [];
+  for (const child of cat.children) {
+    slugs.push(child.slug);
+    slugs.push(...getAllChildSlugs(child));
+  }
+  return slugs;
+}
+
+export function FilterSidebar({ categories, currentParams }: {
+  categories: CategoryItem[];
+  currentParams: Record<string, string | string[] | undefined>;
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -48,23 +73,77 @@ export function FilterSidebar({ categories, activeCategory, currentParams }: {
     };
   }, [isOpen]);
 
+  const selectedCategories = getSelectedCategories(currentParams);
+
   function buildUrl(updates: Record<string, string | undefined>) {
     const params = new URLSearchParams();
-    const merged = { ...currentParams, ...updates };
-    Object.entries(merged).forEach(([k, v]) => { if (typeof v === "string") params.set(k, v); });
-    params.delete("page");
+    const merged: Record<string, string | string[] | undefined> = { ...currentParams };
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v === undefined) {
+        delete merged[k];
+      } else {
+        merged[k] = v;
+      }
+    });
+    Object.entries(merged).forEach(([k, v]) => {
+      if (k === "page") return;
+      if (Array.isArray(v)) {
+        v.forEach((val) => params.append(k, val));
+      } else if (typeof v === "string") {
+        params.set(k, v);
+      }
+    });
+    return `/raamatud?${params.toString()}`;
+  }
+
+  function buildCategoryUrl(catSlugs: string[]) {
+    const params = new URLSearchParams();
+    Object.entries(currentParams).forEach(([k, v]) => {
+      if (k === "category" || k === "page") return;
+      if (typeof v === "string") params.set(k, v);
+    });
+    catSlugs.forEach((c) => params.append("category", c));
     return `/raamatud?${params.toString()}`;
   }
 
   function toggleQuickFilter(f: (typeof QUICK_FILTERS)[number]) {
     if (f.key === "all") { router.push("/raamatud"); return; }
+    if (f.key === "archive") {
+      router.push(isQuickActive(f) ? buildUrl({ archive: undefined, archived: undefined }) : buildUrl({ archive: f.value }));
+      return;
+    }
     const cur = currentParams[f.param!];
     router.push(typeof cur === "string" && cur === f.value ? buildUrl({ [f.param!]: undefined }) : buildUrl({ [f.param!]: f.value }));
   }
 
   function isQuickActive(f: (typeof QUICK_FILTERS)[number]) {
-    if (f.key === "all") return !currentParams.origin && !currentParams.sale && !currentParams.upcoming && !activeCategory && (!currentParams.sort || currentParams.sort === "newest");
+    if (f.key === "all") {
+      return !currentParams.origin
+        && !currentParams.sale
+        && !currentParams.upcoming
+        && !currentParams.archive
+        && !currentParams.archived
+        && selectedCategories.length === 0
+        && (!currentParams.sort || currentParams.sort === "newest");
+    }
+    if (f.key === "archive") return currentParams.archive === f.value || currentParams.archived === f.value;
     return f.param ? currentParams[f.param] === f.value : false;
+  }
+
+  function handleCategoryToggle(cat: CategoryItem) {
+    const childSlugs = cat.children && cat.children.length > 0
+      ? getAllChildSlugs(cat)
+      : [cat.slug];
+
+    const allSelected = childSlugs.every((s) => selectedCategories.includes(s));
+    let newSelected: string[];
+    if (allSelected) {
+      newSelected = selectedCategories.filter((s) => !childSlugs.includes(s));
+    } else {
+      const toAdd = childSlugs.filter((s) => !selectedCategories.includes(s));
+      newSelected = [...selectedCategories, ...toAdd];
+    }
+    router.push(buildCategoryUrl(newSelected));
   }
 
   return (
@@ -107,39 +186,63 @@ export function FilterSidebar({ categories, activeCategory, currentParams }: {
         </div>
 
         {categories.map((cat) => (
-          <CategoryTreeGroup key={cat.id} category={cat} activeCategory={activeCategory}
-            onSelect={(slug) => router.push(buildUrl({ category: slug }))} />
+          <CategoryTreeGroup key={cat.id} category={cat} selectedCategories={selectedCategories}
+            onToggle={(c) => handleCategoryToggle(c)} />
         ))}
       </aside>
     </>
   );
 }
 
-function CategoryTreeGroup({ category, activeCategory, onSelect }: {
-  category: Category; activeCategory?: string; onSelect: (s: string) => void;
+function CategoryTreeGroup({ category, selectedCategories, onToggle }: {
+  category: CategoryItem;
+  selectedCategories: string[];
+  onToggle: (cat: CategoryItem) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(activeCategory === category.slug
-    || category.children?.some(c => c.slug === activeCategory));
-
   const hasChildren = !!category.children?.length;
+  const childSlugs = hasChildren ? getAllChildSlugs(category) : [];
+  const effectiveSlugs = hasChildren ? childSlugs : [category.slug];
+  const selectedCount = effectiveSlugs.filter((s) => selectedCategories.includes(s)).length;
+  const isChecked = effectiveSlugs.length > 0 && selectedCount === effectiveSlugs.length;
+  const isIndeterminate = selectedCount > 0 && selectedCount < effectiveSlugs.length;
+  const isActive = isChecked || isIndeterminate;
+
+  const [isOpen, setIsOpen] = useState(isActive);
 
   return (
     <div className="border-b border-line">
-      <button onClick={() => { if (hasChildren) setIsOpen(!isOpen); else onSelect(category.slug); }}
-        aria-expanded={hasChildren ? isOpen : undefined} aria-current={activeCategory === category.slug ? "page" : undefined}
-        className={`w-full py-[15px] px-1 flex justify-between text-left font-extrabold bg-transparent cursor-pointer hover:text-accent ${activeCategory === category.slug ? "text-accent" : ""}`}>
-        {category.name_et}{hasChildren && <span>{isOpen ? "−" : "+"}</span>}
-      </button>
+      <div className="flex items-center">
+        <button onClick={() => onToggle(category)} role="checkbox" aria-checked={isChecked ? "true" : isIndeterminate ? "mixed" : "false"}
+          className="flex-shrink-0 w-[18px] h-[18px] border grid place-items-center bg-transparent cursor-pointer mr-[8px]"
+          style={{ borderColor: isActive ? "#333" : "#8e969b", backgroundColor: isActive ? "#333" : "transparent" }}>
+          {isIndeterminate && <span className="w-[8px] h-[2px] bg-white" />}
+          {isChecked && <span className="w-[9px] h-[5px] border-l-[2px] border-b-[2px] border-white -rotate-45 -translate-y-px" />}
+        </button>
+        <button onClick={() => { if (hasChildren) setIsOpen(!isOpen); else onToggle(category); }}
+          aria-expanded={hasChildren ? isOpen : undefined}
+          className={`flex-1 py-[15px] px-1 flex justify-between text-left font-extrabold bg-transparent cursor-pointer hover:text-accent ${isActive ? "text-accent" : ""}`}>
+          {category.name_et}{hasChildren && <span>{isOpen ? "−" : "+"}</span>}
+        </button>
+      </div>
       {isOpen && hasChildren && (
-        <div className="pb-3 pl-3 grid">
-          {category.children!.map(child => (
-            <button key={child.id} onClick={() => onSelect(child.slug)}
-              aria-current={activeCategory === child.slug ? "page" : undefined}
-              className={`w-full py-[7px] px-2 text-left bg-transparent cursor-pointer transition-colors
-                ${activeCategory === child.slug ? "text-ink font-bold bg-soft" : "text-muted hover:text-ink hover:font-bold hover:bg-soft"}`}>
-              {child.name_et}
-            </button>
-          ))}
+        <div className="pb-3 pl-[28px] grid">
+          {category.children!.map((child) => {
+            const childActive = selectedCategories.includes(child.slug);
+            return (
+              <div key={child.id} className="flex items-center">
+                <button onClick={() => onToggle(child)} role="checkbox" aria-checked={childActive}
+                  className="flex-shrink-0 w-[18px] h-[18px] border grid place-items-center bg-transparent cursor-pointer mr-[8px]"
+                  style={{ borderColor: childActive ? "#333" : "#8e969b", backgroundColor: childActive ? "#333" : "transparent" }}>
+                  {childActive && <span className="w-[9px] h-[5px] border-l-[2px] border-b-[2px] border-white -rotate-45 -translate-y-px" />}
+                </button>
+                <button onClick={() => onToggle(child)}
+                  className={`flex-1 py-[7px] px-2 text-left bg-transparent cursor-pointer transition-colors
+                    ${childActive ? "text-ink font-bold bg-soft" : "text-muted hover:text-ink hover:font-bold hover:bg-soft"}`}>
+                  {child.name_et}
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

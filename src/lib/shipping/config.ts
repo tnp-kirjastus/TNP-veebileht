@@ -7,34 +7,12 @@ export interface ShippingRate {
   label_en: string;
 }
 
-export const SHIPPING_RATES: ShippingRate[] = [
-  {
-    carrier: "omniva",
-    method: "parcel_machine",
-    price: 5.0,
-    freeFrom: 40,
-    label_et: "Omniva pakiautomaat",
-    label_en: "Omniva parcel machine",
-  },
-  {
-    carrier: "smartpost",
-    method: "parcel_machine",
-    price: 3.5,
-    freeFrom: 40,
-    label_et: "Smartpost pakiautomaat",
-    label_en: "Smartpost parcel machine",
-  },
-  {
-    carrier: "courier",
-    method: "courier",
-    price: 5.0,
-    freeFrom: 40,
-    label_et: "Kuller",
-    label_en: "Courier",
-  },
+const DEFAULT_RATES: ShippingRate[] = [
+  { carrier: "omniva", method: "parcel_machine", price: 5.0, freeFrom: 40, label_et: "Omniva pakiautomaat", label_en: "Omniva parcel machine" },
+  { carrier: "smartpost", method: "parcel_machine", price: 3.5, freeFrom: 40, label_et: "Smartpost pakiautomaat", label_en: "Smartpost parcel machine" },
 ];
 
-export const FREE_SHIPPING_MINIMUM = 40;
+export const SHIPPING_RATES: ShippingRate[] = DEFAULT_RATES;
 
 export function getShippingRate(carrier: string): ShippingRate | undefined {
   return SHIPPING_RATES.find((r) => r.carrier === carrier);

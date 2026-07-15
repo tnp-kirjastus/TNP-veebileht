@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { StatusBadge } from "@/components/admin/StatusBadge";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { formatEuro } from "@/lib/data";
+import { formatEuro } from "@/lib/product-utils";
 
-interface ProductRow extends Record<string, unknown> {
+interface ProductRow {
   id: string;
-  titleCell: string;
-  priceCell: string;
-  stockCell: string;
-  statusCell: string;
+  sku: string;
+  title: string;
+  price: number;
+  salePrice: number | null;
+  stock: number;
+  archived: boolean;
+  upcoming: boolean;
+  isOnSale: boolean;
   dateCell: string;
 }
 
@@ -22,7 +27,7 @@ export default async function ProductsAdminPage({
   const query = (params.q ?? "").trim();
   const statusFilter = params.status ?? "";
   const originFilter = params.origin ?? "";
-  const activeTab = params.tab ?? "active";
+  const activeTab = params.tab ?? "all";
   const perPage = 25;
   const from = (page - 1) * perPage;
 
@@ -58,29 +63,21 @@ export default async function ProductsAdminPage({
     const upcoming = Boolean(p.is_upcoming);
     const isOnSale = salePrice != null && salePrice < price;
 
-    let statusCell = "";
-    if (archived) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-gray-100 text-gray-500">Arhiveeritud</span>`;
-    else if (upcoming) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-amber-100 text-amber-800">Ilmumas</span>`;
-    else if (isOnSale) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-red-100 text-red-700">Soodus</span>`;
-    else statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-green-100 text-green-700">Aktiivne</span>`;
-
     return {
       id: String(p.id),
-      titleCell: `<a href="/haldus/tooted/${p.id}" class="font-bold hover:text-accent">${String(p.title_et)}</a><div class="text-xs text-muted mt-0.5">${String(p.sku)}</div>`,
-      priceCell: isOnSale
-        ? `<span class="text-muted line-through text-xs">${formatEuro(price)}</span><span class="text-accent font-bold ml-2">${formatEuro(salePrice!)}</span>`
-        : `<span class="font-bold">${formatEuro(price)}</span>`,
-      stockCell: archived ? statusCell : stock === 0 ? statusCell : stock <= 5 ? statusCell : String(stock),
-      statusCell,
+      sku: String(p.sku ?? ""),
+      title: String(p.title_et ?? ""),
+      price,
+      salePrice,
+      stock,
+      archived,
+      upcoming,
+      isOnSale,
       dateCell: p.release_date
         ? new Date(String(p.release_date)).toLocaleDateString("et-EE")
         : "\u2014",
     };
   });
-
-  if (statusFilter === "sale") {
-    products.sort((a, b) => 0);
-  }
 
   const totalCount = count ?? 0;
   const totalPages = Math.ceil(totalCount / perPage);
@@ -95,13 +92,16 @@ export default async function ProductsAdminPage({
     if (q) parts.push(`q=${encodeURIComponent(q)}`);
     if (s) parts.push(`status=${encodeURIComponent(s)}`);
     if (o) parts.push(`origin=${encodeURIComponent(o)}`);
-    if (t && t !== "active") parts.push(`tab=${encodeURIComponent(t)}`);
+    if (t && t !== "all") parts.push(`tab=${encodeURIComponent(t)}`);
     if (pg && Number(pg) > 1) parts.push(`page=${encodeURIComponent(pg)}`);
     return `/haldus/tooted${parts.length ? "?" + parts.join("&") : ""}`;
   }
 
-  function Cell({ html }: { html: string }) {
-    return <td className="p-4" dangerouslySetInnerHTML={{ __html: html }} />;
+  function statusVariant(product: ProductRow): "archived" | "upcoming" | "sale" | "active" {
+    if (product.archived) return "archived";
+    if (product.upcoming) return "upcoming";
+    if (product.isOnSale) return "sale";
+    return "active";
   }
 
   return (
@@ -114,7 +114,7 @@ export default async function ProductsAdminPage({
             <Link href="/haldus/tooted/partii" className="inline-flex items-center gap-2 min-h-12 px-6 border border-line font-bold hover:bg-soft transition-colors">
               Partii muutmine
             </Link>
-            <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 bg-ink text-white font-bold hover:bg-ink/80 transition-colors">
+            <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 bg-accent text-white font-bold hover:bg-accent/80 transition-colors">
               + Uus toode
             </Link>
           </div>
@@ -173,10 +173,28 @@ export default async function ProductsAdminPage({
             ) : (
               products.map((p) => (
                 <tr key={p.id} className="border-t border-line hover:bg-soft/50 transition-colors">
-                  <Cell html={p.titleCell} />
-                  <Cell html={p.priceCell} />
-                  <Cell html={p.stockCell} />
-                  <Cell html={p.statusCell} />
+                  <td className="p-4">
+                    <Link href={`/haldus/tooted/${p.id}`} className="font-bold hover:text-accent">{p.title}</Link>
+                    <div className="text-xs text-muted mt-0.5">{p.sku}</div>
+                  </td>
+                  <td className="p-4">
+                    {p.isOnSale && p.salePrice !== null ? (
+                      <>
+                        <span className="text-muted line-through text-xs">{formatEuro(p.price)}</span>
+                        <span className="text-accent font-bold ml-2">{formatEuro(p.salePrice)}</span>
+                      </>
+                    ) : (
+                      <span className="font-bold">{formatEuro(p.price)}</span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {p.archived || p.stock === 0 || p.stock <= 5 ? (
+                      <StatusBadge variant={statusVariant(p)} />
+                    ) : (
+                      p.stock
+                    )}
+                  </td>
+                  <td className="p-4"><StatusBadge variant={statusVariant(p)} /></td>
                   <td className="p-4 text-xs text-muted">{p.dateCell}</td>
                 </tr>
               ))

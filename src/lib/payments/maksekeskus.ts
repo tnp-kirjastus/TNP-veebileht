@@ -2,7 +2,8 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { serverEnv, siteUrl } from "@/lib/env";
+import { siteUrl } from "@/lib/env";
+import { maksekeskusConfig } from "@/lib/maksekeskus/config";
 import { verifyMaksekeskusMac } from "./mac";
 
 const transactionResponse = z.object({
@@ -47,33 +48,55 @@ export interface VerifiedPaymentEvent {
   payloadHash: string;
 }
 
-function configuration() {
-  const env = serverEnv();
-  if (!env.MAKSEKESKUS_SHOP_ID || !env.MAKSEKESKUS_SECRET) throw new Error("payments_not_configured");
-  return { shopId: env.MAKSEKESKUS_SHOP_ID, secret: env.MAKSEKESKUS_SECRET, base: "https://api.maksekeskus.ee" };
-}
-
 export async function createPayment(order: PaymentOrder) {
-  const config = configuration();
+  const config = maksekeskusConfig();
   const base = siteUrl();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await fetch(`${config.base}/v1/transactions`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${config.shopId}:${config.secret}`).toString("base64")}` },
-      body: JSON.stringify({
-        amount: `${Math.floor(order.totalCents / 100)}.${String(order.totalCents % 100).padStart(2, "0")}`, currency: order.currency, ip: order.ip,
-        reference: order.orderNumber, merchant_data: order.id,
-        customer: { name: order.customer.name, email: order.customer.email, country: order.customer.country ?? "ee", locale: order.customer.locale ?? "et" },
-        transaction_url: {
-          return_url: new URL("/api/maksekeskus/return", base).toString(),
-          cancel_url: new URL("/api/maksekeskus/return", base).toString(),
-          notifications_url: new URL("/api/maksekeskus/webhook", base).toString(),
-        },
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${config.base}/v1/transactions`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${config.shopId}:${config.secret}`).toString("base64")}` },
+        body: JSON.stringify({
+          transaction: {
+            amount: `${Math.floor(order.totalCents / 100)}.${String(order.totalCents % 100).padStart(2, "0")}`,
+            currency: order.currency,
+            reference: order.orderNumber,
+            merchant_data: order.id,
+          },
+          customer: {
+            ip: order.ip,
+            name: order.customer.name,
+            email: order.customer.email,
+            country: order.customer.country ?? "ee",
+            locale: order.customer.locale ?? "et",
+          },
+          transaction_url: {
+            return_url: new URL("/api/maksekeskus/return", base).toString(),
+            cancel_url: new URL("/api/maksekeskus/return", base).toString(),
+            notifications_url: new URL("/api/maksekeskus/webhook", base).toString(),
+          },
+        }),
+      });
+    } catch (fetchErr) {
+      const err = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
+      const cause = (err as Error & { cause?: unknown }).cause;
+      const isTls = cause instanceof Error && /certificate|TLS|SSL|unable to verify/i.test(cause.message);
+      if (isTls) {
+        console.error("maksekeskus_tls_error", {
+          message: err.message,
+          causeMessage: cause instanceof Error ? cause.message : String(cause),
+          nodeOptions: process.env.NODE_OPTIONS || "(unset)",
+          apiBase: config.base,
+          orderRef: order.orderNumber,
+        });
+        throw new Error("maksekeskus_tls_error", { cause });
+      }
+      throw err;
+    }
     if (!response.ok) {
       let body = "";
       try { body = await response.text(); } catch { /* ignore */ }
@@ -97,7 +120,7 @@ export function verifyPaymentReturn(rawBody: string): VerifiedPaymentEvent {
 }
 
 export function verifyPaymentMessage(json: string, mac: string): VerifiedPaymentEvent {
-  const config = configuration();
+  const config = maksekeskusConfig();
   if (!verifyMaksekeskusMac(json, config.secret, mac)) throw new Error("invalid_payment_mac");
   const message = paymentReturn.parse(JSON.parse(json));
   if (message.shop !== config.shopId) throw new Error("invalid_payment_shop");

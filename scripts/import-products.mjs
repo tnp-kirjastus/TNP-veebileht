@@ -1,10 +1,15 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
 const SUPABASE_URL = "https://gqgliwbcazcixvyealsx.supabase.co";
-const SERVICE_ROLE_KEY = "REDACTED_SERVICE_ROLE_KEY";
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SERVICE_ROLE_KEY) {
+  console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is required");
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 

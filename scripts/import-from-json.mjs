@@ -1,7 +1,11 @@
 import { readFileSync } from "fs";
 
 const BASE = "https://gqgliwbcazcixvyealsx.supabase.co/rest/v1";
-const KEY = "REDACTED_SERVICE_ROLE_KEY";
+const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!KEY) {
+  console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is required");
+  process.exit(1);
+}
 
 function slugify(text) {
   const t = { "õ": "o", "ä": "a", "ö": "o", "ü": "u", "š": "s", "ž": "z", "Õ": "O", "Ä": "A", "Ö": "O", "Ü": "U", "Š": "S", "Ž": "Z" };

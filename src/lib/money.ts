@@ -5,3 +5,8 @@ export function euroDecimalToCents(value: unknown): number {
   if (!Number.isSafeInteger(cents) || cents < 0) throw new Error("invalid_order_total");
   return cents;
 }
+
+export function roundEuro(value: number): number {
+  if (!Number.isFinite(value)) throw new Error("invalid_order_total");
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}

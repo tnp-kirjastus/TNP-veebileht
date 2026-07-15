@@ -1,6 +1,6 @@
 import "server-only";
 
-import { serverEnv } from "@/lib/env";
+import { maksekeskusConfig } from "@/lib/maksekeskus/config";
 
 export interface ParcelMachine {
   carrier: string;
@@ -24,24 +24,12 @@ interface CachedMachines {
 
 let cache: CachedMachines | null = null;
 
-function configuration() {
-  const env = serverEnv();
-  if (!env.MAKSEKESKUS_SHOP_ID || !env.MAKSEKESKUS_SECRET) {
-    throw new Error("maksekeskus_not_configured");
-  }
-  return {
-    shopId: env.MAKSEKESKUS_SHOP_ID,
-    secret: env.MAKSEKESKUS_SECRET,
-    base: "https://api.maksekeskus.ee",
-  };
-}
-
 export async function fetchParcelMachines(): Promise<ParcelMachine[]> {
   if (cache && cache.expires > Date.now()) {
     return cache.data;
   }
 
-  const config = configuration();
+  const config = maksekeskusConfig();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
 
@@ -72,7 +60,7 @@ export async function fetchParcelMachines(): Promise<ParcelMachine[]> {
       availability: String(m.availability ?? ""),
       x: typeof m.x === "number" ? m.x : undefined,
       y: typeof m.y === "number" ? m.y : undefined,
-    })).filter((m) => m.country === "ee" || m.country === "est" || m.country === "estonia" || m.country === "");
+    })).filter((m) => !m.country || m.country === "ee" || m.country === "eesti" || m.country.startsWith("est"));
 
     cache = { data: machines, expires: Date.now() + 3 * 60 * 60 * 1000 };
     return machines;
@@ -138,7 +126,7 @@ export interface ShipmentResult {
 }
 
 export async function createShipment(order: ShipmentOrder): Promise<ShipmentResult> {
-  const config = configuration();
+  const config = maksekeskusConfig();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
 

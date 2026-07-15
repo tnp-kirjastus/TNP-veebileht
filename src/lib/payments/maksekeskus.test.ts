@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { euroDecimalToCents } from "../money";
 import { calculateMaksekeskusMac } from "../payments/mac";
 
@@ -15,7 +15,16 @@ vi.mock("@/lib/env", () => ({
   siteUrl: () => new URL("http://localhost:3000"),
 }));
 
-import { verifyPaymentMessage, verifyPaymentReturn } from "../payments/maksekeskus";
+vi.mock("@/lib/maksekeskus/config", () => ({
+  maksekeskusConfig: () => ({
+    mode: "test" as const,
+    shopId: "test-shop-id",
+    secret: "test-secret-32-bytes-minimum-xx",
+    base: "https://api.test.maksekeskus.ee",
+  }),
+}));
+
+import { createPayment, verifyPaymentMessage, verifyPaymentReturn } from "../payments/maksekeskus";
 
 function makeMessage(overrides: Record<string, unknown> = {}) {
   const payload = {
@@ -227,15 +236,11 @@ describe("shipping cost calculation", () => {
     expect(calculateShippingCost("smartpost", 40)).toBe(0);
   });
 
-  it("charges 5 EUR for courier under 40 EUR", () => {
-    expect(calculateShippingCost("courier", 10)).toBe(5.0);
+  it("returns 0 for unknown carrier (e.g. courier no longer supported)", () => {
+    expect(calculateShippingCost("courier", 10)).toBe(0);
   });
 
-  it("free delivery for courier at 40 EUR and above", () => {
-    expect(calculateShippingCost("courier", 40)).toBe(0);
-  });
-
-  it("returns 0 for unknown carrier", () => {
+  it("returns 0 for completely unknown carrier", () => {
     expect(calculateShippingCost("dpd", 10)).toBe(0);
   });
 
@@ -253,5 +258,132 @@ describe("shipping cost calculation", () => {
     const shipping = calculateShippingCost("omniva", subtotal);
     const total = subtotal + shipping;
     expect(euroDecimalToCents(total.toFixed(2))).toBe(4499);
+  });
+});
+
+const originalFetch = globalThis.fetch;
+
+describe("createPayment", () => {
+  const validOrder = {
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    orderNumber: "TNP-2026-D000001",
+    totalCents: 2760,
+    currency: "EUR" as const,
+    confirmationToken: "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+    customer: { name: "Test User", email: "test@example.com", country: "ee", locale: "et" },
+    ip: "127.0.0.1",
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  function mockMaksekeskusResponse(overrides: Partial<{ status: number; body: Record<string, unknown> }> = {}) {
+    const status = overrides.status ?? 201;
+    const body = overrides.body ?? {
+      id: "520e8400-e29b-41d4-a716-446655440001",
+      payment_methods: {
+        other: [{ name: "redirect", url: "https://payment.test.maksekeskus.ee/pay/520e8400" }],
+      },
+    };
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      text: vi.fn().mockResolvedValue(JSON.stringify(body)),
+      json: vi.fn().mockResolvedValue(body),
+    } as unknown as Response);
+  }
+
+  it("returns redirect URL on successful payment creation", async () => {
+    mockMaksekeskusResponse();
+    const result = await createPayment(validOrder);
+    expect(result.redirectUrl).toBe("https://payment.test.maksekeskus.ee/pay/520e8400");
+    expect(result.providerTransactionId).toBe("520e8400-e29b-41d4-a716-446655440001");
+  });
+
+  it("sends the correct amount as a decimal string", async () => {
+    mockMaksekeskusResponse();
+    await createPayment(validOrder);
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.transaction.amount).toBe("27.60");
+    expect(body.transaction.currency).toBe("EUR");
+    expect(body.transaction.reference).toBe("TNP-2026-D000001");
+    expect(body.transaction.merchant_data).toBe("550e8400-e29b-41d4-a716-446655440000");
+  });
+
+  it("sends customer details", async () => {
+    mockMaksekeskusResponse();
+    await createPayment(validOrder);
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.customer.ip).toBe("127.0.0.1");
+    expect(body.customer.name).toBe("Test User");
+    expect(body.customer.email).toBe("test@example.com");
+    expect(body.customer.country).toBe("ee");
+    expect(body.customer.locale).toBe("et");
+  });
+
+  it("defaults country to ee and locale to et when not provided", async () => {
+    mockMaksekeskusResponse();
+    await createPayment({ ...validOrder, customer: { name: "A", email: "a@b.ee" } });
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.customer.country).toBe("ee");
+    expect(body.customer.locale).toBe("et");
+  });
+
+  it("sends return, cancel, and notifications URLs", async () => {
+    mockMaksekeskusResponse();
+    await createPayment(validOrder);
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.transaction_url.return_url).toBe("http://localhost:3000/api/maksekeskus/return");
+    expect(body.transaction_url.cancel_url).toBe("http://localhost:3000/api/maksekeskus/return");
+    expect(body.transaction_url.notifications_url).toBe("http://localhost:3000/api/maksekeskus/webhook");
+  });
+
+  it("throws payment_create_XXX on non-200 response", async () => {
+    mockMaksekeskusResponse({ status: 400, body: { error: "bad request" } });
+    await expect(createPayment(validOrder)).rejects.toThrow("payment_create_400");
+  });
+
+  it("throws payment_redirect_missing when no redirect method in response", async () => {
+    mockMaksekeskusResponse({ body: { id: "520e8400-e29b-41d4-a716-446655440001", payment_methods: { other: [] } } });
+    await expect(createPayment(validOrder)).rejects.toThrow("payment_redirect_missing");
+  });
+
+  it("detects TLS errors and throws maksekeskus_tls_error", async () => {
+    const tlsError = new Error("fetch failed");
+    (tlsError as Error & { cause?: unknown }).cause = new Error("unable to verify the first certificate");
+    globalThis.fetch = vi.fn().mockRejectedValue(tlsError);
+    await expect(createPayment(validOrder)).rejects.toThrow("maksekeskus_tls_error");
+  });
+
+  it("propagates non-TLS fetch errors", async () => {
+    const networkError = new Error("network unreachable");
+    globalThis.fetch = vi.fn().mockRejectedValue(networkError);
+    await expect(createPayment(validOrder)).rejects.toThrow("network unreachable");
+  });
+
+  it("handles integer euro amounts as decimal strings", async () => {
+    mockMaksekeskusResponse();
+    await createPayment({ ...validOrder, totalCents: 1500 });
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.transaction.amount).toBe("15.00");
+  });
+
+  it("sends Basic auth header with shopId:secret", async () => {
+    mockMaksekeskusResponse();
+    await createPayment(validOrder);
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const authHeader = fetchCall[1].headers.authorization;
+    const decoded = Buffer.from(authHeader.replace("Basic ", ""), "base64").toString();
+    expect(decoded).toBe("test-shop-id:test-secret-32-bytes-minimum-xx");
   });
 });

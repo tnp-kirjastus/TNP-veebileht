@@ -11,9 +11,12 @@ export function Footer() {
           <div>
             <Image src="/tanapaeva-logo.png" alt="Tänapäev" width={160} height={71}
               className="w-[160px] h-auto brightness-0 invert opacity-90" />
-            <p className="mt-4 text-white/70 max-w-[430px] leading-relaxed">
-              {t.footer.tagline}
-            </p>
+            <div className="mt-4 text-white/70 text-sm leading-relaxed">
+              <p>AS Tänapäev</p>
+              <p>Pärnu mnt. 20, 10141 Tallinn</p>
+              <p>reg: 10544847</p>
+              <p>KMKR nr. EE100535284</p>
+            </div>
           </div>
           <div className="flex flex-col gap-2">
             <Link href="/kasutustingimused" className="font-bold text-white/[.78] hover:text-white transition-colors">{t.footer.terms}</Link>
@@ -21,8 +24,9 @@ export function Footer() {
             <Link href="/kirjastus" className="font-bold text-white/[.78] hover:text-white transition-colors">{t.footer.publisher}</Link>
           </div>
           <div className="flex flex-col gap-3">
-            <p className="text-white/[.78]"><a href="mailto:info@tanapaev.ee" className="hover:text-white">info@tanapaev.ee</a></p>
-            <p className="text-white/[.78]">Tellimused üle Eesti</p>
+            <p className="text-white/[.78]">
+              <a href="mailto:tnp@tnp.ee" className="hover:text-white">tnp@tnp.ee</a>
+            </p>
             <div className="flex gap-[10px] mt-[14px]">
               <a href="https://facebook.com/kirjastustanapaev" target="_blank" rel="noopener noreferrer"
                 className="w-[36px] h-[36px] border border-white/[.28] grid place-items-center text-white hover:bg-white/[.14] transition-colors" aria-label="Facebook">

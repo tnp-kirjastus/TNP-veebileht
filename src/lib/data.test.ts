@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   filterProductsByPerson,
   getActiveProducts,
+  getCatalogueProducts,
   getCategories,
   getProductsByCategory,
   isOnSale,
@@ -27,6 +28,7 @@ function product(overrides: Partial<Product> = {}): Product {
     origin: "estonian",
     is_upcoming: false,
     is_archived: false,
+    allow_preorder: true,
     cover_image: null,
     series_name: null,
     series_slug: null,
@@ -66,6 +68,12 @@ describe("catalogue data invariants", () => {
     const name = authored!.people.author[0];
     const matches = filterProductsByPerson(getActiveProducts(), "author", name);
     expect(matches.some((item) => item.id === authored!.id)).toBe(true);
+  });
+
+  it("can scope the catalogue to archived products", () => {
+    const archived = getCatalogueProducts("archived");
+    expect(archived.length).toBeGreaterThan(0);
+    expect(archived.every((item) => item.is_archived)).toBe(true);
   });
 
   it("contains no extended-year dates after repair", () => {

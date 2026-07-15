@@ -4,9 +4,12 @@ import { z } from "zod";
 import { getCartSession, readCart } from "@/lib/cart-server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPayment } from "@/lib/payments/maksekeskus";
-import { euroDecimalToCents } from "@/lib/money";
+import { euroDecimalToCents, roundEuro } from "@/lib/money";
 import { consumeRateLimit } from "@/lib/rate-limit";
-import { calculateShippingCost } from "@/lib/shipping/config";
+import { calculateShippingCostAsync } from "@/lib/shipping/server";
+import { validateCoupon } from "@/lib/coupons";
+import { getStoreSettings } from "@/lib/settings";
+import { sendNewOrderAdminEmail } from "@/lib/email";
 
 const parcelMachineSchema = z.object({
   carrier: z.string(),
@@ -18,23 +21,49 @@ const parcelMachineSchema = z.object({
 }).nullable();
 
 const schema = z.object({
-  name: z.string().trim().min(2).max(120),
+  name: z.string().trim().min(2).max(120).refine((v) => v.includes(" "), "Sisesta ees- ja perekonnanimi"),
   email: z.email().trim().max(320),
   phone: z.string().trim().min(5).max(40),
   address: z.string().trim().min(2).max(500),
-  shipping_method: z.enum(["omniva", "smartpost", "courier"]).default("omniva"),
+  shipping_method: z.enum(["omniva", "smartpost"]).default("omniva"),
   idempotencyKey: z.string().uuid(),
   items: z.array(z.object({ slug: z.string().min(1).max(240), quantity: z.number().int().min(1).max(99) })).max(99).optional(),
   shipping_cost: z.number().min(0).max(100).default(0),
   parcel_machine: parcelMachineSchema,
+  invoiceRequested: z.boolean().default(false),
+  companyName: z.string().max(200).optional(),
+  companyRegCode: z.string().max(50).optional(),
+  couponCode: z.string().max(50).optional(),
+  couponDiscount: z.number().min(0).default(0),
 });
 
 function buildShippingAddress(parsed: z.infer<typeof schema>): string {
-  if (parsed.shipping_method === "courier") return parsed.address;
   if (parsed.parcel_machine) {
     return `${parsed.parcel_machine.carrier}||${parsed.parcel_machine.id}||${parsed.parcel_machine.name}||${parsed.parcel_machine.address}||${parsed.parcel_machine.city}||${parsed.parcel_machine.zip}`;
   }
   return parsed.address;
+}
+
+function notifyAdmin(
+  orderId: string,
+  orderNumber: string,
+  total: number,
+  createdAt: string,
+  customerName: string,
+  customerEmail: string,
+  customerPhone: string | null,
+  items: Array<{ title: string; quantity: number; price: number }>,
+) {
+  sendNewOrderAdminEmail({
+    orderId,
+    orderNumber,
+    total,
+    createdAt,
+    customerName,
+    customerEmail,
+    customerPhone,
+    items: items.map((i) => ({ productName: i.title, quantity: i.quantity, unitPrice: i.price })),
+  }).catch((err) => console.error("admin_notification_failed", err));
 }
 
 export async function POST(request: Request) {
@@ -56,6 +85,9 @@ export async function POST(request: Request) {
 
   const shippingAddress = buildShippingAddress(parsed.data);
 
+  const storeSettings = await getStoreSettings();
+  const vatPercent = storeSettings.vat.percent;
+
   // --- path A: Supabase cart (primary, preferred) ---
   const sessionId = await getCartSession(false);
   let pathAError: string | null = null;
@@ -73,37 +105,137 @@ export async function POST(request: Request) {
         }
 
         const db = createAdminClient();
-        const subtotal = cart.items.reduce((sum, item) => sum + item.effectivePrice * item.quantity, 0);
-        const shippingCost = calculateShippingCost(parsed.data.shipping_method, subtotal);
-        const orderTotal = subtotal + shippingCost;
 
-        const customerPayload = {
-          name: parsed.data.name,
-          email: parsed.data.email,
-          phone: parsed.data.phone,
-          address: shippingAddress,
-          shipping_method: parsed.data.shipping_method,
-        };
+        const allPreorder = cart.items.every(item => item.isUpcoming && item.allowPreorder);
 
-        const { data: order, error } = await db.schema("commerce").rpc("create_order_from_cart", {
-          p_session_id: sessionId, p_customer: customerPayload, p_idempotency_key: parsed.data.idempotencyKey,
-        });
+        if (allPreorder) {
+          const confirmationToken = randomBytes(32).toString("hex");
+          const orderNumber = `TNP-${new Date().getFullYear()}-D${Date.now().toString(36).toUpperCase()}`;
 
-        if (error) {
-          pathAError = `rpc_error:${error.message}`;
-        } else if (order) {
-          try {
-            const payment = await createPayment({ id: order.order_id, orderNumber: order.order_number, totalCents: euroDecimalToCents(String(orderTotal)), currency: "EUR", confirmationToken: order.confirmation_token, customer: { name: parsed.data.name, email: parsed.data.email, country: "ee", locale: "et" }, ip: clientKey === "unknown" ? "127.0.0.1" : clientKey });
-            await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId, shipping_address: shippingAddress }).eq("id", order.order_id);
-            return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token });
-          } catch (err) {
-            console.error("maksekeskus_create_failed", err instanceof Error ? err.message : String(err));
-            return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
+          const { data: order, error: orderError } = await db.schema("commerce").from("orders")
+            .insert({
+              order_number: orderNumber,
+              status: "preorder",
+              customer_name: parsed.data.name.trim(),
+              customer_email: parsed.data.email.toLowerCase().trim(),
+              customer_phone: parsed.data.phone.trim() || null,
+              shipping_address: shippingAddress,
+              shipping_method: parsed.data.shipping_method,
+              subtotal: 0,
+              shipping_cost: 0,
+              total: 0,
+              idempotency_key: parsed.data.idempotencyKey,
+              confirmation_token: confirmationToken,
+              currency: "EUR",
+              invoice_requested: parsed.data.invoiceRequested,
+              company_name: parsed.data.companyName || null,
+              company_reg_code: parsed.data.companyRegCode || null,
+              coupon_code: parsed.data.couponCode || null,
+              coupon_discount: 0,
+              vat_amount: 0,
+              vat_percent: vatPercent,
+            })
+            .select("id, order_number, confirmation_token")
+            .single();
+
+          if (orderError || !order) {
+            console.error("checkout_path_a_preorder_insert_failed", { error: orderError?.message });
+            pathAError = `preorder_insert_error:${orderError?.message}`;
+          } else {
+            const preorderItemRows = cart.items.map(oi => ({
+              order_id: order.id,
+              product_id: oi.productId,
+              title: oi.title,
+              price: 0,
+              quantity: oi.quantity,
+            }));
+
+            const { error: itemsError } = await db.schema("commerce").from("order_items").insert(preorderItemRows);
+            if (itemsError) {
+              console.error("checkout_path_a_preorder_items_failed", { error: itemsError.message });
+              await db.schema("commerce").from("orders").delete().eq("id", order.id);
+              pathAError = `preorder_items_error:${itemsError.message}`;
+            } else {
+              const { data: cartRow } = await db.schema("commerce").from("carts")
+                .select("id").eq("session_id", sessionId).maybeSingle();
+              if (cartRow) {
+                await db.schema("commerce").from("cart_items").delete().eq("cart_id", cartRow.id);
+              }
+              notifyAdmin(
+                order.id, order.order_number, 0, new Date().toISOString(),
+                parsed.data.name, parsed.data.email, parsed.data.phone || null,
+                cart.items.map(oi => ({ title: oi.title, quantity: oi.quantity, price: 0 })),
+              );
+              return NextResponse.json({
+                redirectUrl: `/tellimus/${order.confirmation_token}`,
+                confirmationToken: order.confirmation_token,
+              });
+            }
+          }
+        } else {
+          const subtotal = cart.items.reduce((sum, item) => sum + item.effectivePrice * item.quantity, 0);
+          const coupon = parsed.data.couponCode ? validateCoupon(parsed.data.couponCode, subtotal) : null;
+          if (parsed.data.couponCode && !coupon) {
+            return NextResponse.json({ error: "Sooduskood ei kehti v\u00f5i on aegunud." }, { status: 400 });
+          }
+          const discountAmount = coupon?.discount ?? 0;
+          const shippingCost = await calculateShippingCostAsync(parsed.data.shipping_method, subtotal);
+          const orderTotal = roundEuro(subtotal + shippingCost - discountAmount);
+          const KM_PERCENT = vatPercent;
+          const taxableSubtotal = subtotal - discountAmount;
+          const vatAmount = roundEuro(taxableSubtotal - (taxableSubtotal / (1 + KM_PERCENT / 100)));
+
+          const customerPayload = {
+            name: parsed.data.name,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+            address: shippingAddress,
+            shipping_method: parsed.data.shipping_method,
+          };
+
+          const { data: order, error } = await db.schema("commerce").rpc("create_order_from_cart", {
+            p_session_id: sessionId,
+            p_customer: customerPayload,
+            p_idempotency_key: parsed.data.idempotencyKey,
+            p_shipping_cost: shippingCost,
+            p_total: orderTotal,
+          });
+
+          if (error) {
+            pathAError = `rpc_error:${error.message}`;
+          } else if (order) {
+            try {
+              const payment = await createPayment({ id: order.order_id, orderNumber: order.order_number, totalCents: euroDecimalToCents(orderTotal.toFixed(2)), currency: "EUR", confirmationToken: order.confirmation_token, customer: { name: parsed.data.name, email: parsed.data.email, country: "ee", locale: "et" }, ip: clientKey === "unknown" ? "127.0.0.1" : clientKey });
+              await db.schema("commerce").from("orders").update({
+                maksekeskus_id: payment.providerTransactionId,
+                shipping_address: shippingAddress,
+                invoice_requested: parsed.data.invoiceRequested,
+                company_name: parsed.data.companyName || null,
+                company_reg_code: parsed.data.companyRegCode || null,
+                coupon_code: coupon?.code ?? null,
+                coupon_discount: discountAmount,
+                vat_amount: vatAmount,
+                vat_percent: KM_PERCENT,
+              }).eq("id", order.order_id);
+              return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token });
+            } catch (err) {
+              const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
+              console.error("maksekeskus_create_failed", {
+                message: err instanceof Error ? err.message : String(err),
+                name: err instanceof Error ? err.name : undefined,
+                cause: cause instanceof Error ? cause.message : cause,
+                orderId: order.order_id,
+                orderNumber: order.order_number,
+                path: "A",
+              });
+              return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
+            }
           }
         }
       }
     } catch (err) {
-      pathAError = `exception:${err instanceof Error ? err.message : String(err)}`;
+      const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
+      pathAError = `exception:${err instanceof Error ? err.message : String(err)}` + (cause instanceof Error ? ` (cause: ${cause.message})` : "");
     }
   }
 
@@ -111,7 +243,7 @@ export async function POST(request: Request) {
   const db = createAdminClient();
   const productSlugs = requestedItems.map(i => i.slug);
   const { data: dbProducts, error: productsError } = await db.schema("commerce").from("products")
-    .select("id, slug, sku, title_et, price, sale_price, sale_start, sale_end, stock, is_archived")
+    .select("id, slug, sku, title_et, price, sale_price, sale_start, sale_end, stock, is_archived, is_upcoming, allow_preorder")
     .in("slug", productSlugs);
 
   if (productsError || !dbProducts || dbProducts.length === 0) {
@@ -126,7 +258,12 @@ export async function POST(request: Request) {
 
   for (const item of requestedItems) {
     const dbProduct = dbProductMap.get(item.slug);
-    if (!dbProduct || dbProduct.is_archived || dbProduct.stock < item.quantity) {
+    if (!dbProduct || dbProduct.is_archived) {
+      console.error("checkout_path_b_product_unavailable", { slug: item.slug, pathAError });
+      return NextResponse.json({ error: "M\u00f5ni raamat ei ole enam saadaval." }, { status: 409 });
+    }
+    const isPreorder = dbProduct.is_upcoming && dbProduct.allow_preorder;
+    if (!isPreorder && dbProduct.stock < item.quantity) {
       console.error("checkout_path_b_product_unavailable", { slug: item.slug, pathAError });
       return NextResponse.json({ error: "M\u00f5ni raamat ei ole enam saadaval." }, { status: 409 });
     }
@@ -144,9 +281,84 @@ export async function POST(request: Request) {
     subtotal += effectivePrice * item.quantity;
   }
 
-  const shippingCost = calculateShippingCost(parsed.data.shipping_method, subtotal);
-  const orderTotal = subtotal + shippingCost;
-  const totalCents = Math.round(orderTotal * 100);
+  const allPreorder = requestedItems.every(item => {
+    const p = dbProductMap.get(item.slug);
+    return p ? (p.is_upcoming && p.allow_preorder) : false;
+  });
+
+  if (allPreorder) {
+    const confirmationToken = randomBytes(32).toString("hex");
+    const orderNumber = `TNP-${new Date().getFullYear()}-D${Date.now().toString(36).toUpperCase()}`;
+
+    const { data: order, error: orderError } = await db.schema("commerce").from("orders")
+      .insert({
+        order_number: orderNumber,
+        status: "preorder",
+        customer_name: parsed.data.name.trim(),
+        customer_email: parsed.data.email.toLowerCase().trim(),
+        customer_phone: parsed.data.phone.trim() || null,
+        shipping_address: shippingAddress,
+        shipping_method: parsed.data.shipping_method,
+        subtotal: 0,
+        shipping_cost: 0,
+        total: 0,
+        idempotency_key: parsed.data.idempotencyKey,
+        confirmation_token: confirmationToken,
+        currency: "EUR",
+        invoice_requested: parsed.data.invoiceRequested,
+        company_name: parsed.data.companyName || null,
+        company_reg_code: parsed.data.companyRegCode || null,
+        coupon_code: parsed.data.couponCode || null,
+        coupon_discount: 0,
+        vat_amount: 0,
+          vat_percent: vatPercent,
+      })
+      .select("id, order_number, confirmation_token")
+      .single();
+
+    if (orderError || !order) {
+      console.error("checkout_path_b_preorder_insert_failed", { error: orderError?.message, pathAError });
+      return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+    }
+
+    const orderItemRows = orderItems.map(oi => ({
+      order_id: order.id,
+      product_id: oi.productId,
+      title: oi.title,
+      price: 0,
+      quantity: oi.quantity,
+    }));
+
+    const { error: itemsError } = await db.schema("commerce").from("order_items").insert(orderItemRows);
+    if (itemsError) {
+      console.error("checkout_path_b_preorder_items_failed", { error: itemsError.message, pathAError });
+      await db.schema("commerce").from("orders").delete().eq("id", order.id);
+      return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+    }
+
+    notifyAdmin(
+      order.id, order.order_number, 0, new Date().toISOString(),
+      parsed.data.name, parsed.data.email, parsed.data.phone || null,
+      orderItems.map(oi => ({ title: oi.title, quantity: oi.quantity, price: 0 })),
+    );
+
+    return NextResponse.json({
+      redirectUrl: `/tellimus/${order.confirmation_token}`,
+      confirmationToken: order.confirmation_token,
+    });
+  }
+
+  const shippingCost = await calculateShippingCostAsync(parsed.data.shipping_method, subtotal);
+  const coupon = parsed.data.couponCode ? validateCoupon(parsed.data.couponCode, subtotal) : null;
+  if (parsed.data.couponCode && !coupon) {
+    return NextResponse.json({ error: "Sooduskood ei kehti v\u00f5i on aegunud." }, { status: 400 });
+  }
+  const discountAmount = coupon?.discount ?? 0;
+  const orderTotal = roundEuro(subtotal + shippingCost - discountAmount);
+  const totalCents = euroDecimalToCents(orderTotal.toFixed(2));
+  const KM_PERCENT = vatPercent;
+  const taxableSubtotal = subtotal - discountAmount;
+  const vatAmount = roundEuro(taxableSubtotal - (taxableSubtotal / (1 + KM_PERCENT / 100)));
   const confirmationToken = randomBytes(32).toString("hex");
   const orderNumber = `TNP-${new Date().getFullYear()}-D${Date.now().toString(36).toUpperCase()}`;
 
@@ -165,6 +377,13 @@ export async function POST(request: Request) {
       idempotency_key: parsed.data.idempotencyKey,
       confirmation_token: confirmationToken,
       currency: "EUR",
+      invoice_requested: parsed.data.invoiceRequested,
+      company_name: parsed.data.companyName || null,
+      company_reg_code: parsed.data.companyRegCode || null,
+      coupon_code: coupon?.code ?? null,
+      coupon_discount: discountAmount,
+      vat_amount: vatAmount,
+      vat_percent: KM_PERCENT,
     })
     .select("id, order_number, confirmation_token, total")
     .single();
@@ -181,7 +400,15 @@ export async function POST(request: Request) {
           await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", existing.id);
           return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: existing.confirmation_token });
         } catch (err) {
-          console.error("maksekeskus_create_failed_retry", err instanceof Error ? err.message : String(err));
+          const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
+          console.error("maksekeskus_create_failed_retry", {
+            message: err instanceof Error ? err.message : String(err),
+            name: err instanceof Error ? err.name : undefined,
+            cause: cause instanceof Error ? cause.message : cause,
+            orderId: existing.id,
+            orderNumber: existing.order_number,
+            path: "B-idempotency",
+          });
           return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
         }
       }
@@ -205,6 +432,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
   }
 
+  const reservationRows = orderItems.map((oi) => ({
+    order_id: order.id,
+    product_id: oi.productId,
+    quantity: oi.quantity,
+    expires_at: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
+  }));
+  const { error: reservationError } = await db.schema("commerce").from("stock_reservations").insert(reservationRows);
+  if (reservationError) {
+    console.error("checkout_path_b_reservations_failed", { error: reservationError.message, pathAError });
+    await db.schema("commerce").from("orders").delete().eq("id", order.id);
+    return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+  }
+
+  notifyAdmin(
+    order.id, order.order_number, orderTotal, new Date().toISOString(),
+    parsed.data.name, parsed.data.email, parsed.data.phone || null,
+    orderItems.map(oi => ({ title: oi.title, quantity: oi.quantity, price: oi.price })),
+  );
+
   try {
     const payment = await createPayment({
       id: order.id,
@@ -218,7 +464,15 @@ export async function POST(request: Request) {
     await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", order.id);
     return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token });
   } catch (err) {
-    console.error("maksekeskus_create_failed", err instanceof Error ? err.message : String(err));
+    const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
+    console.error("maksekeskus_create_failed", {
+      message: err instanceof Error ? err.message : String(err),
+      name: err instanceof Error ? err.name : undefined,
+      cause: cause instanceof Error ? cause.message : cause,
+      orderId: order.id,
+      orderNumber: order.order_number,
+      path: "B",
+    });
     return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
   }
 }

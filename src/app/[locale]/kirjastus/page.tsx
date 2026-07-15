@@ -3,7 +3,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LayoutFull, Shell } from "@/components/layout";
-import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+// Breadcrumbs removed per client request (task 17)
 import { NewsletterSection } from "@/components/store/NewsletterSection";
 
 const staff = [
@@ -16,9 +16,9 @@ const staff = [
 ];
 
 const retailers = [
-  { name: "Rahva Raamat", href: "https://www.rahvaraamat.ee/et", et: "Peterburi tee 92E, 11415 Tallinn\nTel: (+372) 618 0010", en: "Peterburi tee 92E, 11415 Tallinn\nPhone: (+372) 618 0010" },
-  { name: "Apollo Raamatud", href: "https://www.apollo.ee/", et: "Põikmäe 2, Tänassilma küla, 76406 Saku vald, Harjumaa\nTel: (+372) 633 6000", en: "Põikmäe 2, Tänassilma village, 76406 Saku municipality\nPhone: (+372) 633 6000" },
-  { name: "Raamatukodu", href: "https://www.raamatukodu.ee/", et: "Esinduspood T1 Mall of Tallinnas\nPeterburi tee 2, 11415 Tallinn\nTel: (+372) 5191 8192", en: "Bookshop at T1 Mall of Tallinn\nPeterburi tee 2, 11415 Tallinn\nPhone: (+372) 5191 8192" },
+  { name: "Rahva Raamat", href: "https://www.rahvaraamat.ee", et: "Telliskivi 60/2 (I-hoone), 15073 Tallinn", en: "Telliskivi 60/2 (I-building), 15073 Tallinn" },
+  { name: "Apollo Raamatud", href: "https://www.apollo.ee", et: "Tartu mnt 80d, 10112 Tallinn", en: "Tartu mnt 80d, 10112 Tallinn" },
+  { name: "Raamatukoi", href: "https://www.raamatukoi.ee", et: "Harju 1, 10146 Tallinn", en: "Harju 1, 10146 Tallinn" },
 ];
 
 const content = {
@@ -68,10 +68,8 @@ export default async function PublisherPage({ params }: { params: Promise<{ loca
   if (locale !== "et" && locale !== "en") notFound();
   const t = content[locale];
   return <LayoutFull>
-    <section className="py-[50px] border-b border-line"><Shell>
-      <Breadcrumbs crumbs={[{ label: locale === "et" ? "Esileht" : "Home", href: "/" }, { label: t.title }]} />
-      <h1 className="font-heading text-[clamp(42px,7vw,78px)] leading-none mt-[18px]">{t.title}</h1>
-      <p className="max-w-[620px] mt-4 text-muted">{t.subtitle}</p>
+    <section className="py-[28px]"><Shell>
+      <h1 className="font-heading text-[clamp(42px,7vw,78px)] leading-none">{t.title}</h1>
     </Shell></section>
 
     <Shell><div className="grid grid-cols-[1fr_1.2fr] gap-12 py-12 max-[900px]:grid-cols-1">

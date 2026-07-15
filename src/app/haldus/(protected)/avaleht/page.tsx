@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useActionState } from "react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { FormField } from "@/components/admin/FormField";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import { saveHeroSettings, getHomepageSettings } from "@/app/haldus/homepage-actions";
+import { saveHeroSettings, getHomepageSettings, saveCardsSettings, saveSectionsSettings } from "@/app/haldus/homepage-actions";
 
 interface HeroConfig {
   versionName: string;
   eyebrow: string;
   heading: string;
+  headingSize: string;
   subtext: string;
   ctaLabel: string;
   ctaHref: string;
@@ -46,8 +47,9 @@ interface Section {
 const defaultHero: HeroConfig = {
   versionName: "",
   eyebrow: "",
-  heading: "Raamatud, mis kutsuvad edasi lugema.",
-  subtext: "Suur valik ilukirjandust, lasteraamatuid, ajaloo- ja praktilisi teoseid.",
+  heading: "Tänapäev",
+  headingSize: "clamp(56px,6vw,71px)",
+  subtext: "",
   ctaLabel: "",
   ctaHref: "",
   secondaryLabel: "",
@@ -55,7 +57,7 @@ const defaultHero: HeroConfig = {
   desktopImage: "",
   mobileImage: "",
   bgClass: "bg-[#f2eee6]",
-  showSearch: true,
+  showSearch: false,
   isPublished: false,
 };
 
@@ -67,31 +69,89 @@ export default function HomepageAdminPage() {
   const [state, action, pending] = useActionState(saveHeroSettings, undefined);
 
   const [cards, setCards] = useState<HeroCard[]>([
-    { id: "1", label: "Ajalugu", heading: "Eesti ajaloo suurteosed", description: "Avasta meie ajalooraamatute kollektsiooni.", linkHref: "/raamatud?category=ajalugu", desktopImage: "", mobileImage: "", position: 1 },
-    { id: "2", label: "Lastele", heading: "Lasteraamatud igas vanuses", description: "Põnevad lood ja kaunid illustratsioonid.", linkHref: "/raamatud?category=laste-ja-noorteraamatud", desktopImage: "", mobileImage: "", position: 2 },
-    { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=kasiraamatud", desktopImage: "", mobileImage: "", position: 3 },
+    { id: "1", label: "Ajalugu", heading: "Eesti ajaloo suurteosed", description: "Avasta meie ajalooraamatute kollektsiooni.", linkHref: "/raamatud?category=ajalugu-ja-poliitika", desktopImage: "", mobileImage: "", position: 1 },
+    { id: "2", label: "Lastele", heading: "Lasteraamatud igas vanuses", description: "Põnevad lood ja kaunid illustratsioonid.", linkHref: "/raamatud?category=lasteraamatud", desktopImage: "", mobileImage: "", position: 2 },
+    { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=hobid", desktopImage: "", mobileImage: "", position: 3 },
   ]);
 
   const [sections, setSections] = useState<Section[]>([
     { id: "1", heading: "Uued raamatud", source: "newest", productCount: 8, viewAllHref: "/raamatud", isVisible: true },
-    { id: "2", heading: "Ilmumas", source: "upcoming", productCount: 4, viewAllHref: "/raamatud", isVisible: true },
-    { id: "3", heading: "Pakkumised", source: "sale", productCount: 4, viewAllHref: "/pakkumised", isVisible: true },
+    { id: "2", heading: "Ilmumas", source: "upcoming", productCount: 4, viewAllHref: "/raamatud?upcoming=true", isVisible: true },
+    { id: "3", heading: "Soodus", source: "sale", productCount: 4, viewAllHref: "/pakkumised", isVisible: true },
   ]);
+
+  const [cardsSaveMsg, setCardsSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [sectionsSaveMsg, setSectionsSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [cardsBusy, setCardsBusy] = useState(false);
+  const [sectionsBusy, setSectionsBusy] = useState(false);
+
+  const desktopRef = useRef<HTMLInputElement>(null);
+  const mobileRef = useRef<HTMLInputElement>(null);
+  const [desktopPreview, setDesktopPreview] = useState<string | null>(null);
+  const [mobilePreview, setMobilePreview] = useState<string | null>(null);
+  const [uploadBusy, setUploadBusy] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState("");
+
+  async function handleImageUpload(file: File, field: "desktopImage" | "mobileImage") {
+    setUploadBusy(field);
+    setUploadError("");
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("section", field === "desktopImage" ? "hero-desktop" : "hero-mobile");
+    try {
+      const res = await fetch("/api/admin/homepage-media", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setUploadError(json.error ?? "\u00dcleslaadimine eba\u00f5nnestus");
+      } else if (json.url) {
+        updateHeroField(field, json.url);
+        if (field === "desktopImage") setDesktopPreview(json.url);
+        else setMobilePreview(json.url);
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "\u00dcleslaadimine eba\u00f5nnestus");
+    } finally {
+      setUploadBusy(null);
+    }
+  }
+
+  async function handleCardImageUpload(file: File, cardId: string, field: "desktopImage" | "mobileImage") {
+    setUploadBusy(`${cardId}-${field}`);
+    setUploadError("");
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("section", `hero-card-${cardId}`);
+    try {
+      const res = await fetch("/api/admin/homepage-media", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setUploadError(json.error ?? "\u00dcleslaadimine eba\u00f5nnestus");
+      } else if (json.url) {
+        updateCard(cardId, field, json.url);
+      }
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "\u00dcleslaadimine eba\u00f5nnestus");
+    } finally {
+      setUploadBusy(null);
+    }
+  }
 
   useEffect(() => {
     getHomepageSettings().then((data) => {
       if (data.hero) {
         setHero((prev) => ({ ...prev, ...data.hero }));
       }
+      if (data.cards && Array.isArray(data.cards) && data.cards.length > 0) {
+        setCards(data.cards as unknown as HeroCard[]);
+      }
+      if (data.sections && Array.isArray(data.sections) && data.sections.length > 0) {
+        setSections(data.sections as unknown as Section[]);
+      }
       setLoaded(true);
     });
   }, []);
 
-  useEffect(() => {
-    if (state?.success) {
-      setHero((prev) => ({ ...prev, isPublished: true }));
-    }
-  }, [state]);
+  const isPublished = hero.isPublished || state?.success;
 
   function updateHeroField(field: keyof HeroConfig, value: string | boolean) {
     setHero((prev) => ({ ...prev, [field]: value }));
@@ -103,6 +163,67 @@ export default function HomepageAdminPage() {
 
   function updateSection(id: string, field: keyof Section, value: string | number | boolean) {
     setSections((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+  }
+
+  function addCard() {
+    const maxPos = cards.reduce((m, c) => Math.max(m, c.position), 0);
+    const newCard: HeroCard = {
+      id: String(Date.now()),
+      label: "",
+      heading: "",
+      description: "",
+      linkHref: "",
+      desktopImage: "",
+      mobileImage: "",
+      position: maxPos + 1,
+    };
+    setCards((prev) => [...prev, newCard]);
+  }
+
+  function addSection() {
+    const newSection: Section = {
+      id: String(Date.now()),
+      heading: "",
+      source: "newest",
+      productCount: 4,
+      viewAllHref: "",
+      isVisible: true,
+    };
+    setSections((prev) => [...prev, newSection]);
+  }
+
+  async function handleSaveCards() {
+    setCardsBusy(true);
+    setCardsSaveMsg(null);
+    try {
+      const result = await saveCardsSettings(cards);
+      if (result?.error) {
+        setCardsSaveMsg({ type: "error", text: result.error });
+      } else {
+        setCardsSaveMsg({ type: "success", text: "Kaardid salvestatud!" });
+      }
+    } catch (err) {
+      setCardsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine eba\u00f5nnestus" });
+    } finally {
+      setCardsBusy(false);
+    }
+  }
+
+  async function handleSaveSections() {
+    setSectionsBusy(true);
+    setSectionsSaveMsg(null);
+    try {
+      const result = await saveSectionsSettings(sections);
+      if (result?.error) {
+        setSectionsSaveMsg({ type: "error", text: result.error });
+      } else {
+        setSectionsSaveMsg({ type: "success", text: "Sektsioonid salvestatud!" });
+      }
+    } catch (err) {
+      setSectionsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine eba\u00f5nnestus" });
+    } finally {
+      setSectionsBusy(false);
+    }
   }
 
   return (
@@ -126,8 +247,8 @@ export default function HomepageAdminPage() {
       {tab === "hero" && (
         <div className="max-w-3xl grid gap-5">
           <div className="flex items-center gap-3 mb-2">
-            <StatusBadge variant={hero.isPublished ? "published" : "draft"} />
-            <span className="text-sm text-muted">{!loaded ? "Laen\u2026" : hero.isPublished ? "Avaldatud" : "Mustand"}</span>
+            <StatusBadge variant={isPublished ? "published" : "draft"} />
+            <span className="text-sm text-muted">{!loaded ? "Laen\u2026" : isPublished ? "Avaldatud" : "Mustand"}</span>
           </div>
 
           <FormField label="Versiooni nimi">
@@ -142,6 +263,10 @@ export default function HomepageAdminPage() {
               <input name="heading" value={hero.heading} onChange={(e) => updateHeroField("heading", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="Peamine pealkiri" />
             </FormField>
           </div>
+
+          <FormField label="Pealkirja suurus (CSS)">
+            <input name="headingSize" value={hero.headingSize} onChange={(e) => updateHeroField("headingSize", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="clamp(56px,6vw,71px)" />
+          </FormField>
 
           <FormField label="Alatekst">
             <textarea name="subtext" value={hero.subtext} onChange={(e) => updateHeroField("subtext", e.target.value)} rows={3} className="border border-line bg-paper p-3 text-sm font-normal" />
@@ -163,12 +288,40 @@ export default function HomepageAdminPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
-            <FormField label="Lauaarvuti pilt (failinimi)">
-              <input name="desktopImage" value={hero.desktopImage} onChange={(e) => updateHeroField("desktopImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
-            </FormField>
-            <FormField label="Mobiili pilt (failinimi)">
-              <input name="mobileImage" value={hero.mobileImage} onChange={(e) => updateHeroField("mobileImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
-            </FormField>
+            <div className="grid gap-2">
+              <FormField label="Lauaarvuti pilt">
+                <input
+                  ref={desktopRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.avif,.tif,.tiff"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, "desktopImage"); }}
+                  className="border border-line bg-paper p-3 text-sm font-normal"
+                />
+              </FormField>
+              {(desktopPreview || hero.desktopImage) && (
+                <div className="relative aspect-video bg-soft border border-line overflow-hidden">
+                  <img src={desktopPreview || hero.desktopImage} alt="Laaditud pilt" className="w-full h-full object-contain" />
+                </div>
+              )}
+              {uploadBusy === "desktopImage" && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+            </div>
+            <div className="grid gap-2">
+              <FormField label="Mobiili pilt">
+                <input
+                  ref={mobileRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.avif,.tif,.tiff"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, "mobileImage"); }}
+                  className="border border-line bg-paper p-3 text-sm font-normal"
+                />
+              </FormField>
+              {(mobilePreview || hero.mobileImage) && (
+                <div className="relative aspect-[9/16] max-w-[200px] bg-soft border border-line overflow-hidden">
+                  <img src={mobilePreview || hero.mobileImage} alt="Laaditud pilt" className="w-full h-full object-contain" />
+                </div>
+              )}
+              {uploadBusy === "mobileImage" && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+            </div>
           </div>
 
           <label className="flex items-center gap-2 text-sm font-bold">
@@ -176,6 +329,7 @@ export default function HomepageAdminPage() {
             Näita otsingukasti
           </label>
 
+          {uploadError && <p className="text-accent text-sm font-bold">{uploadError}</p>}
           {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
           {state?.success && <p className="text-leaf text-sm font-bold">Päise salvestatud!</p>}
 
@@ -183,6 +337,7 @@ export default function HomepageAdminPage() {
             <input type="hidden" name="versionName" value={hero.versionName} />
             <input type="hidden" name="eyebrow" value={hero.eyebrow} />
             <input type="hidden" name="heading" value={hero.heading} />
+            <input type="hidden" name="headingSize" value={hero.headingSize} />
             <input type="hidden" name="subtext" value={hero.subtext} />
             <input type="hidden" name="ctaLabel" value={hero.ctaLabel} />
             <input type="hidden" name="ctaHref" value={hero.ctaHref} />
@@ -224,20 +379,45 @@ export default function HomepageAdminPage() {
                 <FormField label="URL">
                   <input value={card.linkHref} onChange={(e) => updateCard(card.id, "linkHref", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
                 </FormField>
-                <FormField label="Lauaarvuti pilt">
-                  <input value={card.desktopImage} onChange={(e) => updateCard(card.id, "desktopImage", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
-                </FormField>
-                <FormField label="Mobiili pilt">
-                  <input value={card.mobileImage} onChange={(e) => updateCard(card.id, "mobileImage", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
-                </FormField>
+                <div className="grid gap-1">
+                  <FormField label="Lauaarvuti pilt">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.avif,.tif,.tiff"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCardImageUpload(f, card.id, "desktopImage"); }}
+                      className="border border-line bg-paper p-2 text-sm font-normal"
+                    />
+                  </FormField>
+                  {card.desktopImage && (
+                    <img src={card.desktopImage} alt="" className="w-full h-16 object-contain bg-soft border border-line" />
+                  )}
+                  {uploadBusy === `${card.id}-desktopImage` && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+                </div>
+                <div className="grid gap-1">
+                  <FormField label="Mobiili pilt">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.avif,.tif,.tiff"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCardImageUpload(f, card.id, "mobileImage"); }}
+                      className="border border-line bg-paper p-2 text-sm font-normal"
+                    />
+                  </FormField>
+                  {card.mobileImage && (
+                    <img src={card.mobileImage} alt="" className="w-full h-16 object-contain bg-soft border border-line" />
+                  )}
+                  {uploadBusy === `${card.id}-mobileImage` && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+                </div>
               </div>
             </div>
           ))}
-          <button className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
+          <button onClick={addCard} className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
             + Lisa kaart
           </button>
-          <button className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80">
-            Salvesta kaardid
+          {cardsSaveMsg && (
+            <p className={`text-sm font-bold ${cardsSaveMsg.type === "error" ? "text-accent" : "text-leaf"}`}>{cardsSaveMsg.text}</p>
+          )}
+          <button onClick={handleSaveCards} disabled={cardsBusy} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+            {cardsBusy ? "Salvestan\u2026" : "Salvesta kaardid"}
           </button>
         </div>
       )}
@@ -251,7 +431,7 @@ export default function HomepageAdminPage() {
                 <h3 className="font-heading text-lg">{section.heading || "Uus sektsioon"}</h3>
                 <label className="flex items-center gap-2 text-sm font-bold">
                   <input type="checkbox" checked={section.isVisible} onChange={(e) => updateSection(section.id, "isVisible", e.target.checked)} className="accent-ink h-4 w-4" />
-                  N\u00e4htav
+                  Nähtav
                 </label>
               </div>
               <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-1">
@@ -264,7 +444,7 @@ export default function HomepageAdminPage() {
                     <option value="upcoming">Ilmumas</option>
                     <option value="sale">Soodustusega</option>
                     <option value="category">Kategooriast</option>
-                    <option value="manual">K\u00e4sitsi valitud</option>
+                    <option value="manual">Käsitsi valitud</option>
                   </select>
                 </FormField>
                 <FormField label="Toodete arv">
@@ -276,11 +456,14 @@ export default function HomepageAdminPage() {
               </FormField>
             </div>
           ))}
-          <button className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
+          <button onClick={addSection} className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
             + Lisa sektsioon
           </button>
-          <button className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80">
-            Salvesta sektsioonid
+          {sectionsSaveMsg && (
+            <p className={`text-sm font-bold ${sectionsSaveMsg.type === "error" ? "text-accent" : "text-leaf"}`}>{sectionsSaveMsg.text}</p>
+          )}
+          <button onClick={handleSaveSections} disabled={sectionsBusy} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+            {sectionsBusy ? "Salvestan\u2026" : "Salvesta sektsioonid"}
           </button>
         </div>
       )}

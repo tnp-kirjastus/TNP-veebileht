@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Product, Category, Series, Person } from "./data-types";
 import { isOnSale } from "./product-utils";
-export { getEffectivePrice, isOnSale, getSalePercent, formatEuro, formatDate } from "./product-utils";
+export { getEffectivePrice, isOnSale, getSalePercent, formatEuro, formatDate, formatEditions } from "./product-utils";
 export type { Product, Category, Series, Person } from "./data-types";
 
 let _cache: {
@@ -53,13 +53,24 @@ function allPeople(): Person[] {
 }
 
 const activeProducts = (): Product[] => allProducts().filter((p) => !p.is_archived);
+type ProductScope = "active" | "archived" | "all";
+
+function productsByScope(scope: ProductScope = "active"): Product[] {
+  if (scope === "archived") return allProducts().filter((p) => p.is_archived);
+  if (scope === "all") return allProducts();
+  return activeProducts();
+}
 
 export function getActiveProducts(): Product[] {
   return activeProducts();
 }
 
+export function getCatalogueProducts(scope: ProductScope = "active"): Product[] {
+  return productsByScope(scope);
+}
+
 export function getArchivedProducts(): Product[] {
-  return allProducts().filter((p) => p.is_archived);
+  return productsByScope("archived");
 }
 
 export function getProductBySlug(slug: string): Product | undefined {
@@ -113,9 +124,9 @@ export function getForeignProducts(): Product[] {
   return activeProducts().filter((p) => p.origin === "foreign");
 }
 
-export function searchProducts(query: string): Product[] {
+export function searchProducts(query: string, scope: ProductScope = "active"): Product[] {
   const q = query.toLowerCase();
-  return activeProducts().filter(
+  return productsByScope(scope).filter(
     (p) =>
       p.title_et.toLowerCase().includes(q) ||
       p.sku.includes(q) ||
@@ -136,6 +147,37 @@ export function filterProductsByPerson(products: Product[], role: string, slugOr
 
 export function getCategories(): Category[] {
   return allCategories();
+}
+
+export function getChildCategories(parentSlug: string): Category[] {
+  return allCategories().filter((c) => c.parent === parentSlug);
+}
+
+export function getCategoryTree(): Category[] {
+  const all = allCategories();
+  const map = new Map<string, Category>();
+  for (const c of all) {
+    map.set(c.slug, { ...c, children: [] });
+  }
+  const roots: Category[] = [];
+  for (const c of all) {
+    const node = map.get(c.slug)!;
+    if (c.parent && map.has(c.parent)) {
+      map.get(c.parent)!.children!.push(node);
+    } else if (!c.parent) {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+export function getProductsByCategories(categorySlugs: string[], scope: ProductScope = "active"): Product[] {
+  const categoryNames = allCategories()
+    .filter((c) => categorySlugs.includes(c.slug))
+    .map((c) => c.name);
+  return productsByScope(scope).filter((p) =>
+    p.categories.some((c) => categoryNames.includes(c))
+  );
 }
 
 export function getSeries(): Series[] {

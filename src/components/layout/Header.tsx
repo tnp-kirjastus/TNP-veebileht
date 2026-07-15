@@ -4,30 +4,40 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { Shell } from "./Shell";
-import { SearchOverlay } from "../store/SearchOverlay";
 import { MobileNav } from "./MobileNav";
 import { useCart } from "@/lib/cart-context";
 import { useCartDrawer } from "@/lib/cart-drawer-context";
 import { LanguageToggle } from "./LanguageToggle";
 import { isPublicNavActive, PUBLIC_NAV_ITEMS } from "@/lib/navigation";
-import { usePathname } from "next/navigation";
 
 export function Header() {
-  const [searchOpen, setSearchOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { itemCount } = useCart();
-  const pathname = usePathname();
   const { open: openCart } = useCartDrawer();
-  const searchButtonRef = useRef<HTMLButtonElement>(null);
-  function closeSearch() { setSearchOpen(false); requestAnimationFrame(() => searchButtonRef.current?.focus()); }
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
     }
     window.addEventListener("keydown", shortcut);
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    router.push(`/raamatud?q=${encodeURIComponent(q)}`);
+  }
 
   return (
     <>
@@ -38,20 +48,16 @@ export function Header() {
               <img src="/tanapaeva-logo.png" alt="Tänapäev" className="w-full" />
             </Link>
 
-            <nav className="flex justify-center gap-[22px] max-[1120px]:hidden">
-              {PUBLIC_NAV_ITEMS.map((item) => {
-                const active = isPublicNavActive(item.key, item.href, pathname);
-                return (
-                <Link key={item.key} href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`relative uppercase font-extrabold text-sm py-3 whitespace-nowrap
-                    after:absolute after:left-0 after:right-0 after:bottom-[7px] after:h-[2px] after:bg-accent
-                    after:scale-x-0 after:origin-right after:transition-transform after:duration-[280ms]
-                    hover:after:scale-x-100 hover:after:origin-left ${active ? "text-accent after:scale-x-100" : "text-[#303437]"}`}>
-                  {item.label}
-                </Link>
-              )})}
-            </nav>
+            <form onSubmit={handleSearch} className="w-full max-w-[640px] mx-auto max-[1120px]:hidden">
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Otsi raamatut, autorit, ISBNi, kategooriat ..."
+                className="w-full h-[48px] border border-line bg-panel px-5 text-sm outline-none focus:border-ink/30 transition-colors"
+              />
+            </form>
 
             <div className="flex items-center gap-[10px]">
               <LanguageToggle />
@@ -66,14 +72,17 @@ export function Header() {
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3.2"/><path d="M17 2H7a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h10a5 5 0 0 0 5-5V7a5 5 0 0 0-5-5zm-5 15.2a5.2 5.2 0 1 1 0-10.4 5.2 5.2 0 0 1 0 10.4zm5.4-9.6a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4z"/></svg>
               </a>
 
+              <Link href="/profiil"
+                className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center max-[760px]:hidden"
+                aria-label="Konto">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/>
+                </svg>
+              </Link>
+
               <button className="hidden max-[1120px]:grid w-[44px] h-[44px] border border-line bg-panel place-items-center"
                 onClick={() => setMobileNavOpen(true)} aria-label="Ava menüü">
                 <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-              </button>
-
-              <button ref={searchButtonRef} className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center"
-                onClick={() => setSearchOpen(true)} aria-label="Otsi">
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
               </button>
 
               <button onClick={openCart}
@@ -88,10 +97,25 @@ export function Header() {
               </button>
             </div>
           </div>
+
+          <nav className="flex justify-center gap-[22px] border-t border-ink/[.06] max-[1120px]:hidden">
+            {PUBLIC_NAV_ITEMS.map((item) => {
+              const active = isPublicNavActive(item.key, item.href, pathname);
+              return (
+                <Link key={item.key} href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative uppercase font-extrabold text-sm py-3 whitespace-nowrap
+                    after:absolute after:left-0 after:right-0 after:bottom-[7px] after:h-[2px] after:bg-accent
+                    after:scale-x-0 after:origin-right after:transition-transform after:duration-[280ms]
+                    hover:after:scale-x-100 hover:after:origin-left ${active ? "text-accent after:scale-x-100" : "text-[#303437]"}`}>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </Shell>
       </header>
 
-      <SearchOverlay open={searchOpen} onClose={closeSearch} />
       <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     </>
   );

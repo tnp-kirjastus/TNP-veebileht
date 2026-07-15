@@ -5,8 +5,14 @@ import {
   sortMachinesByCity,
   groupMachinesByCity,
 } from "@/lib/shipping/maksekeskus-shipping";
+import { consumeRateLimit } from "@/lib/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const clientKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!await consumeRateLimit("parcel_machines", clientKey, 60, 30)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   try {
     const allMachines = await fetchParcelMachines();
 

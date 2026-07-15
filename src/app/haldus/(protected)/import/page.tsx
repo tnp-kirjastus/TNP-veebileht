@@ -54,6 +54,9 @@ export default function ImportPage() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({
     sku: "isbn", title: "title", price: "price", stock: "stock", description: "description",
+    categories: "tootekategooriad", authors: "toote_autor", series: "toote_sari",
+    sale_price: "soodushind", binding: "toote_koide", pages: "toote_lk",
+    release_date: "toote_ilmumiskuupaev", origin: "eesti_valismaa", is_archived: "arhiiv",
   });
   const [mode, setMode] = useState<ImportMode>("partial");
   const [results, setResults] = useState<ImportRow[]>([]);
@@ -223,12 +226,63 @@ export default function ImportPage() {
           {fileData.length > 0 && (
             <>
               <h3 className="font-bold text-sm mb-2">Veerude vastendamine</h3>
-              <p className="text-xs text-muted mb-3">Määra, milline veerg vastab millisele toote väljale. Kaanepildi veerg võib olla Pilt, Toote Kaanepilt või cover_file.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-                {(["sku", "title", "price", "stock", "description"] as const).map((field) => (
-                  <label key={field} className="grid gap-1 text-xs font-bold">
-                    {field === "sku" ? "ISBN" : field === "title" ? "Pealkiri" : field === "price" ? "Hind" : field === "stock" ? "Laoseis" : "Kirjeldus"}
-                    <select value={mapping[field] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
+              <p className="text-xs text-muted mb-3">Määra, milline veerg vastab millisele toote väljale.</p>
+
+              <h4 className="font-bold text-xs text-muted mb-2 mt-2">Põhiväljad</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                {([
+                  { key: "sku", label: "ISBN" },
+                  { key: "title", label: "Pealkiri" },
+                  { key: "price", label: "Hind" },
+                  { key: "sale_price", label: "Soodushind" },
+                  { key: "stock", label: "Laoseis" },
+                ] as const).map(({ key, label }) => (
+                  <label key={key} className="grid gap-1 text-xs font-bold">
+                    {label}
+                    <select value={mapping[key] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
+                      className="border border-line bg-paper p-2 font-normal text-xs">
+                      <option value="">— Ignoreeri —</option>
+                      {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
+
+              <h4 className="font-bold text-xs text-muted mb-2 mt-2">Metaandmed</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                {([
+                  { key: "description", label: "Kirjeldus" },
+                  { key: "binding", label: "Köide" },
+                  { key: "pages", label: "Lehekülgi" },
+                  { key: "release_date", label: "Ilmumisaeg" },
+                  { key: "origin", label: "Päritolu (Eesti/Välismaa)" },
+                  { key: "is_archived", label: "Arhiiv (x = jah)" },
+                ] as const).map(({ key, label }) => (
+                  <label key={key} className="grid gap-1 text-xs font-bold">
+                    {label}
+                    <select value={mapping[key] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
+                      className="border border-line bg-paper p-2 font-normal text-xs">
+                      <option value="">— Ignoreeri —</option>
+                      {headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
+
+              <h4 className="font-bold text-xs text-muted mb-2 mt-2">Seosed</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+                {([
+                  { key: "categories", label: "Kategooriad (| eraldaja)" },
+                  { key: "series", label: "Sari" },
+                  { key: "authors", label: "Autorid (| eraldaja)" },
+                  { key: "translators", label: "Tõlkijad (| eraldaja)" },
+                  { key: "illustrators", label: "Illustreerijad" },
+                  { key: "designers", label: "Kujundajad" },
+                  { key: "editors", label: "Toimetajad" },
+                ] as const).map(({ key, label }) => (
+                  <label key={key} className="grid gap-1 text-xs font-bold">
+                    {label}
+                    <select value={mapping[key] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
                       className="border border-line bg-paper p-2 font-normal text-xs">
                       <option value="">— Ignoreeri —</option>
                       {headers.map((h) => <option key={h} value={h}>{h}</option>)}

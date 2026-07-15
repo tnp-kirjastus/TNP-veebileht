@@ -7,12 +7,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "node scripts/regenerate-json.mjs",
+    "prebuild": "set NODE_OPTIONS=--use-system-ca && node scripts/regenerate-json.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "regen-json": "node scripts/regenerate-json.mjs"
+    "test": "set NODE_OPTIONS=--use-system-ca && vitest run",
+    "regen-json": "set NODE_OPTIONS=--use-system-ca && node scripts/regenerate-json.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

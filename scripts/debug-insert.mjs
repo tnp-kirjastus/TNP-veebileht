@@ -1,7 +1,11 @@
 import { readFileSync } from "fs";
 
 const BASE = "https://gqgliwbcazcixvyealsx.supabase.co/rest/v1";
-const KEY = "REDACTED_SERVICE_ROLE_KEY";
+const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!KEY) {
+  console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is required");
+  process.exit(1);
+}
 const H = { "apikey": KEY, "Authorization": `Bearer ${KEY}`, "Content-Type": "application/json", "Content-Profile": "commerce", "Accept-Profile": "commerce", "Prefer": "return=minimal" };
 
 const products = JSON.parse(readFileSync("src/data/products.json", "utf-8"));

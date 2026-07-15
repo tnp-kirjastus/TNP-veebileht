@@ -22,9 +22,10 @@ export async function GET() {
 
 async function change(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
+  const sessionId = await getCartSession(true);
+  if (!await consumeRateLimit("cart_write", sessionId!, 60, 60)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   const parsed = mutationSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid_cart_item" }, { status: 400 });
-  const sessionId = await getCartSession(true);
   try {
     const cart = await mutateCart(sessionId!, parsed.data.slug, parsed.data.quantity || null);
     return NextResponse.json(cart);

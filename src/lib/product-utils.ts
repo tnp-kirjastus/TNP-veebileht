@@ -33,9 +33,15 @@ export function formatEuro(value: number): string {
 
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("et-EE", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const d = new Date(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
+export function formatEditions(editions: { type: string; date: string }[]): string {
+  return editions
+    .map(e => `${formatDate(e.date)} (${e.type})`)
+    .join(", ");
 }

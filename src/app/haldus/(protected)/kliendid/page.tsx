@@ -1,12 +1,14 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminSession } from "@/lib/admin-auth";
 
 export default async function CustomersAdminPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; role?: string }>;
 }) {
+  await requireAdminSession(["admin"]);
   const params = await searchParams;
   const query = (params.q ?? "").trim();
 

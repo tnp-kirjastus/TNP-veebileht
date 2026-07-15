@@ -4,17 +4,15 @@ export const t = {
     uued_raamatud: "Uued raamatud",
     raamatud: "Raamatud",
     sarjad: "Sarjad",
-    pakkumised: "Pakkumised",
+    autorid: "Autorid",
+    soodus: "Soodus",
     kirjastus: "Kirjastus",
   },
   search: {
     placeholder: "Otsi raamatuid, autoreid, sarju...",
     button: "Otsi",
   },
-  notice: {
-    free_shipping: "Tasuta tarne alates 40 eurost",
-    tagline: "Uued raamatud, ettetellimused ja kampaaniad ühest kohast",
-  },
+
   newsletter: {
     heading: "Liitu Tänapäev uudiskirjaga",
     description: "Uued raamatud, ettetellimused ja kampaaniad otse sinu postkasti.",
@@ -22,13 +20,13 @@ export const t = {
     button: "Liitu",
   },
   home: {
-    hero_title: "Raamatud, mis kutsuvad edasi lugema.",
+    hero_title: "Tänapäev",
     new_books: "Uued raamatud",
     view_all: "Vaata kõiki",
     series: "Sarjad",
     all_series: "Kõik sarjad",
-    offers: "Pakkumised",
-    all_offers: "Kõik pakkumised",
+    offers: "Soodus",
+    all_offers: "Kõik soodsad raamatud",
   },
   filters: {
     title: "Filtrid",
@@ -63,6 +61,10 @@ export const t = {
     editor: "Toimetaja",
     illustrator: "Illustreerija",
     series: "Sari",
+    editions: "Kordustr\u00fckid",
+    same_category: "Samast kategooriast",
+    same_author: "Samalt autorilt",
+    same_series: "Samast sarjast",
   },
   cart: {
     title: "Ostukorv",
@@ -105,7 +107,7 @@ export const t = {
     description: "Sirvi raamatusarju — iga sari koondab temaatiliselt või autoripõhiselt seotud raamatud ühte kohta.",
   },
   campaigns: {
-    title: "Pakkumised",
+    title: "Soodus",
     description: "Soodsad raamatud piiratud aja jooksul. Kõik allahinnatud tooted ühes kohas.",
   },
   news: {
@@ -115,8 +117,12 @@ export const t = {
   publisher: {
     title: "Kirjastus",
   },
+  authors_page: {
+    title: "Autorid",
+    description: "Sirvi autoreid tähestiku järgi. Nimel klikkides näed kõiki autori raamatuid.",
+    empty: "Ühtegi autorit ei leitud.",
+  },
   footer: {
-    tagline: "Kirjastus Tänapäev — Eesti suurim kirjastus. Oleme välja andnud üle 4000 raamatu ja meie kataloog täieneb iga kuu.",
     terms: "Kasutustingimused",
     privacy: "Privaatsuspoliitika",
     publisher: "Kirjastus",

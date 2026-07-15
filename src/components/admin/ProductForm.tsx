@@ -7,6 +7,8 @@ import { getCoverUrlClient } from "@/lib/media-url";
 
 interface SeriesData { id: string; slug: string; name_et: string; }
 
+interface Edition { type: string; date: string; }
+
 type ProductStatus = "draft" | "active" | "upcoming" | "archived";
 
 export interface EditableProduct {
@@ -29,6 +31,7 @@ export interface EditableProduct {
   is_upcoming?: boolean;
   is_archived?: boolean;
   is_featured?: boolean;
+  allow_preorder?: boolean;
   cover_image?: string | null;
   series_id?: string | null;
   status?: ProductStatus;
@@ -36,6 +39,7 @@ export interface EditableProduct {
   person_ids?: Record<string, string[]>;
   seo_title?: string | null;
   seo_description?: string | null;
+  editions?: Edition[];
 }
 
 function computeStatus(product: EditableProduct): ProductStatus {
@@ -44,7 +48,7 @@ function computeStatus(product: EditableProduct): ProductStatus {
   return "active";
 }
 
-const TABS = ["identity", "content", "commerce", "meta", "cover", "people", "seo"] as const;
+const TABS = ["identity", "content", "commerce", "meta", "cover", "people", "seo", "editions"] as const;
 type Tab = (typeof TABS)[number];
 
 type CoverAction = "keep" | "replace" | "remove";
@@ -58,6 +62,7 @@ function tabLabel(tab: Tab): string {
     case "cover": return "Kaanepilt";
     case "people": return "Autorid";
     case "seo": return "SEO";
+    case "editions": return "Trükid";
   }
 }
 
@@ -78,6 +83,7 @@ export function ProductForm({
   const [uploadWarning, setUploadWarning] = useState("");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [dropActive, setDropActive] = useState(false);
+  const [editions, setEditions] = useState<Edition[]>(product.editions ?? []);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const originalCover = product.cover_image ?? null;
@@ -179,6 +185,7 @@ export function ProductForm({
     <form action={action} className="max-w-5xl">
       {product.id && <input type="hidden" name="id" value={product.id} />}
       <input type="hidden" name="cover_image" value={coverImageValue} />
+      <input type="hidden" name="editions" value={JSON.stringify(editions)} />
 
       <div className="border border-line bg-panel">
         {/* Tab bar */}
@@ -253,6 +260,14 @@ export function ProductForm({
                 </select>
               </FormField>
             </div>
+            {status === "upcoming" && (
+              <div className="mt-5 flex gap-4">
+                <input type="hidden" name="allow_preorder" value="false" />
+                <label className="flex items-center gap-2 text-sm font-bold">
+                  <input type="checkbox" name="allow_preorder" value="true" defaultChecked={product.allow_preorder ?? true} className="accent-ink h-4 w-4" /> Luba ettetellimine
+                </label>
+              </div>
+            )}
           </fieldset>
 
           {/* Metadata */}
@@ -433,6 +448,53 @@ export function ProductForm({
               <FormField label="SEO kirjeldus (max 170)">
                 <textarea name="seo_description" maxLength={170} rows={2} defaultValue={product.seo_description ?? ""} className="border border-line bg-paper p-3 font-normal text-sm" />
               </FormField>
+            </div>
+          </fieldset>
+
+          {/* Editions */}
+          <fieldset id="tab-editions" className="border-t border-line pt-6">
+            <legend className="font-heading text-xl mb-4">Trükid</legend>
+            <div className="grid gap-4">
+              {editions.map((ed, i) => (
+                <div key={i} className="flex items-center gap-3 border border-line p-3 bg-paper">
+                  <span className="text-xs text-muted font-bold min-w-[40px]">#{i + 1}</span>
+                  <input
+                    type="text"
+                    value={ed.type}
+                    onChange={(e) => {
+                      const next = [...editions];
+                      next[i] = { ...next[i], type: e.target.value };
+                      setEditions(next);
+                    }}
+                    placeholder="Tüüp (nt 2. trükk)"
+                    className="border border-line bg-paper p-2 font-normal text-sm flex-1"
+                  />
+                  <input
+                    type="date"
+                    value={ed.date.slice(0, 10)}
+                    onChange={(e) => {
+                      const next = [...editions];
+                      next[i] = { ...next[i], date: e.target.value };
+                      setEditions(next);
+                    }}
+                    className="border border-line bg-paper p-2 font-normal text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditions(editions.filter((_, j) => j !== i))}
+                    className="min-h-8 px-3 border border-line text-sm font-bold text-accent hover:bg-accent/5"
+                  >
+                    Eemalda
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setEditions([...editions, { type: "", date: "" }])}
+                className="min-h-10 px-4 border border-line text-sm font-bold hover:bg-soft self-start"
+              >
+                + Lisa trükk
+              </button>
             </div>
           </fieldset>
         </div>

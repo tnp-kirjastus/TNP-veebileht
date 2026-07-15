@@ -13,19 +13,26 @@ import type {
   ParcelMachine,
 } from "@/lib/shipping/maksekeskus-shipping";
 
-type ShippingCarrier = "omniva" | "smartpost" | "courier";
+type ShippingCarrier = "omniva" | "smartpost";
 
 type CheckoutData = {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   shipping_method: ShippingCarrier;
   address: string;
+  invoiceRequested: boolean;
+  companyName: string;
+  companyRegCode: string;
 };
 
 const initialData: CheckoutData = {
-  name: "", email: "", phone: "",
+  firstName: "", lastName: "", email: "", phone: "",
   shipping_method: "omniva", address: "",
+  invoiceRequested: false,
+  companyName: "",
+  companyRegCode: "",
 };
 
 function shippingRate(carrier: ShippingCarrier): ShippingRate | undefined {
@@ -51,6 +58,12 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
   const [machineDropdownOpen, setMachineDropdownOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<ParcelMachine | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [couponCode, setCouponCode] = useState("");
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState(false);
+  const [couponDiscount, setCouponDiscount] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const loadMachines = useCallback(() => {
@@ -100,9 +113,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
         if (prevMachine) {
           next.address = "";
         }
-        if (value === "courier" && current.shipping_method !== "courier") {
-          next.address = "";
-        }
       }
       return next;
     });
@@ -143,12 +153,40 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
   }, [currentCarrierMachines, machineSearch]);
 
   const shippingCost = calculateShippingCost(data.shipping_method, total);
-  const orderTotal = total + shippingCost;
+  const orderTotal = total + shippingCost - couponDiscount;
   const needsMore = shippingCost > 0
     ? shippingRate(data.shipping_method)!.freeFrom - total
     : 0;
 
+  const KM_PERCENT = 9;
+  const vatAmount = orderTotal - (orderTotal / (1 + KM_PERCENT / 100));
+
   const isParcelMachine = data.shipping_method === "omniva" || data.shipping_method === "smartpost";
+
+  async function applyCoupon() {
+    setCouponBusy(true);
+    setCouponError("");
+    setCouponSuccess(false);
+    try {
+      const response = await fetch("/api/coupon/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: couponCode.trim(), subtotal: total }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setCouponError(result.error || "Sooduskood ei kehti.");
+        setCouponDiscount(0);
+        return;
+      }
+      setCouponDiscount(result.discount);
+      setCouponSuccess(true);
+    } catch {
+      setCouponError("Sooduskoodi kontroll ebaõnnestus.");
+    } finally {
+      setCouponBusy(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,10 +194,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
     if (step < 3) {
       if (step === 2 && isParcelMachine && !selectedMachine) {
         setError("Palun vali pakiautomaat.");
-        return;
-      }
-      if (step === 2 && data.shipping_method === "courier" && data.address.length < 5) {
-        setError("Palun sisesta tarneaadress.");
         return;
       }
       setStep((step + 1) as 2 | 3);
@@ -179,10 +213,19 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          ...data,
+          name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+          email: data.email,
+          phone: data.phone,
+          shipping_method: data.shipping_method,
+          address: data.address,
+          invoiceRequested: data.invoiceRequested,
+          companyName: data.companyName,
+          companyRegCode: data.companyRegCode,
           idempotencyKey,
           items: items.map(({ slug, quantity }) => ({ slug, quantity })),
           shipping_cost: shippingCost,
+          couponCode: couponCode.trim() || undefined,
+          couponDiscount,
           parcel_machine: selectedMachine
             ? {
                 carrier: selectedMachine.carrier,
@@ -203,7 +246,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
       }
       if (
         typeof result.redirectUrl !== "string" ||
-        !result.redirectUrl.startsWith("https://")
+        (!result.redirectUrl.startsWith("https://") && !result.redirectUrl.startsWith("/"))
       ) {
         throw new Error("invalid_payment_redirect");
       }
@@ -242,18 +285,30 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
               <legend className="font-heading text-2xl mb-5">Kontaktandmed</legend>
               <div className={`grid gap-5 ${compact ? "grid-cols-1" : "grid-cols-2 max-sm:grid-cols-1"}`}>
                 <label className="grid gap-2 font-bold text-sm">
-                  Nimi
+                  Eesnimi
                   <input
-                    value={data.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    autoComplete="name"
+                    value={data.firstName}
+                    onChange={(e) => update("firstName", e.target.value)}
+                    autoComplete="given-name"
                     autoFocus
                     required
-                    minLength={2}
+                    minLength={1}
                     className="border border-line p-3 font-normal"
                   />
                 </label>
                 <label className="grid gap-2 font-bold text-sm">
+                  Perekonnanimi
+                  <input
+                    value={data.lastName}
+                    onChange={(e) => update("lastName", e.target.value)}
+                    autoComplete="family-name"
+                    required
+                    minLength={1}
+                    className="border border-line p-3 font-normal"
+                  />
+                </label>
+              </div>
+              <label className="grid gap-2 font-bold text-sm">
                   E-post
                   <input
                     value={data.email}
@@ -264,7 +319,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                     className="border border-line p-3 font-normal"
                   />
                 </label>
-              </div>
               <label className="grid gap-2 font-bold text-sm">
                 Telefon
                 <input
@@ -277,7 +331,75 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                   className="border border-line p-3 font-normal"
                 />
               </label>
+
+              <div className="border-t border-line pt-4 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={data.invoiceRequested}
+                    onChange={(e) => update("invoiceRequested", e.target.checked)}
+                    className="accent-ink h-4 w-4"
+                  />
+                  <span className="font-bold text-sm">Soovin arvet firmale</span>
+                </label>
+
+                {data.invoiceRequested && (
+                  <div className={`grid gap-4 mt-4 pl-6 ${compact ? "grid-cols-1" : "grid-cols-2 max-sm:grid-cols-1"}`}>
+                    <label className="grid gap-2 font-bold text-sm">
+                      Ettevõtte nimi
+                      <input
+                        value={data.companyName}
+                        onChange={(e) => update("companyName", e.target.value)}
+                        required={data.invoiceRequested}
+                        className="border border-line p-3 font-normal"
+                      />
+                    </label>
+                    <label className="grid gap-2 font-bold text-sm">
+                      Registrikood
+                      <input
+                        value={data.companyRegCode}
+                        onChange={(e) => update("companyRegCode", e.target.value)}
+                        required={data.invoiceRequested}
+                        className="border border-line p-3 font-normal"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
             </fieldset>
+          )}
+
+          {/* Coupon code - visible in steps 1 and 2 */}
+          {(step === 1 || step === 2) && (
+            <div className="border-t border-line pt-4 mt-0">
+              <label className="grid gap-2 font-bold text-sm">
+                Sooduskood
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <input
+                    value={couponCode}
+                    onChange={(e) => {
+                      setCouponCode(e.target.value);
+                      if (couponSuccess) {
+                        setCouponSuccess(false);
+                        setCouponDiscount(0);
+                      }
+                    }}
+                    placeholder="Sisesta sooduskood"
+                    className="border border-line p-3 font-normal"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCoupon}
+                    disabled={!couponCode.trim() || couponBusy}
+                    className="min-h-[46px] px-4 border border-ink font-bold bg-ink text-white hover:bg-ink/80 disabled:opacity-50"
+                  >
+                    {couponBusy ? "..." : "Rakenda"}
+                  </button>
+                </div>
+              </label>
+              {couponError && <p className="text-accent text-sm mt-1">{couponError}</p>}
+              {couponSuccess && <p className="text-leaf text-sm mt-1">Sooduskood rakendatud! &minus;{couponDiscount.toFixed(2)} €</p>}
+            </div>
           )}
 
           {/* Step 2: Delivery */}
@@ -285,7 +407,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
             <fieldset className="grid gap-5">
               <legend className="font-heading text-2xl mb-5">Tarneviis</legend>
 
-              {(["omniva", "smartpost", "courier"] as const).map((carrier) => {
+              {(["omniva", "smartpost"] as const).map((carrier) => {
                 const rate = shippingRate(carrier);
                 const cost = rate ? calculateShippingCost(carrier, total) : 0;
                 return (
@@ -305,11 +427,9 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                     />
                     <strong>{shippingLabel(carrier)}</strong>
                     <span className="block text-sm text-muted mt-1">
-                      {carrier === "courier"
-                        ? "Tarne sinu sisestatud aadressile."
-                        : rate
-                          ? `Tarne ${rate.price.toFixed(2)} € pakiautomaati.`
-                          : ""}
+                      {rate
+                        ? `Tarne ${rate.price.toFixed(2)} € pakiautomaati.`
+                        : ""}
                       {cost === 0 && rate && (
                         <span className="text-leaf font-bold ml-1">Tasuta</span>
                       )}
@@ -406,45 +526,28 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                 </div>
               )}
 
-              {data.shipping_method === "courier" && (
-                <label className="grid gap-2 font-bold text-sm">
-                  Täielik tarneaadress
-                  <textarea
-                    value={isParcelMachine ? "" : data.address}
-                    onChange={(e) => update("address", e.target.value)}
-                    autoComplete="street-address"
-                    required
-                    minLength={5}
-                    rows={3}
-                    className="border border-line p-3 font-normal"
-                  />
-                </label>
-              )}
-
-              <div className="border border-dashed border-ink/20 bg-soft p-3 text-sm text-center">
+              <div className="bg-accent p-3 text-sm text-center text-white">
                 {shippingCost > 0 ? (
                   <>
-                    <span className="text-muted">Tarne hind </span>
+                    <span>Tarne hind </span>
                     <strong>{shippingCost.toFixed(2)} €</strong>
                     {needsMore > 0 && (
                       <>
-                        <span className="text-muted">. Lisa {needsMore.toFixed(2)} € eest ja tarne on </span>
-                        <strong className="text-leaf">TASUTA</strong>
+                        <span>. Lisa {needsMore.toFixed(2)} € eest ja tarne on </span>
+                        <strong>TASUTA</strong>
                       </>
                     )}
                   </>
                 ) : (
-                  <>
-                    <strong className="text-leaf">Tasuta tarne</strong>
-                    <span className="text-muted"> — ostukorvi summa ületab tasuta tarne piiri</span>
-                  </>
+                  <strong>Tasuta tarne</strong>
                 )}
+                {shippingCost === 0 && <> — Toote saatmine on tasuta alates {shippingRate(data.shipping_method)?.freeFrom ?? 40} eurosest ostust.</>}
               </div>
 
               <div className="text-sm text-muted">
                 <p>
                   <strong className="text-ink">Eeldatav tarneaeg:</strong>{" "}
-                  {isParcelMachine ? "2–4 tööpäeva" : "1–3 tööpäeva"} pärast makse kinnitust.
+                  3–14 tööpäeva pärast makse kinnitust.
                 </p>
                 <p className="mt-1">
                   Makse turvab <strong className="text-ink">Maksekeskus</strong>. Tagastamisõigus kehtib
@@ -482,17 +585,45 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                 </div>
               )}
 
+              <div className="border border-ink p-4 mt-6 bg-soft">
+                <h3 className="font-heading text-lg mb-3">Tellimuse kokkuvõte</h3>
+                <div className="grid gap-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Raamatud</span>
+                    <strong>{total.toFixed(2)} €</strong>
+                  </div>
+                  {couponDiscount > 0 && (
+                    <div className="flex justify-between text-leaf">
+                      <span>Sooduskood</span>
+                      <strong>&minus;{couponDiscount.toFixed(2)} €</strong>
+                    </div>
+                  )}
+                  {shippingCost > 0 && (
+                    <div className="flex justify-between">
+                      <span>Saatmine ({shippingLabel(data.shipping_method)})</span>
+                      <strong>{shippingCost.toFixed(2)} €</strong>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-line text-lg">
+                    <span>Kokku</span>
+                    <strong>{orderTotal.toFixed(2)} €</strong>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted">
+                    <span>sh käibemaks ({KM_PERCENT}%)</span>
+                    <span>{vatAmount.toFixed(2)} €</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-2 bg-soft border border-line p-4 text-sm">
                 <p>
-                  <strong>Tellija:</strong> {data.name}, {data.email}, {data.phone}
+                  <strong>Tellija:</strong> {data.firstName} {data.lastName}, {data.email}, {data.phone}
                 </p>
                 <p>
                   <strong>Tarne:</strong>{" "}
-                  {data.shipping_method === "courier"
-                    ? `Kuller — ${data.address}`
-                    : selectedMachine
-                      ? `${shippingLabel(data.shipping_method)} — ${selectedMachine.name}, ${selectedMachine.city}`
-                      : shippingLabel(data.shipping_method)}
+                  {selectedMachine
+                    ? `${shippingLabel(data.shipping_method)} — ${selectedMachine.name}, ${selectedMachine.city}`
+                    : shippingLabel(data.shipping_method)}
                 </p>
                 <button
                   type="button"
@@ -591,17 +722,25 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
               <span>{shippingCost.toFixed(2)} €</span>
             </div>
           )}
+          {couponDiscount > 0 && (
+            <div className="flex justify-between text-sm mt-2 text-leaf">
+              <span>Soodustus</span>
+              <span>&minus;{couponDiscount.toFixed(2)} €</span>
+            </div>
+          )}
           <div className="flex justify-between mt-4 pt-4 border-t border-line text-xl font-extrabold">
             <span>Kokku</span>
             <span>{orderTotal.toFixed(2)} €</span>
           </div>
-          {needsMore > 0 && shippingCost > 0 ? (
+          {shippingCost > 0 && needsMore > 0 ? (
             <p className="text-sm text-muted mt-3">
               Lisa veel {needsMore.toFixed(2)} € eest ja tarne on tasuta
             </p>
-          ) : (
-            <p className="text-sm text-leaf font-bold mt-3">Tasuta tarne</p>
-          )}
+          ) : shippingCost === 0 ? (
+            <p className="text-sm text-leaf font-bold mt-3">
+              Tasuta tarne alates {shippingRate(data.shipping_method)?.freeFrom ?? 40} €
+            </p>
+          ) : null}
           <p className="text-xs text-muted mt-3">
             Lõplik summa ja saadavus kontrollitakse enne makse loomist.
           </p>

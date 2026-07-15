@@ -70,6 +70,7 @@ export async function deleteCampaign(formData: FormData) {
   const { data } = await db.schema("content").from("campaigns").delete().eq("id", id).select("name_et").single();
   await audit(session.user.id, "campaign.deleted", "content.campaign", id, { before: { name: data?.name_et } });
   revalidateCampaign();
+  revalidatePath("/haldus/kampaaniad");
 }
 
 export async function saveCategory(_state: { error?: string } | undefined, formData: FormData) {
@@ -90,6 +91,7 @@ export async function saveCategory(_state: { error?: string } | undefined, formD
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
   await audit(session.user.id, v.id ? "category.updated" : "category.created", "content.category", result.data.id, { after: { name: v.name_et } });
   revalidatePath("/raamatud");
+  revalidatePath("/haldus/kategooriad");
   return { success: true, id: result.data.id };
 }
 
@@ -116,6 +118,7 @@ export async function saveSeries(_state: { error?: string } | undefined, formDat
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
   await audit(session.user.id, v.id ? "series.updated" : "series.created", "content.series", result.data.id, { after: { name: v.name_et } });
   revalidateSeries(v.slug);
+  revalidatePath("/haldus/sarjad");
   return { success: true, id: result.data.id };
 }
 
@@ -142,6 +145,7 @@ export async function savePerson(_state: { error?: string } | undefined, formDat
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
   await audit(session.user.id, v.id ? "person.updated" : "person.created", "people.person", result.data.id, { after: { name: v.name } });
   revalidatePath("/raamatud");
+  revalidatePath("/haldus/inimesed");
   return { success: true, id: result.data.id };
 }
 

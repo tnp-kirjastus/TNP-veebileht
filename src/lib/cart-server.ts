@@ -8,6 +8,7 @@ import { serverEnv } from "@/lib/env";
 const COOKIE_NAME = "tnp_cart";
 
 export interface CartDtoItem {
+  productId: string;
   slug: string;
   title: string;
   author: string;
@@ -16,6 +17,8 @@ export interface CartDtoItem {
   effectivePrice: number;
   coverImage: string | null;
   quantity: number;
+  isUpcoming: boolean;
+  allowPreorder: boolean;
 }
 
 export interface CartDto {
@@ -58,19 +61,21 @@ export async function readCart(sessionId: string): Promise<CartDto> {
   if (!cart) return { items: [], itemCount: 0, totalCents: 0 };
 
   const { data, error } = await db.schema("commerce").from("cart_items")
-    .select("quantity, products!inner(slug,title_et,price,sale_price,sale_start,sale_end,cover_image,is_archived)")
+    .select("quantity, products!inner(id,slug,title_et,price,sale_price,sale_start,sale_end,cover_image,is_archived,is_upcoming,allow_preorder)")
     .eq("cart_id", cart.id);
   if (error) throw new Error("cart_read_failed");
 
   const items: CartDtoItem[] = (data ?? []).flatMap((row) => {
     const productValue = row.products as unknown;
     const product = (Array.isArray(productValue) ? productValue[0] : productValue) as {
-      slug: string; title_et: string; price: number; sale_price: number | null;
+      id: string; slug: string; title_et: string; price: number; sale_price: number | null;
       sale_start: string | null; sale_end: string | null; cover_image: string | null; is_archived: boolean;
+      is_upcoming: boolean; allow_preorder: boolean;
     } | null;
     if (!product || product.is_archived) return [];
     const current = effectivePrice(product);
     return [{
+      productId: product.id,
       slug: product.slug,
       title: product.title_et,
       author: "",
@@ -79,6 +84,8 @@ export async function readCart(sessionId: string): Promise<CartDto> {
       effectivePrice: current,
       coverImage: product.cover_image,
       quantity: row.quantity,
+      isUpcoming: product.is_upcoming ?? false,
+      allowPreorder: product.allow_preorder ?? false,
     }];
   });
   return {

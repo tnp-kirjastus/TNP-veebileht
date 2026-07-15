@@ -58,8 +58,14 @@ export default function CartPage() {
               <div className="mt-4 border border-dashed border-ink/20 p-4 text-center bg-soft">
                 <span className="text-muted">Lisa ostukorvi veel </span>
                 <strong className="text-ink">{needsMore.toFixed(2)} €</strong>
-                <span className="text-muted"> eest tooteid ja tarne on </span>
+                <span className="text-muted"> ja transport on </span>
                 <strong className="text-leaf">TASUTA</strong>
+              </div>
+            )}
+
+            {needsMore <= 0 && items.length > 0 && (
+              <div className="mt-4 border border-leaf/30 p-4 text-center bg-[#f0f7f0]">
+                <strong className="text-leaf">Transport on tasuta!</strong>
               </div>
             )}
 

@@ -41,6 +41,7 @@ export function revalidateProduct(slug: string) {
 export function revalidateCampaign() {
   revalidatePath("/");
   revalidatePath("/pakkumised");
+  revalidatePath("/haldus/kampaaniad");
 }
 
 export function revalidateBlog(slug?: string) {

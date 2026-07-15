@@ -184,7 +184,7 @@ describe("Cover import integration — failure isolation", () => {
 
   it("DB failure cleans up unreferenced object", () => {
     const storageObjects = new Set<string>();
-    let dbSucceeded = false;
+    const dbSucceeded = false;
     const newKey = "products/new-id/hash.webp";
 
     storageObjects.add(newKey);

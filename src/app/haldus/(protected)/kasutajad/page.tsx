@@ -1,10 +1,12 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminSession } from "@/lib/admin-auth";
 import { CreateUserForm } from "./CreateUserForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { DeleteUserButton } from "./DeleteUserButton";
 
 export default async function UsersAdminPage() {
+  await requireAdminSession(["admin"]);
   const db = createAdminClient();
 
   const { data: profiles } = await db
