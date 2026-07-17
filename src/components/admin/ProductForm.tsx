@@ -504,7 +504,7 @@ export function ProductForm({
       {state?.success && <p role="status" className="text-leaf font-bold mt-4">Toode salvestatud!</p>}
 
       <div className="flex gap-3 mt-6">
-        <button type="submit" disabled={pending || uploadBusy} className="min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+        <button type="submit" disabled={pending || uploadBusy} className="min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
           {pending ? "Salvestan…" : product.id ? "Salvesta muudatused" : "Loo toode"}
         </button>
         {product.id && (

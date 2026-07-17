@@ -8,6 +8,8 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { t } from "@/lib/translations";
 import { getHomepageHero, getHomepageCards, getHomepageSections, type HomepageSection, type HomepageCard } from "@/lib/homepage";
 import { getNewProducts, getSaleProducts, getUpcomingProducts, getActiveProducts, isOnSale, type Product } from "@/lib/data";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { unstable_cache } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -96,8 +98,22 @@ export default async function HomePage() {
     };
   }
   const newSec = sec("newest", "Uued raamatud", "/raamatud?sort=newest", 10);
-  const campaignSec = sec("sale", "Kampaania raamatud", "/pakkumised", 5);
   const upcomingSec = sec("upcoming", "Ilmuvad raamatud", "/raamatud?upcoming=true", 5);
+
+  const getCampaignName = unstable_cache(
+    async () => {
+      const db = createAdminClient();
+      const { data } = await db.schema("content").from("campaigns")
+        .select("name_et").eq("is_active", true)
+        .order("starts_at", { ascending: false }).limit(1).maybeSingle();
+      return data?.name_et ?? null;
+    },
+    ["homepage-campaign-name"],
+    { revalidate: 300 }
+  );
+  const activeCampaignName = await getCampaignName();
+
+  const campaignSec = sec("sale", activeCampaignName || "Kampaania raamatud", "/pakkumised", 5);
 
   const newBooks = newSec.visible ? getNewProducts(newSec.count).map(mapProduct) : [];
   const campaignBooks = campaignSec.visible ? getSaleProducts().slice(0, campaignSec.count).map(mapProduct) : [];
@@ -151,7 +167,7 @@ export default async function HomePage() {
                 {heroSubtext && <p className="mt-[14px] max-w-[640px] text-muted text-[17px] leading-[1.4]">{heroSubtext}</p>}
                 {(hasCta || hasSecondary) && (
                   <div className="mt-[28px] flex items-center gap-4 flex-wrap">
-                    {hasCta && <Link href={heroConfig!.ctaHref!} className="min-h-[48px] inline-flex items-center px-6 bg-ink text-white font-bold text-sm hover:bg-ink/80 transition-colors">{heroConfig!.ctaLabel}</Link>}
+                    {hasCta && <Link href={heroConfig!.ctaHref!} className="min-h-[48px] inline-flex items-center px-6 border border-ink bg-white text-ink font-bold text-sm hover:bg-ink hover:text-white transition-colors">{heroConfig!.ctaLabel}</Link>}
                     {hasSecondary && <Link href={heroConfig!.secondaryHref!} className="min-h-[48px] inline-flex items-center px-6 border border-ink text-ink font-bold text-sm hover:bg-ink hover:text-white transition-colors">{heroConfig!.secondaryLabel}</Link>}
                   </div>
                 )}

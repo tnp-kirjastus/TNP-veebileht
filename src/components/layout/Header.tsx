@@ -9,6 +9,8 @@ import { Shell } from "./Shell";
 import { MobileNav } from "./MobileNav";
 import { useCart } from "@/lib/cart-context";
 import { useCartDrawer } from "@/lib/cart-drawer-context";
+import { useAuth } from "@/lib/auth-context";
+import { useProfileDrawer } from "@/lib/profile-drawer-context";
 import { LanguageToggle } from "./LanguageToggle";
 import { isPublicNavActive, PUBLIC_NAV_ITEMS } from "@/lib/navigation";
 
@@ -17,6 +19,8 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const { itemCount } = useCart();
   const { open: openCart } = useCartDrawer();
+  const { user, loading } = useAuth();
+  const { open: openProfile } = useProfileDrawer();
   const router = useRouter();
   const pathname = usePathname();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -72,13 +76,25 @@ export function Header() {
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3.2"/><path d="M17 2H7a5 5 0 0 0-5 5v10a5 5 0 0 0 5 5h10a5 5 0 0 0 5-5V7a5 5 0 0 0-5-5zm-5 15.2a5.2 5.2 0 1 1 0-10.4 5.2 5.2 0 0 1 0 10.4zm5.4-9.6a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4z"/></svg>
               </a>
 
-              <Link href="/profiil"
-                className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center max-[760px]:hidden"
-                aria-label="Konto">
-                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/>
-                </svg>
-              </Link>
+              {loading ? (
+                <div className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center max-[760px]:hidden" />
+              ) : user ? (
+                <Link href="/profiil"
+                  className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center max-[760px]:hidden"
+                  aria-label="Konto">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/>
+                  </svg>
+                </Link>
+              ) : (
+                <button onClick={openProfile}
+                  className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center max-[760px]:hidden hover:bg-soft"
+                  aria-label="Konto">
+                  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/>
+                  </svg>
+                </button>
+              )}
 
               <button className="hidden max-[1120px]:grid w-[44px] h-[44px] border border-line bg-panel place-items-center"
                 onClick={() => setMobileNavOpen(true)} aria-label="Ava menüü">

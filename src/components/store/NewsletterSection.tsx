@@ -43,7 +43,7 @@ export function NewsletterSection() {
                 className="flex-1 min-w-0 h-[50px] border border-ink border-r-0 bg-panel px-4 outline-none max-[640px]:border-r max-[640px]:border-ink" />
               <input type="hidden" name="source" value="footer" />
               <button type="submit" disabled={status === "sending"}
-                className="h-[50px] px-6 border border-ink bg-ink text-white font-extrabold whitespace-nowrap hover:bg-[#2a2d30] transition-colors disabled:opacity-60">
+                className="h-[50px] px-6 border border-ink bg-white text-ink font-extrabold whitespace-nowrap hover:bg-ink hover:text-white transition-colors disabled:opacity-60">
                 {status === "sending" ? "Saadan…" : t.newsletter.button}
               </button>
             </form>

@@ -11,7 +11,7 @@ import {
   buildOrderShippedHtml,
 } from "@/lib/email-templates";
 
-const DEFAULT_FROM = "Kirjastus T\u00e4nap\u00e4ev <tellimused@tnp.ee>";
+const DEFAULT_FROM = "Kirjastus Tänapäev <tellimused@tnp.ee>";
 
 async function getFromAddress(): Promise<string> {
   const settings = await getStoreSettings();
@@ -54,7 +54,7 @@ export async function sendOrderConfirmationEmail(params: {
   const fromAddress = settings.email.fromAddress || DEFAULT_FROM;
   const subject = settings.email.orderSubject.replace("{{orderNumber}}", params.orderNumber);
   const itemLines = params.items.map(
-    (item) => `${item.quantity} x ${item.title} \u2014 ${item.price.toFixed(2)} \u20ac`
+    (item) => `${item.quantity} x ${item.title} — ${item.price.toFixed(2)} €`
   ).join("\n");
   const body = settings.email.orderBody
     .replace("{{customerName}}", params.customerName)

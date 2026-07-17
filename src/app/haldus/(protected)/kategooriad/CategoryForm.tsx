@@ -25,7 +25,7 @@ export function CategoryForm({ category }: { category?: Record<string, unknown> 
         </FormField>
       </div>
       {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
-      <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 bg-ink text-white text-sm font-bold disabled:opacity-50">
+      <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50">
         {pending ? "Salvestan…" : category ? "Salvesta" : "Loo kategooria"}
       </button>
     </form>

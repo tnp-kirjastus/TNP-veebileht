@@ -27,7 +27,7 @@ export async function saveHeroSettings(_state: { error?: string; success?: boole
     await requireAdminSession(["editor", "admin"]);
     const raw = Object.fromEntries(formData.entries());
     const parsed = heroSchema.safeParse(raw);
-    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
 
     const db = createAdminClient();
 
@@ -36,7 +36,7 @@ export async function saveHeroSettings(_state: { error?: string; success?: boole
 
     if (selectError) {
       console.error("saveHeroSettings select error:", selectError);
-      return { error: `Salvestamine eba\u00f5nnestus: ${selectError.message || selectError.code || "tundmatu viga"}` };
+      return { error: `Salvestamine ebaõnnestus: ${selectError.message || selectError.code || "tundmatu viga"}` };
     }
 
     const record = { hero: parsed.data, updated_at: new Date().toISOString() };
@@ -46,7 +46,7 @@ export async function saveHeroSettings(_state: { error?: string; success?: boole
 
     if (result.error) {
       console.error("saveHeroSettings error:", result.error);
-      return { error: `Salvestamine eba\u00f5nnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
+      return { error: `Salvestamine ebaõnnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
     }
 
     revalidatePath("/");
@@ -54,7 +54,7 @@ export async function saveHeroSettings(_state: { error?: string; success?: boole
     return { success: true };
   } catch (err) {
     console.error("saveHeroSettings unexpected error:", err);
-    return { error: `Salvestamine eba\u00f5nnestus: ${err instanceof Error ? err.message : "tundmatu viga"}` };
+    return { error: `Salvestamine ebaõnnestus: ${err instanceof Error ? err.message : "tundmatu viga"}` };
   }
 }
 
@@ -119,14 +119,14 @@ export async function saveCardsSettings(cards: unknown) {
       ? await db.schema("content").from("homepage").update({ cards: parsed.data, updated_at: new Date().toISOString() }).eq("key", "default")
       : await db.schema("content").from("homepage").insert({ key: "default", cards: parsed.data, updated_at: new Date().toISOString() });
 
-    if (result.error) return { error: `Salvestamine eba\u00f5nnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
+    if (result.error) return { error: `Salvestamine ebaõnnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
 
     revalidatePath("/");
     revalidatePath("/haldus/avaleht");
     return { success: true };
   } catch (err) {
     console.error("saveCardsSettings unexpected error:", err);
-    return { error: `Salvestamine eba\u00f5nnestus: ${err instanceof Error ? err.message : "tundmatu viga"}` };
+    return { error: `Salvestamine ebaõnnestus: ${err instanceof Error ? err.message : "tundmatu viga"}` };
   }
 }
 
@@ -144,14 +144,14 @@ export async function saveSectionsSettings(sections: unknown) {
       ? await db.schema("content").from("homepage").update({ sections: parsed.data, updated_at: new Date().toISOString() }).eq("key", "default")
       : await db.schema("content").from("homepage").insert({ key: "default", sections: parsed.data, updated_at: new Date().toISOString() });
 
-    if (result.error) return { error: `Salvestamine eba\u00f5nnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
+    if (result.error) return { error: `Salvestamine ebaõnnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
 
     revalidatePath("/");
     revalidatePath("/haldus/avaleht");
     return { success: true };
   } catch (err) {
     console.error("saveSectionsSettings unexpected error:", err);
-    return { error: `Salvestamine eba\u00f5nnestus: ${err instanceof Error ? err.message : "tundmatu viga"}` };
+    return { error: `Salvestamine ebaõnnestus: ${err instanceof Error ? err.message : "tundmatu viga"}` };
   }
 }
 

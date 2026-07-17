@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { CartProvider } from "@/lib/cart-context";
 import { CartDrawerProvider } from "@/lib/cart-drawer-context";
 import { CartDrawerWrapper } from "@/components/store/CartDrawerWrapper";
+import { AuthProvider } from "@/lib/auth-context";
+import { ProfileDrawerProvider } from "@/lib/profile-drawer-context";
+import { ProfileDrawerWrapper } from "@/components/profiil/ProfileDrawerWrapper";
 import { AccentTheme } from "@/components/AccentTheme";
 import { siteUrl } from "@/lib/env";
 import "./globals.css";
@@ -24,10 +27,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <a href="#main-content" className="fixed left-3 top-3 z-[100] -translate-y-24 bg-ink px-4 py-3 font-bold text-white focus:translate-y-0">Liigu põhisisu juurde</a>
         <CartProvider>
-          <CartDrawerProvider>
-            {children}
-            <CartDrawerWrapper />
-          </CartDrawerProvider>
+          <AuthProvider>
+            <CartDrawerProvider>
+              <ProfileDrawerProvider>
+                {children}
+                <CartDrawerWrapper />
+                <ProfileDrawerWrapper />
+              </ProfileDrawerProvider>
+            </CartDrawerProvider>
+          </AuthProvider>
         </CartProvider>
       </body>
     </html>

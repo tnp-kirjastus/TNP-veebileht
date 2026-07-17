@@ -50,7 +50,7 @@ export default async function CustomersAdminPage({
                    <span className="text-xs text-muted">Klient</span>}
                 </td>
                 <td className="p-4 text-xs text-muted">
-                  {profile.created_at ? new Date(String(profile.created_at)).toLocaleDateString("et-EE") : "\u2014"}
+                  {profile.created_at ? new Date(String(profile.created_at)).toLocaleDateString("et-EE") : "—"}
                 </td>
                 <td className="p-4">
                   <div className="flex gap-3 text-sm">

@@ -70,7 +70,7 @@ export function AddToCartButton({ product, disabled = false }: {
             ? "border-accent bg-white text-accent hover:bg-accent hover:text-white"
             : isButtonDisabled
               ? "bg-soft text-muted border-line cursor-not-allowed"
-              : "border-ink bg-ink text-white hover:bg-[#2a2d30]"
+              : "border-ink bg-white text-ink hover:bg-ink hover:text-white"
           }`}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

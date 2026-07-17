@@ -75,7 +75,7 @@ export default function CartPage() {
                 <span>{total.toFixed(2)} €</span>
               </div>
               {error && <p role="alert" className="text-accent font-bold mb-3">{error}</p>}
-              <Link href="/ostukorv/kassa" className="w-full min-h-[46px] px-[18px] border border-ink bg-ink text-white font-extrabold hover:bg-[#2a2d30] transition-colors flex items-center justify-center">
+              <Link href="/ostukorv/kassa" className="w-full min-h-[46px] px-[18px] border border-ink bg-white text-ink font-extrabold hover:bg-ink hover:text-white transition-colors flex items-center justify-center">
                 Vormista tellimus
               </Link>
             </div>

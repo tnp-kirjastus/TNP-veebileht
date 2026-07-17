@@ -15,7 +15,7 @@ export const revalidate = 3600;
 interface SearchParams {
   q?: string; category?: string | string[]; origin?: string; sale?: string; upcoming?: string; archive?: string; archived?: string;
   author?: string; translator?: string; designer?: string; illustrator?: string; editor?: string;
-  sort?: string; page?: string;
+  sort?: string; page?: string; sale_start?: string; sale_end?: string;
 }
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
@@ -70,7 +70,15 @@ function BooksContent({ params }: { params: SearchParams }) {
     const catFilteredIds = new Set(getProductsByCategories(categorySlugs, productScope).map((p) => p.id));
     results = results.filter((p) => catFilteredIds.has(p.id));
   }
-  if (params.sale === "true") results = results.filter(isOnSale);
+  if (params.sale_start !== undefined && params.sale_end !== undefined) {
+    if (params.sale_start === "always" && params.sale_end === "open") {
+      results = results.filter((p) => p.sale_price != null && p.sale_start === null && p.sale_end === null);
+    } else {
+      results = results.filter((p) => p.sale_price != null && p.sale_start === params.sale_start && p.sale_end === params.sale_end);
+    }
+  } else if (params.sale === "true") {
+    results = results.filter(isOnSale);
+  }
   if (params.upcoming === "true") results = results.filter((product) => product.is_upcoming);
 
   if (params.origin === "estonian") results = results.filter(p => p.origin === "estonian");
@@ -93,6 +101,10 @@ function BooksContent({ params }: { params: SearchParams }) {
   const activeLabel = params.q ? `Otsing: "${params.q}"`
     : showArchived
       ? "Läbimüüdud"
+    : (params.sale_start !== undefined && params.sale_end !== undefined)
+      ? (params.sale_start === "always" && params.sale_end === "open"
+          ? "Püsivalt soodsad"
+          : `Otsing: ${new Date(params.sale_start).toLocaleDateString("et-EE")} – ${new Date(params.sale_end).toLocaleDateString("et-EE")}`)
     : params.category
       ? (() => {
           const slugs = Array.isArray(params.category) ? params.category : [params.category];
@@ -132,7 +144,7 @@ function BooksContent({ params }: { params: SearchParams }) {
                 {page > 1 && <Link href={buildPageHref(params, page - 1)} className="px-4 py-2 border border-line hover:bg-soft font-bold">← Eelmine</Link>}
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
                   const p = Math.max(1, page - 3) + i; if (p > totalPages) return null;
-                  return <Link key={p} href={buildPageHref(params, p)} className={`px-3 py-2 font-bold ${p === page ? "bg-ink text-white" : "hover:text-accent"}`}>{p}</Link>;
+                  return <Link key={p} href={buildPageHref(params, p)} className={`px-3 py-2 font-bold border ${p === page ? "border-ink bg-white text-ink" : "border-transparent hover:text-accent"}`}>{p}</Link>;
                 })}
                 {page < totalPages && <Link href={buildPageHref(params, page + 1)} className="px-4 py-2 border border-line hover:bg-soft font-bold">Järgmine →</Link>}
               </nav>

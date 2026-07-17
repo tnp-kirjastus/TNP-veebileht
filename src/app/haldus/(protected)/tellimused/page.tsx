@@ -10,7 +10,7 @@ export default async function OrdersAdminPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string; status?: string; totalMin?: string; totalMax?: string; dateFrom?: string; dateTo?: string }>;
 }) {
-  await requireAdminSession(["admin"]);
+  await requireAdminSession(["editor", "admin"]);
 
   const params = await searchParams;
   const query = (params.q ?? "").trim();
@@ -97,11 +97,19 @@ export default async function OrdersAdminPage({
 
   const hasActiveFilters = !!(query || statusFilter || totalMin || totalMax || dateFrom || dateTo);
 
+  const queryParams: Record<string, string> = {};
+  if (query) queryParams.q = query;
+  if (statusFilter) queryParams.status = statusFilter;
+  if (totalMin) queryParams.totalMin = totalMin;
+  if (totalMax) queryParams.totalMax = totalMax;
+  if (dateFrom) queryParams.dateFrom = dateFrom;
+  if (dateTo) queryParams.dateTo = dateTo;
+
   return (
     <>
       <AdminPageHeader
         title="Tellimused"
-        description={`${totalCount} tellimust. Maksed, t\u00e4itmine ja erandite k\u00e4sitlemine.`}
+        description={`${totalCount} tellimust. Maksed, täitmine ja erandite käsitlemine.`}
         action={<CreateOrderDialog />}
       />
 
@@ -111,20 +119,20 @@ export default async function OrdersAdminPage({
           type="search"
           name="q"
           defaultValue={query}
-          placeholder="Otsi kliendi nime j\u00e4rgi\u2026"
+          placeholder="Otsi kliendi nime järgi…"
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm"
         />
         <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
-          <option value="">K\u00f5ik olekud</option>
+          <option value="">Kõik olekud</option>
           <option value="pending">Ootel</option>
           <option value="payment_pending">Makse ootel</option>
           <option value="paid">Makstud</option>
-          <option value="processing">T\u00f6\u00f6tlemisel</option>
+          <option value="processing">Töötlemisel</option>
           <option value="shipped">Saadetud</option>
-          <option value="cancelled">T\u00fchistatud</option>
-          <option value="payment_failed">Makse eba\u00f5nnestus</option>
+          <option value="cancelled">Tühistatud</option>
+          <option value="payment_failed">Makse ebaõnnestus</option>
           <option value="expired">Aegunud</option>
-          <option value="manual_review">K\u00e4sitsi \u00fclevaatus</option>
+          <option value="manual_review">Käsitsi ülevaatus</option>
           <option value="refunded">Tagastatud</option>
           <option value="preorder">Ettetellimus</option>
         </select>
@@ -151,21 +159,21 @@ export default async function OrdersAdminPage({
           name="dateFrom"
           defaultValue={dateFrom}
           className="h-11 border border-line bg-paper px-3 text-sm"
-          title="Alates kuup\u00e4evast"
+          title="Alates kuupäevast"
         />
         <input
           type="date"
           name="dateTo"
           defaultValue={dateTo}
           className="h-11 border border-line bg-paper px-3 text-sm"
-          title="Kuni kuup\u00e4evani"
+          title="Kuni kuupäevani"
         />
         <button type="submit" className="h-11 px-5 border border-line bg-soft text-sm font-bold hover:bg-line/30">
           Filtreeri
         </button>
         {hasActiveFilters && (
           <Link href="/haldus/tellimused" className="h-11 px-4 inline-flex items-center text-sm text-muted hover:text-ink font-bold">
-            T\u00fchista
+            Tühista
           </Link>
         )}
       </form>
@@ -175,7 +183,7 @@ export default async function OrdersAdminPage({
         totalCount={totalCount}
         page={page}
         totalPages={totalPages}
-        buildPageHref={buildPageHref}
+        queryParams={queryParams}
       />
     </>
   );

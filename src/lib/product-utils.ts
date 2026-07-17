@@ -28,7 +28,7 @@ export function getSalePercent(p: Product): number {
 }
 
 export function formatEuro(value: number): string {
-  return value.toFixed(2) + " \u20AC";
+  return value.toFixed(2) + " €";
 }
 
 export function formatDate(dateStr: string | null): string {

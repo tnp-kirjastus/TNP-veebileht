@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "snapshot": false,
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      ".next/**",
+      "node_modules/**",
+      "src/data/products.json",
+      "tmp/**",
+      ".vercel/**",
+      "coverage/**",
+      "out/**",
+      "build/**",
+      "*.tsbuildinfo"
+    ]
+  }
+}

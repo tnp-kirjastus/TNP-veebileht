@@ -52,7 +52,7 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   const raw = Object.fromEntries(formData.entries());
   const parsed = productSchema.safeParse(raw);
   if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju.";
+    const msg = parsed.error.issues[0]?.message ?? "Kontrolli välju.";
     return { error: msg };
   }
 
@@ -101,8 +101,8 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     : await db.schema("commerce").from("products").insert(productRecord).select("id,slug").single();
 
   if (result.error) {
-    if (result.error.code === "23505") return { error: "Unikaalne v\u00e4li on juba kasutusel (ISBN v\u00f5i URL-i nimi)." };
-    return { error: "Salvestamine eba\u00f5nnestus. Proovi uuesti." };
+    if (result.error.code === "23505") return { error: "Unikaalne väli on juba kasutusel (ISBN või URL-i nimi)." };
+    return { error: "Salvestamine ebaõnnestus. Proovi uuesti." };
   }
 
   const productId = result.data.id;

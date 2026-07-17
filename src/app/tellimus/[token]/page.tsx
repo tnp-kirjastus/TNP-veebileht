@@ -70,7 +70,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ t
         </div>
 
         <div className="mt-10 text-center">
-          <Link href="/raamatud" className="inline-flex items-center gap-2 min-h-[46px] px-6 border border-ink bg-ink text-white font-extrabold hover:bg-[#2a2d30] transition-colors">
+          <Link href="/raamatud" className="inline-flex items-center gap-2 min-h-[46px] px-6 border border-ink bg-white text-ink font-extrabold hover:bg-ink hover:text-white transition-colors">
             Jätka ostlemist
           </Link>
         </div>

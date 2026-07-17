@@ -9,7 +9,7 @@ export function PersonForm({ person }: { person?: Record<string, unknown> }) {
 
   return (
     <form action={action} className="border border-line bg-panel p-5 grid gap-4 max-w-2xl">
-      <h3 className="font-heading text-lg">{person ? "Muuda inimest" : "Uus inimene"}</h3>
+      <h3 className="font-heading text-lg">{person ? "Muuda autorit" : "Uus autor"}</h3>
       {person && <input type="hidden" name="id" value={String(person.id)} />}
       <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
         <FormField label="Nimi" required>
@@ -23,8 +23,8 @@ export function PersonForm({ person }: { person?: Record<string, unknown> }) {
         <textarea name="bio_et" rows={4} maxLength={5000} defaultValue={person ? String(person.bio_et ?? "") : ""} className="border border-line bg-paper p-2 text-sm font-normal" />
       </FormField>
       {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
-      <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 bg-ink text-white text-sm font-bold disabled:opacity-50">
-        {pending ? "Salvestan…" : person ? "Salvesta" : "Loo inimene"}
+      <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50">
+        {pending ? "Salvestan…" : person ? "Salvesta" : "Loo autor"}
       </button>
     </form>
   );

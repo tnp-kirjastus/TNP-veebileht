@@ -4,12 +4,12 @@ export interface ShippingRate {
   price: number;
   freeFrom: number;
   label_et: string;
-  label_en: string;
+  label_en?: string;
 }
 
 const DEFAULT_RATES: ShippingRate[] = [
-  { carrier: "omniva", method: "parcel_machine", price: 5.0, freeFrom: 40, label_et: "Omniva pakiautomaat", label_en: "Omniva parcel machine" },
-  { carrier: "smartpost", method: "parcel_machine", price: 3.5, freeFrom: 40, label_et: "Smartpost pakiautomaat", label_en: "Smartpost parcel machine" },
+  { carrier: "omniva", method: "parcel_machine", price: 5.0, freeFrom: 40, label_et: "Omniva pakiautomaat" },
+  { carrier: "smartpost", method: "parcel_machine", price: 3.5, freeFrom: 40, label_et: "Smartpost pakiautomaat" },
 ];
 
 export const SHIPPING_RATES: ShippingRate[] = DEFAULT_RATES;

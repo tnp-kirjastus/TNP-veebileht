@@ -75,7 +75,7 @@ export default async function ProductsAdminPage({
       isOnSale,
       dateCell: p.release_date
         ? new Date(String(p.release_date)).toLocaleDateString("et-EE")
-        : "\u2014",
+        : "—",
     };
   });
 
@@ -114,7 +114,7 @@ export default async function ProductsAdminPage({
             <Link href="/haldus/tooted/partii" className="inline-flex items-center gap-2 min-h-12 px-6 border border-line font-bold hover:bg-soft transition-colors">
               Partii muutmine
             </Link>
-            <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 bg-accent text-white font-bold hover:bg-accent/80 transition-colors">
+            <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 border border-accent bg-white text-accent font-bold hover:bg-accent hover:text-white transition-colors">
               + Uus toode
             </Link>
           </div>
@@ -138,7 +138,7 @@ export default async function ProductsAdminPage({
       </div>
 
       <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">
-        <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i või URL-i nime järgi\u2026"
+        <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i või URL-i nime järgi…"
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
         <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">Kõik olekud</option>
@@ -147,7 +147,7 @@ export default async function ProductsAdminPage({
         <select name="origin" defaultValue={originFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">Kõik päritolud</option>
           <option value="estonian">Eesti</option>
-          <option value="foreign">V\u00e4lismaine</option>
+          <option value="foreign">Välismaine</option>
         </select>
         <input type="hidden" name="tab" value={activeTab} />
         <button type="submit" className="h-11 px-5 border border-line bg-soft text-sm font-bold hover:bg-line/30">Filtreeri</button>
@@ -169,7 +169,7 @@ export default async function ProductsAdminPage({
           </thead>
           <tbody>
             {products.length === 0 ? (
-              <tr><td colSpan={5} className="p-12 text-center text-muted">\u00dchtki toodet ei leitud.</td></tr>
+              <tr><td colSpan={5} className="p-12 text-center text-muted">Ühtki toodet ei leitud.</td></tr>
             ) : (
               products.map((p) => (
                 <tr key={p.id} className="border-t border-line hover:bg-soft/50 transition-colors">
@@ -207,18 +207,18 @@ export default async function ProductsAdminPage({
         <div className="flex items-center justify-between mt-6 gap-4 flex-wrap">
           <p className="text-xs text-muted">Lehekülg {page} / {totalPages} ({totalCount} toodet)</p>
           <div className="flex gap-1">
-            {page > 1 && <Link href={buildHref({ page: String(page - 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">\u2190 Eelmine</Link>}
+            {page > 1 && <Link href={buildHref({ page: String(page - 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">← Eelmine</Link>}
             {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
               const pageNum = page <= 4 ? i + 1 : page + i - 3;
               if (pageNum < 1 || pageNum > totalPages) return null;
               return (
                 <Link key={pageNum} href={buildHref(pageNum === 1 ? {} : { page: String(pageNum) })}
-                  className={`px-4 py-2 border text-sm font-bold ${pageNum === page ? "bg-ink text-white border-ink" : "border-line hover:bg-soft"}`}>
+                  className={`px-4 py-2 border text-sm font-bold ${pageNum === page ? "border-ink bg-white text-ink" : "border-line hover:bg-soft"}`}>
                   {pageNum}
                 </Link>
               );
             })}
-            {page < totalPages && <Link href={buildHref({ page: String(page + 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">J\u00e4rgmine \u2192</Link>}
+            {page < totalPages && <Link href={buildHref({ page: String(page + 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">Järgmine →</Link>}
           </div>
         </div>
       )}

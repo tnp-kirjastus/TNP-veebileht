@@ -42,7 +42,7 @@ interface ImportResult {
 const COVER_COLUMN_ALIASES = ["cover_file", "cover_url", "Pilt", "Toote Kaanepilt"];
 
 function slugify(text: string): string {
-  const t: Record<string, string> = { "\u00f5": "o", "\u00e4": "a", "\u00f6": "o", "\u00fc": "u", "\u0161": "s", "\u017e": "z", "\u00d5": "O", "\u00c4": "A", "\u00d6": "O", "\u00dc": "U", "\u0160": "S", "\u017d": "Z" };
+  const t: Record<string, string> = { "õ": "o", "ä": "a", "ö": "o", "ü": "u", "š": "s", "ž": "z", "Õ": "O", "Ä": "A", "Ö": "O", "Ü": "U", "Š": "S", "Ž": "Z" };
   let r = String(text);
   for (const [k, v] of Object.entries(t)) r = r.replace(new RegExp(k, "g"), v);
   return r.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
@@ -416,7 +416,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
 
     const catField = mapping.categories || null;
     const authorField = mapping.authors || mapping["Toote Autor"] || null;
-    const translatorField = mapping.translators || mapping["Toote T\u00f5lk"] || null;
+    const translatorField = mapping.translators || mapping["Toote Tõlk"] || null;
     const designerField = mapping.designers || mapping["Toote Disainer"] || mapping["Toote Kujundaja"] || null;
     const illustratorField = mapping.illustrators || mapping["Toote Illustreerija"] || null;
     const editorField = mapping.editors || mapping["Toote Toimetaja"] || null;
@@ -594,7 +594,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         }
 
         const { error: updErr } = await db.schema("commerce").from("products").update(update).eq("id", existing.id);
-        if (updErr) throw new Error(`DB uuendamine eba\u00f5nnestus: ${updErr.message}`);
+        if (updErr) throw new Error(`DB uuendamine ebaõnnestus: ${updErr.message}`);
         productId = existing.id;
       } else {
         let seriesId: string | null = null;
@@ -662,7 +662,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         }
 
         const { data: inserted, error: insErr } = await db.schema("commerce").from("products").insert(insert).select("id,slug").single();
-        if (insErr) throw new Error(`DB lisamine eba\u00f5nnestus: ${insErr.message}`);
+        if (insErr) throw new Error(`DB lisamine ebaõnnestus: ${insErr.message}`);
         productId = String(inserted.id);
       }
 

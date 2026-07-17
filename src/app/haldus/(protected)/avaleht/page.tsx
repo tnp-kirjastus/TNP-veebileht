@@ -102,14 +102,14 @@ export default function HomepageAdminPage() {
       const res = await fetch("/api/admin/homepage-media", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok || json.error) {
-        setUploadError(json.error ?? "\u00dcleslaadimine eba\u00f5nnestus");
+        setUploadError(json.error ?? "Üleslaadimine ebaõnnestus");
       } else if (json.url) {
         updateHeroField(field, json.url);
         if (field === "desktopImage") setDesktopPreview(json.url);
         else setMobilePreview(json.url);
       }
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "\u00dcleslaadimine eba\u00f5nnestus");
+      setUploadError(err instanceof Error ? err.message : "Üleslaadimine ebaõnnestus");
     } finally {
       setUploadBusy(null);
     }
@@ -125,12 +125,12 @@ export default function HomepageAdminPage() {
       const res = await fetch("/api/admin/homepage-media", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok || json.error) {
-        setUploadError(json.error ?? "\u00dcleslaadimine eba\u00f5nnestus");
+        setUploadError(json.error ?? "Üleslaadimine ebaõnnestus");
       } else if (json.url) {
         updateCard(cardId, field, json.url);
       }
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "\u00dcleslaadimine eba\u00f5nnestus");
+      setUploadError(err instanceof Error ? err.message : "Üleslaadimine ebaõnnestus");
     } finally {
       setUploadBusy(null);
     }
@@ -203,7 +203,7 @@ export default function HomepageAdminPage() {
         setCardsSaveMsg({ type: "success", text: "Kaardid salvestatud!" });
       }
     } catch (err) {
-      setCardsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine eba\u00f5nnestus" });
+      setCardsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine ebaõnnestus" });
     } finally {
       setCardsBusy(false);
     }
@@ -220,7 +220,7 @@ export default function HomepageAdminPage() {
         setSectionsSaveMsg({ type: "success", text: "Sektsioonid salvestatud!" });
       }
     } catch (err) {
-      setSectionsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine eba\u00f5nnestus" });
+      setSectionsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine ebaõnnestus" });
     } finally {
       setSectionsBusy(false);
     }
@@ -230,15 +230,15 @@ export default function HomepageAdminPage() {
     <>
       <AdminPageHeader
         title="Avalehe haldus"
-        description="Päise ala, esilet\u00f5stetud kaartide ja kodulehe sektsioonide redigeerimine."
-        breadcrumbs={[{ label: "\u00dclevaade", href: "/haldus" }, { label: "Avaleht" }]}
+        description="Päise ala, esiletõstetud kaartide ja kodulehe sektsioonide redigeerimine."
+        breadcrumbs={[{ label: "Ülevaade", href: "/haldus" }, { label: "Avaleht" }]}
       />
 
       <div className="flex border-b border-line mb-6">
         {(["hero", "cards", "sections"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${tab === t ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-            {t === "hero" ? "Päise haldus" : t === "cards" ? "Esilet\u00f5stetud kaardid" : "Sektsioonid"}
+            {t === "hero" ? "Päise haldus" : t === "cards" ? "Esiletõstetud kaardid" : "Sektsioonid"}
           </button>
         ))}
       </div>
@@ -248,7 +248,7 @@ export default function HomepageAdminPage() {
         <div className="max-w-3xl grid gap-5">
           <div className="flex items-center gap-3 mb-2">
             <StatusBadge variant={isPublished ? "published" : "draft"} />
-            <span className="text-sm text-muted">{!loaded ? "Laen\u2026" : isPublished ? "Avaldatud" : "Mustand"}</span>
+            <span className="text-sm text-muted">{!loaded ? "Laen…" : isPublished ? "Avaldatud" : "Mustand"}</span>
           </div>
 
           <FormField label="Versiooni nimi">
@@ -303,7 +303,7 @@ export default function HomepageAdminPage() {
                   <img src={desktopPreview || hero.desktopImage} alt="Laaditud pilt" className="w-full h-full object-contain" />
                 </div>
               )}
-              {uploadBusy === "desktopImage" && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+              {uploadBusy === "desktopImage" && <p className="text-xs text-muted">Laadin üles…</p>}
             </div>
             <div className="grid gap-2">
               <FormField label="Mobiili pilt">
@@ -320,7 +320,7 @@ export default function HomepageAdminPage() {
                   <img src={mobilePreview || hero.mobileImage} alt="Laaditud pilt" className="w-full h-full object-contain" />
                 </div>
               )}
-              {uploadBusy === "mobileImage" && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+              {uploadBusy === "mobileImage" && <p className="text-xs text-muted">Laadin üles…</p>}
             </div>
           </div>
 
@@ -348,8 +348,8 @@ export default function HomepageAdminPage() {
             <input type="hidden" name="bgClass" value={hero.bgClass} />
             <input type="hidden" name="showSearch" value={String(hero.showSearch)} />
             <input type="hidden" name="isPublished" value="true" />
-            <button type="submit" disabled={pending} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
-              {pending ? "Salvestan\u2026" : "Salvesta p\u00e4ise seaded"}
+            <button type="submit" disabled={pending} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
+              {pending ? "Salvestan…" : "Salvesta päise seaded"}
             </button>
           </form>
         </div>
@@ -391,7 +391,7 @@ export default function HomepageAdminPage() {
                   {card.desktopImage && (
                     <img src={card.desktopImage} alt="" className="w-full h-16 object-contain bg-soft border border-line" />
                   )}
-                  {uploadBusy === `${card.id}-desktopImage` && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+                  {uploadBusy === `${card.id}-desktopImage` && <p className="text-xs text-muted">Laadin üles…</p>}
                 </div>
                 <div className="grid gap-1">
                   <FormField label="Mobiili pilt">
@@ -405,7 +405,7 @@ export default function HomepageAdminPage() {
                   {card.mobileImage && (
                     <img src={card.mobileImage} alt="" className="w-full h-16 object-contain bg-soft border border-line" />
                   )}
-                  {uploadBusy === `${card.id}-mobileImage` && <p className="text-xs text-muted">Laadin üles\u2026</p>}
+                  {uploadBusy === `${card.id}-mobileImage` && <p className="text-xs text-muted">Laadin üles…</p>}
                 </div>
               </div>
             </div>
@@ -416,8 +416,8 @@ export default function HomepageAdminPage() {
           {cardsSaveMsg && (
             <p className={`text-sm font-bold ${cardsSaveMsg.type === "error" ? "text-accent" : "text-leaf"}`}>{cardsSaveMsg.text}</p>
           )}
-          <button onClick={handleSaveCards} disabled={cardsBusy} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
-            {cardsBusy ? "Salvestan\u2026" : "Salvesta kaardid"}
+          <button onClick={handleSaveCards} disabled={cardsBusy} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
+            {cardsBusy ? "Salvestan…" : "Salvesta kaardid"}
           </button>
         </div>
       )}
@@ -462,8 +462,8 @@ export default function HomepageAdminPage() {
           {sectionsSaveMsg && (
             <p className={`text-sm font-bold ${sectionsSaveMsg.type === "error" ? "text-accent" : "text-leaf"}`}>{sectionsSaveMsg.text}</p>
           )}
-          <button onClick={handleSaveSections} disabled={sectionsBusy} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
-            {sectionsBusy ? "Salvestan\u2026" : "Salvesta sektsioonid"}
+          <button onClick={handleSaveSections} disabled={sectionsBusy} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
+            {sectionsBusy ? "Salvestan…" : "Salvesta sektsioonid"}
           </button>
         </div>
       )}

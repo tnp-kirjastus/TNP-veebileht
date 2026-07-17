@@ -37,7 +37,7 @@ export function PostForm({ post = {} }: { post?: EditablePost }) {
         <label className="grid gap-2 text-sm font-bold">Avaldamise aeg<input name="published_at" type="datetime-local" defaultValue={post.published_at?.slice(0, 16) ?? ""} className="border border-line bg-panel p-3 font-normal" /></label>
       </div>
       {state?.error && <p role="alert" className="text-accent font-bold">{state.error}</p>}
-      <button disabled={pending} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold disabled:opacity-50">{pending ? "Salvestan…" : "Salvesta postitus"}</button>
+      <button disabled={pending} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">{pending ? "Salvestan…" : "Salvesta postitus"}</button>
     </form>
   );
 }

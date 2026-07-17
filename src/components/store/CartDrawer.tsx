@@ -86,7 +86,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
 
             {error && <p role="alert" className="text-accent font-bold mb-3">{error}</p>}
             <button type="button" onClick={() => setCheckoutOpen(true)}
-                className="w-full min-h-[46px] px-[18px] border border-ink bg-ink text-white font-extrabold hover:bg-[#2a2d30] transition-colors inline-flex items-center justify-center gap-[9px]">
+                className="w-full min-h-[46px] px-[18px] border border-ink bg-white text-ink font-extrabold hover:bg-ink hover:text-white transition-colors inline-flex items-center justify-center gap-[9px]">
                 Vormista tellimus
               </button>
           </div>

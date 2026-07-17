@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/lib/cart-context";
+import { createClient } from "@/lib/supabase/browser";
 import {
   SHIPPING_RATES,
   calculateShippingCost,
@@ -51,6 +52,9 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [createAccount, setCreateAccount] = useState(true);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [machines, setMachines] = useState<Record<string, GroupedMachines[]> | null>(null);
   const [machinesError, setMachinesError] = useState(false);
@@ -206,6 +210,16 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
       return;
     }
 
+      const errors: Record<string, string> = {};
+    if (createAccount) {
+      if (!password || password.length < 6) errors.password = "Parool peab olema vähemalt 6 tähemärki.";
+      if (password !== confirmPassword) errors.confirmPassword = "Paroolid ei ühti.";
+    }
+    if (Object.keys(errors).length > 0) {
+      setError(errors.password ?? errors.confirmPassword ?? "Kontrolli parooli.");
+      return;
+    }
+
     setPending(true);
     setError("");
     try {
@@ -226,6 +240,8 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
           shipping_cost: shippingCost,
           couponCode: couponCode.trim() || undefined,
           couponDiscount,
+          create_account: createAccount,
+          password: createAccount ? password : undefined,
           parcel_machine: selectedMachine
             ? {
                 carrier: selectedMachine.carrier,
@@ -251,6 +267,15 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
         throw new Error("invalid_payment_redirect");
       }
       clearCart();
+      if (result.created_account && createAccount && password) {
+        try {
+          const sb = createClient();
+          const { error: signInErr } = await sb.auth.signInWithPassword({ email: data.email, password });
+          if (signInErr) {
+            console.warn("[checkout] auto sign-in after account creation failed:", signInErr.message);
+          }
+        } catch { /* ignore */ }
+      }
       window.location.assign(result.redirectUrl);
     } catch {
       setError("Makse algatamine ebaõnnestus. Proovi uuesti.");
@@ -269,7 +294,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                 key={label}
                 aria-current={step === number ? "step" : undefined}
                 className={`min-h-12 px-3 grid place-items-center text-center text-sm font-extrabold border-r last:border-0 border-line ${
-                  step === number ? "bg-ink text-white" : number < step ? "bg-soft text-ink" : "text-muted"
+                  step === number ? "border-2 border-ink bg-white text-ink" : number < step ? "bg-soft text-ink" : "text-muted"
                 }`}
               >
                 {number}. {label}
@@ -366,6 +391,49 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                   </div>
                 )}
               </div>
+
+              <div className="border-t border-line pt-4 mt-2">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={createAccount}
+                    onChange={(e) => setCreateAccount(e.target.checked)}
+                    className="mt-0.5 w-5 h-5 accent-ink"
+                  />
+                  <div>
+                    <span className="font-bold text-sm">Loo konto</span>
+                    <p className="text-sm text-muted mt-0.5">
+                      Loo endale konto, et näha oma tellimusi ja kiiremini
+                      järgmisi oste sooritada.
+                    </p>
+                  </div>
+                </label>
+
+                {createAccount && (
+                  <div className={`grid gap-4 mt-4 pl-7 ${compact ? "grid-cols-1" : "grid-cols-2 max-sm:grid-cols-1"}`}>
+                    <label className="grid gap-2 font-bold text-sm">
+                      Parool
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="new-password"
+                        className="border border-line p-3 font-normal"
+                      />
+                    </label>
+                    <label className="grid gap-2 font-bold text-sm">
+                      Korda parooli
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                        className="border border-line p-3 font-normal"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
             </fieldset>
           )}
 
@@ -391,7 +459,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                     type="button"
                     onClick={applyCoupon}
                     disabled={!couponCode.trim() || couponBusy}
-                    className="min-h-[46px] px-4 border border-ink font-bold bg-ink text-white hover:bg-ink/80 disabled:opacity-50"
+                    className="min-h-[46px] px-4 border border-ink font-bold bg-white text-ink hover:bg-ink hover:text-white disabled:opacity-50"
                   >
                     {couponBusy ? "..." : "Rakenda"}
                   </button>
@@ -688,7 +756,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
             )}
             <button
               disabled={pending || items.length === 0}
-              className="min-h-12 bg-ink text-white px-5 font-bold disabled:opacity-50"
+              className="min-h-12 border border-ink bg-white text-ink px-5 font-bold hover:bg-ink hover:text-white disabled:opacity-50"
             >
               {pending
                 ? "Suunan maksma…"

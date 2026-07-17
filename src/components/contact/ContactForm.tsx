@@ -29,7 +29,7 @@ export function ContactForm({ locale }: { locale: "et" | "en" }) {
     <label className="grid gap-2 text-sm font-bold" htmlFor="contact-email">{t.email}</label><input id="contact-email" type="email" name="email" autoComplete="email" maxLength={320} required className="w-full border border-line bg-panel px-[14px] py-3 outline-none focus:border-ink" />
     <label className="grid gap-2 text-sm font-bold" htmlFor="contact-message">{t.message}</label><textarea id="contact-message" name="message" required minLength={5} maxLength={5000} rows={6} className="w-full border border-line bg-panel px-[14px] py-3 outline-none focus:border-ink resize-y min-h-[140px]" />
     {status === "error" && <p role="alert" className="text-accent text-sm font-bold">{error}</p>}
-    <button type="submit" disabled={status === "loading"} className="justify-self-start min-h-[48px] px-7 border border-ink bg-ink text-white font-extrabold disabled:opacity-50">{status === "loading" ? t.sending : t.send}</button>
+    <button type="submit" disabled={status === "loading"} className="justify-self-start min-h-[48px] px-7 border border-ink bg-white text-ink font-extrabold hover:bg-ink hover:text-white disabled:opacity-50">{status === "loading" ? t.sending : t.send}</button>
   </form>;
 }
 

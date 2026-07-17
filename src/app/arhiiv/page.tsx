@@ -47,7 +47,7 @@ export default async function ArchivePage({ searchParams }: { searchParams: Prom
       <Breadcrumbs crumbs={[{ label: "Esileht", href: "/" }, { label: "Läbimüüdud" }]} />
       <h1 className="font-heading text-[clamp(42px,7vw,78px)] leading-none mt-[18px]">Läbimüüdud</h1>
       <p className="max-w-[680px] mt-4 text-muted">Kõik Tänapäeva arhiivis olevad raamatud. Neid teoseid ei saa praegu ostukorvi lisada.</p>
-      <form className="mt-7 flex max-w-xl"><input type="search" name="q" defaultValue={params.q} placeholder="Otsi arhiivist" className="h-12 flex-1 border border-ink px-4" /><button className="h-12 bg-ink text-white px-6 font-extrabold">Otsi</button></form>
+      <form className="mt-7 flex max-w-xl"><input type="search" name="q" defaultValue={params.q} placeholder="Otsi arhiivist" className="h-12 flex-1 border border-ink px-4" /><button className="h-12 border border-ink bg-white text-ink px-6 font-extrabold hover:bg-ink hover:text-white transition-colors">Otsi</button></form>
     </Shell></section>
     <Shell><div className="flex justify-between gap-4 py-8"><p className="text-muted">{all.length} raamatut</p>{query && <Link href="/arhiiv" className="font-bold text-accent">Tühista otsing</Link>}</div>
       <ProductGrid products={products.map(card)} columns={4} emptyMessage="Arhiivist ei leitud vasteid." />

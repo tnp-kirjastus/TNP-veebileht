@@ -61,7 +61,7 @@ export const t = {
     editor: "Toimetaja",
     illustrator: "Illustreerija",
     series: "Sari",
-    editions: "Kordustr\u00fckid",
+    editions: "Kordustrükid",
     same_category: "Samast kategooriast",
     same_author: "Samalt autorilt",
     same_series: "Samast sarjast",

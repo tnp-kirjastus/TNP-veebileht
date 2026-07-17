@@ -291,7 +291,7 @@ export default function ImportPage() {
                 ))}
               </div>
               <button type="button" onClick={doCompare} disabled={busy}
-                className="min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+                className="min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
                 {busy ? "Võrdlen…" : "2. Võrdle kataloogiga"}
               </button>
             </>
@@ -384,7 +384,7 @@ export default function ImportPage() {
           </div>
 
           <button type="button" onClick={doApply} disabled={busy}
-            className="mt-6 min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
+            className="mt-6 min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
             {busy ? "Rakendan…" : "3. Rakenda muudatused"}
           </button>
         </div>
@@ -396,7 +396,7 @@ export default function ImportPage() {
           <h2 className="font-heading text-2xl mb-4 text-leaf">Import rakendatud</h2>
           <p className="text-lg font-bold">{applied} toodet imporditud või uuendatud.</p>
           <button type="button" onClick={() => { setStep("upload"); setApplied(null); setFileData([]); setResults([]); setArchiveBase64(null); setArchiveName(null); if (fileRef.current) fileRef.current.value = ""; if (zipRef.current) zipRef.current.value = ""; }}
-            className="mt-4 min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80">
+            className="mt-4 min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white">
             Uus import
           </button>
         </div>

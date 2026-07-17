@@ -35,6 +35,8 @@ const schema = z.object({
   companyRegCode: z.string().max(50).optional(),
   couponCode: z.string().max(50).optional(),
   couponDiscount: z.number().min(0).default(0),
+  create_account: z.boolean().default(false),
+  password: z.string().min(6).max(128).optional(),
 });
 
 function buildShippingAddress(parsed: z.infer<typeof schema>): string {
@@ -66,11 +68,59 @@ function notifyAdmin(
   }).catch((err) => console.error("admin_notification_failed", err));
 }
 
+async function handleAccountCreation(
+  createAccount: boolean,
+  password: string | undefined,
+  email: string,
+  name: string,
+  phone: string,
+  orderId: string,
+): Promise<boolean> {
+  if (!createAccount || !password || password.length < 6) return false;
+  try {
+    const db = createAdminClient();
+    const { data: newUser, error: createErr } = await db.auth.admin.createUser({
+      email: email.toLowerCase().trim(),
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: name.trim() },
+    });
+    if (createErr) {
+      if (createErr.message?.includes("already") || createErr.status === 422) {
+        const { data: existing } = await db.auth.admin.listUsers({ page: 0, perPage: 1 });
+        const match = existing?.users?.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase().trim()
+        );
+        if (match) {
+          await db.schema("commerce").from("orders").update({ user_id: match.id }).eq("id", orderId);
+        }
+      } else {
+        console.error("checkout_account_create_failed", { error: createErr.message, email });
+      }
+      return false;
+    }
+    if (newUser?.user) {
+      await db.from("profiles").upsert({
+        id: newUser.user.id,
+        email: email.toLowerCase().trim(),
+        full_name: name.trim(),
+        phone: phone.trim() || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+      await db.schema("commerce").from("orders").update({ user_id: newUser.user.id }).eq("id", orderId);
+      return true;
+    }
+  } catch (err) {
+    console.error("checkout_account_create_exception", { error: String(err) });
+  }
+  return false;
+}
+
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin || new URL(origin).origin !== new URL(request.url).origin) return NextResponse.json({ error: "invalid_origin" }, { status: 403 });
   const clientKey = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("cf-connecting-ip") ?? "unknown";
-  if (!await consumeRateLimit("checkout", clientKey, 60, 30)) return NextResponse.json({ error: "Liiga palju p\u00e4ringuid. Proovi hetke p\u00e4rast uuesti." }, { status: 429 });
+  if (!await consumeRateLimit("checkout", clientKey, 60, 30)) return NextResponse.json({ error: "Liiga palju päringuid. Proovi hetke pärast uuesti." }, { status: 429 });
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Kontrolli tellimuse andmeid." }, { status: 400 });
 
@@ -80,7 +130,7 @@ export async function POST(request: Request) {
 
   const requestedItems = parsed.data.items ?? [];
   if (requestedItems.length === 0) {
-    return NextResponse.json({ error: "Ostukorv on t\u00fchi." }, { status: 400 });
+    return NextResponse.json({ error: "Ostukorv on tühi." }, { status: 400 });
   }
 
   const shippingAddress = buildShippingAddress(parsed.data);
@@ -166,9 +216,14 @@ export async function POST(request: Request) {
                 parsed.data.name, parsed.data.email, parsed.data.phone || null,
                 cart.items.map(oi => ({ title: oi.title, quantity: oi.quantity, price: 0 })),
               );
+              const createdAccount = await handleAccountCreation(
+                parsed.data.create_account, parsed.data.password,
+                parsed.data.email, parsed.data.name, parsed.data.phone, order.id,
+              );
               return NextResponse.json({
                 redirectUrl: `/tellimus/${order.confirmation_token}`,
                 confirmationToken: order.confirmation_token,
+                created_account: createdAccount,
               });
             }
           }
@@ -176,7 +231,7 @@ export async function POST(request: Request) {
           const subtotal = cart.items.reduce((sum, item) => sum + item.effectivePrice * item.quantity, 0);
           const coupon = parsed.data.couponCode ? validateCoupon(parsed.data.couponCode, subtotal) : null;
           if (parsed.data.couponCode && !coupon) {
-            return NextResponse.json({ error: "Sooduskood ei kehti v\u00f5i on aegunud." }, { status: 400 });
+            return NextResponse.json({ error: "Sooduskood ei kehti või on aegunud." }, { status: 400 });
           }
           const discountAmount = coupon?.discount ?? 0;
           const shippingCost = await calculateShippingCostAsync(parsed.data.shipping_method, subtotal);
@@ -217,7 +272,11 @@ export async function POST(request: Request) {
                 vat_amount: vatAmount,
                 vat_percent: KM_PERCENT,
               }).eq("id", order.order_id);
-              return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token });
+              const createdAccount = await handleAccountCreation(
+                parsed.data.create_account, parsed.data.password,
+                parsed.data.email, parsed.data.name, parsed.data.phone, order.order_id,
+              );
+              return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token, created_account: createdAccount });
             } catch (err) {
               const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
               console.error("maksekeskus_create_failed", {
@@ -228,7 +287,7 @@ export async function POST(request: Request) {
                 orderNumber: order.order_number,
                 path: "A",
               });
-              return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
+              return NextResponse.json({ error: "Makse algatamine ebaõnnestus. Proovi uuesti." }, { status: 502 });
             }
           }
         }
@@ -248,7 +307,7 @@ export async function POST(request: Request) {
 
   if (productsError || !dbProducts || dbProducts.length === 0) {
     console.error("checkout_path_b_product_lookup_failed", { productsError: productsError?.message, pathAError });
-    return NextResponse.json({ error: "M\u00f5ni raamat ei ole enam saadaval." }, { status: 409 });
+    return NextResponse.json({ error: "Mõni raamat ei ole enam saadaval." }, { status: 409 });
   }
 
   const dbProductMap = new Map(dbProducts.map(p => [p.slug, p]));
@@ -260,12 +319,12 @@ export async function POST(request: Request) {
     const dbProduct = dbProductMap.get(item.slug);
     if (!dbProduct || dbProduct.is_archived) {
       console.error("checkout_path_b_product_unavailable", { slug: item.slug, pathAError });
-      return NextResponse.json({ error: "M\u00f5ni raamat ei ole enam saadaval." }, { status: 409 });
+      return NextResponse.json({ error: "Mõni raamat ei ole enam saadaval." }, { status: 409 });
     }
     const isPreorder = dbProduct.is_upcoming && dbProduct.allow_preorder;
     if (!isPreorder && dbProduct.stock < item.quantity) {
       console.error("checkout_path_b_product_unavailable", { slug: item.slug, pathAError });
-      return NextResponse.json({ error: "M\u00f5ni raamat ei ole enam saadaval." }, { status: 409 });
+      return NextResponse.json({ error: "Mõni raamat ei ole enam saadaval." }, { status: 409 });
     }
     const now = Date.now();
     const start = dbProduct.sale_start ? Date.parse(String(dbProduct.sale_start)) : null;
@@ -318,7 +377,7 @@ export async function POST(request: Request) {
 
     if (orderError || !order) {
       console.error("checkout_path_b_preorder_insert_failed", { error: orderError?.message, pathAError });
-      return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+      return NextResponse.json({ error: "Tellimuse loomine ebaõnnestus. Proovi uuesti." }, { status: 500 });
     }
 
     const orderItemRows = orderItems.map(oi => ({
@@ -333,7 +392,7 @@ export async function POST(request: Request) {
     if (itemsError) {
       console.error("checkout_path_b_preorder_items_failed", { error: itemsError.message, pathAError });
       await db.schema("commerce").from("orders").delete().eq("id", order.id);
-      return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+      return NextResponse.json({ error: "Tellimuse loomine ebaõnnestus. Proovi uuesti." }, { status: 500 });
     }
 
     notifyAdmin(
@@ -342,16 +401,22 @@ export async function POST(request: Request) {
       orderItems.map(oi => ({ title: oi.title, quantity: oi.quantity, price: 0 })),
     );
 
+    const createdAccountBPre = await handleAccountCreation(
+      parsed.data.create_account, parsed.data.password,
+      parsed.data.email, parsed.data.name, parsed.data.phone, order.id,
+    );
+
     return NextResponse.json({
       redirectUrl: `/tellimus/${order.confirmation_token}`,
       confirmationToken: order.confirmation_token,
+      created_account: createdAccountBPre,
     });
   }
 
   const shippingCost = await calculateShippingCostAsync(parsed.data.shipping_method, subtotal);
   const coupon = parsed.data.couponCode ? validateCoupon(parsed.data.couponCode, subtotal) : null;
   if (parsed.data.couponCode && !coupon) {
-    return NextResponse.json({ error: "Sooduskood ei kehti v\u00f5i on aegunud." }, { status: 400 });
+    return NextResponse.json({ error: "Sooduskood ei kehti või on aegunud." }, { status: 400 });
   }
   const discountAmount = coupon?.discount ?? 0;
   const orderTotal = roundEuro(subtotal + shippingCost - discountAmount);
@@ -398,7 +463,11 @@ export async function POST(request: Request) {
         try {
           const payment = await createPayment({ id: existing.id, orderNumber: existing.order_number, totalCents: Math.round(Number(existing.total) * 100), currency: "EUR", confirmationToken: existing.confirmation_token, customer: { name: parsed.data.name, email: parsed.data.email, country: "ee", locale: "et" }, ip: clientKey === "unknown" ? "127.0.0.1" : clientKey });
           await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", existing.id);
-          return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: existing.confirmation_token });
+          const createdAccountIdem = await handleAccountCreation(
+            parsed.data.create_account, parsed.data.password,
+            parsed.data.email, parsed.data.name, parsed.data.phone, existing.id,
+          );
+          return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: existing.confirmation_token, created_account: createdAccountIdem });
         } catch (err) {
           const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
           console.error("maksekeskus_create_failed_retry", {
@@ -409,12 +478,12 @@ export async function POST(request: Request) {
             orderNumber: existing.order_number,
             path: "B-idempotency",
           });
-          return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
+          return NextResponse.json({ error: "Makse algatamine ebaõnnestus. Proovi uuesti." }, { status: 502 });
         }
       }
     }
     console.error("checkout_path_b_order_insert_failed", { error: orderError?.message, pathAError });
-    return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+    return NextResponse.json({ error: "Tellimuse loomine ebaõnnestus. Proovi uuesti." }, { status: 500 });
   }
 
   const orderItemRows = orderItems.map(oi => ({
@@ -429,7 +498,7 @@ export async function POST(request: Request) {
   if (itemsError) {
     console.error("checkout_path_b_order_items_failed", { error: itemsError.message, pathAError });
     await db.schema("commerce").from("orders").delete().eq("id", order.id);
-    return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+    return NextResponse.json({ error: "Tellimuse loomine ebaõnnestus. Proovi uuesti." }, { status: 500 });
   }
 
   const reservationRows = orderItems.map((oi) => ({
@@ -442,7 +511,7 @@ export async function POST(request: Request) {
   if (reservationError) {
     console.error("checkout_path_b_reservations_failed", { error: reservationError.message, pathAError });
     await db.schema("commerce").from("orders").delete().eq("id", order.id);
-    return NextResponse.json({ error: "Tellimuse loomine eba\u00f5nnestus. Proovi uuesti." }, { status: 500 });
+    return NextResponse.json({ error: "Tellimuse loomine ebaõnnestus. Proovi uuesti." }, { status: 500 });
   }
 
   notifyAdmin(
@@ -462,7 +531,11 @@ export async function POST(request: Request) {
       ip: clientKey === "unknown" ? "127.0.0.1" : clientKey,
     });
     await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", order.id);
-    return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token });
+    const createdAccountBNorm = await handleAccountCreation(
+      parsed.data.create_account, parsed.data.password,
+      parsed.data.email, parsed.data.name, parsed.data.phone, order.id,
+    );
+    return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token, created_account: createdAccountBNorm });
   } catch (err) {
     const cause = err instanceof Error && (err as Error & { cause?: unknown }).cause;
     console.error("maksekeskus_create_failed", {
@@ -473,6 +546,6 @@ export async function POST(request: Request) {
       orderNumber: order.order_number,
       path: "B",
     });
-    return NextResponse.json({ error: "Makse algatamine eba\u00f5nnestus. Proovi uuesti." }, { status: 502 });
+    return NextResponse.json({ error: "Makse algatamine ebaõnnestus. Proovi uuesti." }, { status: 502 });
   }
 }
