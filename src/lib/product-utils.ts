@@ -28,11 +28,16 @@ export function getSalePercent(p: Product): number {
 }
 
 export function formatEuro(value: number): string {
+<<<<<<< HEAD
   return value.toFixed(2) + " €";
+=======
+  return value.toFixed(2) + " \u20AC";
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return "";
+<<<<<<< HEAD
   const d = new Date(dateStr);
   const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -44,4 +49,11 @@ export function formatEditions(editions: { type: string; date: string }[]): stri
   return editions
     .map(e => `${formatDate(e.date)} (${e.type})`)
     .join(", ");
+=======
+  return new Date(dateStr).toLocaleDateString("et-EE", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }

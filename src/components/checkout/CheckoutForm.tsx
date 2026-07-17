@@ -622,6 +622,17 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                   14 päeva jooksul alates kättesaamisest.
                 </p>
               </div>
+
+              <div className="text-sm text-muted">
+                <p>
+                  <strong className="text-ink">Eeldatav tarneaeg:</strong>{" "}
+                  {isParcelMachine ? "2–4 tööpäeva" : "1–3 tööpäeva"} pärast makse kinnitust.
+                </p>
+                <p className="mt-1">
+                  Makse turvab <strong className="text-ink">Maksekeskus</strong>. Tagastamisõigus kehtib
+                  14 päeva jooksul alates kättesaamisest.
+                </p>
+              </div>
             </fieldset>
           )}
 

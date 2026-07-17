@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 import { serverEnv } from "./env";
 import { createAdminClient } from "./supabase/admin";
+<<<<<<< HEAD
 import { getStoreSettings } from "@/lib/settings";
 import {
   statusSubject,
@@ -35,6 +36,8 @@ export async function isNotifEnabled(statusKey: string): Promise<boolean> {
     return true;
   }
 }
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
 export async function sendOrderConfirmationEmail(params: {
   orderId: string;
@@ -50,6 +53,7 @@ export async function sendOrderConfirmationEmail(params: {
     return;
   }
 
+<<<<<<< HEAD
   const settings = await getStoreSettings();
   const fromAddress = settings.email.fromAddress || DEFAULT_FROM;
   const subject = settings.email.orderSubject.replace("{{orderNumber}}", params.orderNumber);
@@ -77,6 +81,25 @@ export async function sendOrderConfirmationEmail(params: {
         provider: "resend",
         template: "order_confirmation",
       },
+=======
+  const db = createAdminClient();
+
+  const outboxPayload = {
+    order_id: params.orderId,
+    order_number: params.orderNumber,
+    customer_email: params.to,
+    customer_name: params.customerName,
+    total: params.total,
+    items: params.items,
+    provider: "resend",
+    template: "order_confirmation",
+  };
+
+  const { data: outboxRow, error: outboxErr } = await db.schema("commerce").from("outbox")
+    .insert({
+      event_type: "email.order_confirmation",
+      payload: outboxPayload,
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     })
     .select("id")
     .single();
@@ -88,12 +111,25 @@ export async function sendOrderConfirmationEmail(params: {
 
   const resend = new Resend(env.RESEND_API_KEY);
 
+<<<<<<< HEAD
   try {
     await resend.emails.send({
       from: fromAddress,
       to: params.to,
       subject,
       text: body,
+=======
+  const itemLines = params.items.map(
+    (item) => `${item.quantity} x ${item.title} — ${item.price.toFixed(2)} €`
+  ).join("\n");
+
+  try {
+    await resend.emails.send({
+      from: "Kirjastus Tänapäev <tellimused@tnp.ee>",
+      to: params.to,
+      subject: `Tellimus ${params.orderNumber} kinnitatud`,
+      text: `Tere ${params.customerName}!\n\nSinu tellimus nr ${params.orderNumber} summas ${params.total.toFixed(2)} € on kinnitatud.\n\nTellitud raamatud:\n${itemLines}\n\nSaadame raamatud esimesel võimalusel. Tarne kohta saadame eraldi teavituse.\n\nKüsimuste korral kirjuta: tellimused@tnp.ee\n\nKirjastus Tänapäev`,
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     });
 
     await db.schema("commerce").from("outbox")
@@ -107,6 +143,7 @@ export async function sendOrderConfirmationEmail(params: {
       .eq("id", outboxRow.id);
   }
 }
+<<<<<<< HEAD
 
 export async function sendOrderStatusUpdate(params: {
   orderId: string;
@@ -307,3 +344,5 @@ export async function sendNewOrderAdminEmail(params: {
     console.error("admin_notification_email_failed", errorMsg);
   }
 }
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc

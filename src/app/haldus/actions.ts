@@ -25,10 +25,10 @@ const postSchema = z.object({
 export async function login(_state: { error?: string } | undefined, formData: FormData) {
   const email = z.email().safeParse(formData.get("email"));
   const password = z.string().min(8).safeParse(formData.get("password"));
-  if (!email.success || !password.success) return { error: "Sisselogimine ebaõnnestus." };
+  if (!email.success || !password.success) return { error: "Sisselogimine eba\u00f5nnestus." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: email.data, password: password.data });
-  if (error) return { error: "Sisselogimine ebaõnnestus." };
+  if (error) return { error: "Sisselogimine eba\u00f5nnestus." };
   redirect("/haldus");
 }
 
@@ -42,7 +42,7 @@ export async function savePost(_state: { error?: string } | undefined, formData:
   const session = await requireAdminSession(["editor", "admin"]);
   const raw = Object.fromEntries(formData.entries());
   const parsed = postSchema.safeParse(raw);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
   const value = parsed.data;
   const db = createAdminClient();
   const record = {
@@ -61,7 +61,11 @@ export async function savePost(_state: { error?: string } | undefined, formData:
   const result = value.id
     ? await db.schema("content").from("posts").update(record).eq("id", value.id).select("id").single()
     : await db.schema("content").from("posts").insert(record).select("id").single();
+<<<<<<< HEAD
   if (result.error) return { error: result.error.code === "23505" ? "See URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
+=======
+  if (result.error) return { error: result.error.code === "23505" ? "See URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   await audit(session.user.id, value.id ? "blog.post.updated" : "blog.post.created", "content.post", result.data.id, {
     after: { title: value.title_et, status: value.status },

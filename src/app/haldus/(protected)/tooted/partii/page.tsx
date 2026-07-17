@@ -20,6 +20,7 @@ interface ProductBrief {
 type BulkAction = "set_state_active" | "set_state_upcoming" | "archive" | "unarchive" | "set_price" | "set_sale_price" | "clear_sale_price" | "set_stock" | "adjust_stock" | "set_origin" | "set_featured" | "clear_featured";
 
 const actionLabels: Record<BulkAction, string> = {
+<<<<<<< HEAD
   set_state_active: "Märgi aktiivseks",
   set_state_upcoming: "Märgi ilmuvaks",
   archive: "Arhiveeri",
@@ -30,6 +31,18 @@ const actionLabels: Record<BulkAction, string> = {
   set_stock: "Määra laoseis",
   adjust_stock: "Muuda laoseisu (+/-)",
   set_origin: "Määra päritolu",
+=======
+  set_state_active: "M\u00e4rgi aktiivseks",
+  set_state_upcoming: "M\u00e4rgi ilmuvaks",
+  archive: "Arhiveeri",
+  unarchive: "Taasta arhiivist",
+  set_price: "M\u00e4\u00e4ra hind",
+  set_sale_price: "M\u00e4\u00e4ra soodushind",
+  clear_sale_price: "Eemalda soodushind",
+  set_stock: "M\u00e4\u00e4ra laoseis",
+  adjust_stock: "Muuda laoseisu (+/-)",
+  set_origin: "M\u00e4\u00e4ra p\u00e4ritolu",
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   set_featured: "Lisa esiletõstetuks",
   clear_featured: "Eemalda esiletõstetud",
 };
@@ -81,7 +94,11 @@ export default function BulkEditPage() {
       <AdminPageHeader
         title="Partii muutmine"
         description={`Vali tooted ja rakenda ühne muudatus. ${selectedIds.size} toodet valitud.`}
+<<<<<<< HEAD
         breadcrumbs={[{ label: "Ülevaade", href: "/haldus" }, { label: "Tooted", href: "/haldus/tooted" }, { label: "Partii muutmine" }]}
+=======
+        breadcrumbs={[{ label: "\u00dclevaade", href: "/haldus" }, { label: "Tooted", href: "/haldus/tooted" }, { label: "Partii muutmine" }]}
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       />
 
       <div className="flex flex-wrap items-end gap-4 mb-6 p-5 border border-line bg-soft">
@@ -96,6 +113,7 @@ export default function BulkEditPage() {
         </div>
         {needsValue && (
           <div className="grid gap-1">
+<<<<<<< HEAD
             <label className="text-xs font-bold text-muted">Väärtus</label>
             {selectedAction === "set_origin" ? (
               <select value={actionValue} onChange={(e) => setActionValue(e.target.value)}
@@ -103,6 +121,15 @@ export default function BulkEditPage() {
                 <option value="">Vali…</option>
                 <option value="estonian">Eesti</option>
                 <option value="foreign">Välismaine</option>
+=======
+            <label className="text-xs font-bold text-muted">V\u00e4\u00e4rtus</label>
+            {selectedAction === "set_origin" ? (
+              <select value={actionValue} onChange={(e) => setActionValue(e.target.value)}
+                className="h-11 border border-line bg-paper px-3 text-sm font-bold">
+                <option value="">Vali\u2026</option>
+                <option value="estonian">Eesti</option>
+                <option value="foreign">V\u00e4lismaine</option>
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
               </select>
             ) : (
               <input type="number" step="0.01" value={actionValue} onChange={(e) => setActionValue(e.target.value)}
@@ -112,7 +139,11 @@ export default function BulkEditPage() {
           </div>
         )}
         <button type="button" disabled={selectedIds.size === 0} onClick={() => setShowConfirm(true)}
+<<<<<<< HEAD
           className="h-11 px-6 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">
+=======
+          className="h-11 px-6 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-30 disabled:cursor-not-allowed">
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           Rakenda valituile ({selectedIds.size})
         </button>
         <button type="button" onClick={() => setSelectedIds(new Set())} disabled={selectedIds.size === 0}
@@ -124,10 +155,17 @@ export default function BulkEditPage() {
       <div className="flex items-center gap-3 mb-4">
         <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") doSearch(search); }}
+<<<<<<< HEAD
           placeholder="Otsi tooteid pealkirja või ISBN-i järgi…"
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
         <button type="button" onClick={() => doSearch(search)} disabled={loading}
           className="h-11 px-5 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50">
+=======
+          placeholder="Otsi tooteid pealkirja või ISBN-i järgi\u2026"
+          className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
+        <button type="button" onClick={() => doSearch(search)} disabled={loading}
+          className="h-11 px-5 bg-ink text-white text-sm font-bold hover:bg-ink/80 disabled:opacity-50">
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           Otsi
         </button>
       </div>
@@ -176,9 +214,15 @@ export default function BulkEditPage() {
             <h2 className="font-heading text-xl mb-2">Kinnita partii muudatus</h2>
             <p className="text-muted text-sm mb-2">
               <strong>{actionLabels[selectedAction]}</strong>
+<<<<<<< HEAD
               {actionValue ? ` — väärtus: ${actionValue}` : ""}
             </p>
             <p className="text-sm mb-6">See muudatus rakendatakse <strong>{selectedIds.size}</strong> tootele. Kas jätkata?</p>
+=======
+              {actionValue ? ` \u2014 v\u00e4\u00e4rtus: ${actionValue}` : ""}
+            </p>
+            <p className="text-sm mb-6">See muudatus rakendatakse <strong>{selectedIds.size}</strong> tootele. Kas j\u00e4tkata?</p>
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
             <form action={action}>
               <input type="hidden" name="ids" value={Array.from(selectedIds).join(",")} />
@@ -186,8 +230,13 @@ export default function BulkEditPage() {
               <input type="hidden" name="value" value={actionValue} />
               <div className="flex gap-3 justify-end">
                 <button type="button" onClick={() => setShowConfirm(false)} className="px-5 py-2.5 border border-line text-sm font-bold hover:bg-soft">Tühista</button>
+<<<<<<< HEAD
                 <button type="submit" disabled={pending} className="px-5 py-2.5 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50">
                   {pending ? "Rakendan…" : `Rakenda ${selectedIds.size} tootele`}
+=======
+                <button type="submit" disabled={pending} className="px-5 py-2.5 bg-ink text-white text-sm font-bold hover:bg-ink/80 disabled:opacity-50">
+                  {pending ? "Rakendan\u2026" : `Rakenda ${selectedIds.size} tootele`}
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                 </button>
               </div>
             </form>
@@ -200,7 +249,11 @@ export default function BulkEditPage() {
           <h3 className="font-heading text-lg mb-2 text-leaf">Muudatus rakendatud</h3>
           <div className="grid grid-cols-3 gap-4 text-sm">
             <div><span className="font-bold text-leaf">{state.result.updated}</span> uuendatud</div>
+<<<<<<< HEAD
             <div><span className="font-bold">{state.result.skipped}</span> vahele jäetud</div>
+=======
+            <div><span className="font-bold">{state.result.skipped}</span> vahele j\u00e4etud</div>
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             <div><span className="font-bold text-accent">{Array.isArray(state.result.errors) ? state.result.errors.length : 0}</span> viga</div>
           </div>
           {Array.isArray(state.result.errors) && state.result.errors.length > 0 && (

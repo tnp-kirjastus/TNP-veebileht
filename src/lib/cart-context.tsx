@@ -61,12 +61,27 @@ function useClientHydrated(): boolean {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
+<<<<<<< HEAD
   const [items, setItems] = useState<CartItem[]>(() => loadFromStorage());
   const [error, setError] = useState<string | null>(null);
   const hydrated = useClientHydrated();
   const inited = useRef(false);
 
   useEffect(() => {
+=======
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const inited = useRef(false);
+
+  useEffect(() => {
+    const stored = loadFromStorage();
+    if (stored.length > 0) setItems(stored);
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     if (inited.current || !hydrated) return;
     inited.current = true;
     const controller = new AbortController();

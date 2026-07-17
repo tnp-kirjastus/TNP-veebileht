@@ -55,7 +55,11 @@ async function fetchPeopleAll() {
   let from = 0;
   const size = 1000;
   while (true) {
+<<<<<<< HEAD
     const { data, error } = await db.schema("people").from("people").select("id,name,slug").range(from, from + size - 1);
+=======
+    const { data, error } = await db.schema("people").from("people").select("name,slug").range(from, from + size - 1);
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     if (error) throw error;
     if (!data || data.length === 0) break;
     all.push(...data);
@@ -76,6 +80,7 @@ async function main() {
   const dbProducts = await fetchAll("products");
   console.log(`  Fetched ${dbProducts.length} products`);
 
+<<<<<<< HEAD
   // 2. Categories (from commerce.categories with parent info)
   const allCategoriesRaw = [];
   let catFrom = 0;
@@ -91,6 +96,11 @@ async function main() {
     catFrom += catSize;
   }
   console.log(`  Fetched ${allCategoriesRaw.length} categories`);
+=======
+  // 2. Categories (from commerce.categories or commerce.product_categories?)
+  const { data: categories } = await db.schema("commerce").from("categories").select("name_et,slug").order("sort_order");
+  console.log(`  Fetched ${categories?.length ?? 0} categories`);
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   // 3. Series (from content.series where FK references)
   const { data: series } = await db.schema("content").from("series").select("name_et,slug");
@@ -101,6 +111,7 @@ async function main() {
   console.log(`  Fetched ${people.length} people`);
 
   // Transform products to JSON format
+<<<<<<< HEAD
 
   const allCategoriesMap = new Map();
   for (const c of allCategoriesRaw) {
@@ -127,10 +138,25 @@ async function main() {
       const list = productCategoriesMap.get(row.product_id) || [];
       list.push(catName);
       productCategoriesMap.set(row.product_id, list);
+=======
+  const productCategoriesMap = new Map();
+  const { data: pcRows } = await db.schema("commerce").from("product_categories")
+    .select("product_id, categories(name_et)");
+  if (pcRows) {
+    for (const row of pcRows) {
+      const cats = row.categories;
+      const catName = (Array.isArray(cats) ? cats[0]?.name_et : cats?.name_et);
+      if (catName && row.product_id) {
+        const list = productCategoriesMap.get(row.product_id) || [];
+        list.push(catName);
+        productCategoriesMap.set(row.product_id, list);
+      }
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     }
   }
 
   const productPeopleMap = new Map();
+<<<<<<< HEAD
 
   const allPeopleMap = new Map();
   for (const p of people) {
@@ -187,6 +213,39 @@ async function main() {
   for (const p of dbProducts) {
     if (p.series_id && allSeriesMap.has(p.series_id)) {
       productSeriesMap.set(p.id, allSeriesMap.get(p.series_id));
+=======
+  const { data: ppRows } = await db.schema("commerce").from("product_people")
+    .select("product_id, role, people(name)");
+  if (ppRows) {
+    for (const row of ppRows) {
+      if (!row.product_id) continue;
+      const person = row.people;
+      const personName = (Array.isArray(person) ? person[0]?.name : person?.name);
+      if (!personName) continue;
+      const role = String(row.role ?? "author");
+      const map = productPeopleMap.get(row.product_id) || {};
+      const list = map[role] || [];
+      list.push(personName);
+      map[role] = list;
+      productPeopleMap.set(row.product_id, map);
+    }
+  }
+
+  const productSeriesMap = new Map();
+  const { data: psRows } = await db.schema("commerce").from("products")
+    .select("id, series!inner(slug, name_et)")
+    .not("series_id", "is", null);
+  if (psRows) {
+    for (const row of psRows) {
+      const s = row.series;
+      const seriesData = Array.isArray(s) ? s[0] : s;
+      if (seriesData) {
+        productSeriesMap.set(row.id, {
+          series_slug: String(seriesData.slug ?? ""),
+          series_name: String(seriesData.name_et ?? ""),
+        });
+      }
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     }
   }
 
@@ -212,14 +271,20 @@ async function main() {
       origin: p.origin || "estonian",
       is_upcoming: Boolean(p.is_upcoming),
       is_archived: Boolean(p.is_archived),
+<<<<<<< HEAD
       allow_preorder: Boolean(p.allow_preorder ?? true),
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       cover_image: p.cover_image || null,
       series_name: series?.series_name || null,
       series_slug: series?.series_slug || null,
       categories: cats,
       people,
+<<<<<<< HEAD
       editions: p.editions ?? [],
       latest_release_date: p.latest_release_date ?? null,
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     };
   });
 
@@ -227,6 +292,7 @@ async function main() {
   writeFileSync(resolve(dataDir, "products.json"), JSON.stringify(jsonProducts, null, "\t"), "utf-8");
   console.log(`  Wrote ${jsonProducts.length} products to products.json`);
 
+<<<<<<< HEAD
   // Write categories.json with hierarchical structure
   {
     const idToSlug = new Map();
@@ -240,6 +306,11 @@ async function main() {
         slug: c.slug,
         ...(c.parent_id && idToSlug.has(c.parent_id) ? { parent: idToSlug.get(c.parent_id) } : {}),
       }));
+=======
+  // Write categories.json
+  if (categories) {
+    const catJson = categories.map(c => ({ name: c.name_et, slug: c.slug }));
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     writeFileSync(resolve(dataDir, "categories.json"), JSON.stringify(catJson, null, "\t"), "utf-8");
     console.log(`  Wrote ${catJson.length} categories to categories.json`);
   }

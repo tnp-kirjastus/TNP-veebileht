@@ -103,7 +103,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       {/* Product hero — breadcrumbs INSIDE the same section */}
       <section className="relative grid grid-cols-[1fr_1fr] gap-12 py-[10px] pb-[50px] items-stretch max-[900px]:grid-cols-1">
         {onSale && salePercent > 0 && (
+<<<<<<< HEAD
           <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-[1]">-{salePercent}%</span>
+=======
+          <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-10">-{salePercent}%</span>
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
         )}
         <div className="grid place-items-center bg-soft px-10 py-[60px] max-[900px]:py-8 max-[600px]:px-6 max-[600px]:py-[30px]">
           {product.cover_image ? <img src={getCoverUrl(product.cover_image) ?? ""} alt={product.title_et} className="max-h-[800px] w-auto max-w-[90%] filter drop-shadow-[_-18px_24px_28px_rgba(36,26,16,0.28)] max-[900px]:max-h-[600px] max-[600px]:max-h-[450px]" loading="eager" /> : <div className="aspect-[3/4] w-[75%] bg-muted/10 flex items-center justify-center text-muted text-center p-4">{product.title_et}</div>}

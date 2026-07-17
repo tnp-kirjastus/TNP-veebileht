@@ -27,7 +27,10 @@ const productSchema = z.object({
   is_upcoming: z.coerce.boolean().optional(),
   is_archived: z.coerce.boolean().optional(),
   is_featured: z.coerce.boolean().optional(),
+<<<<<<< HEAD
   allow_preorder: z.coerce.boolean().optional(),
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   cover_image: z.string().trim().max(1000).optional(),
   series_id: z.string().uuid().optional(),
   category_ids: z.string().optional(),
@@ -38,7 +41,10 @@ const productSchema = z.object({
   people_illustrators: z.string().optional(),
   seo_title: z.string().trim().max(70).optional(),
   seo_description: z.string().trim().max(170).optional(),
+<<<<<<< HEAD
   editions: z.string().optional(),
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   status: z.enum(["draft", "active", "upcoming", "archived"]).default("active"),
 });
 
@@ -52,7 +58,11 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   const raw = Object.fromEntries(formData.entries());
   const parsed = productSchema.safeParse(raw);
   if (!parsed.success) {
+<<<<<<< HEAD
     const msg = parsed.error.issues[0]?.message ?? "Kontrolli välju.";
+=======
+    const msg = parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju.";
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     return { error: msg };
   }
 
@@ -62,6 +72,7 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   const coverImageRaw = v.cover_image?.trim();
   const coverImageFinal = coverImageRaw === "[CLEAR]" ? null : (coverImageRaw || null);
 
+<<<<<<< HEAD
   let editionsParsed: { type: string; date: string }[] = [];
   if (v.editions) {
     try {
@@ -70,6 +81,8 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     } catch { /* keep empty */ }
   }
 
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const productRecord = {
     sku: v.sku,
     title_et: v.title_et,
@@ -89,10 +102,15 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     is_upcoming: v.is_upcoming ?? false,
     is_archived: v.is_archived ?? false,
     is_featured: v.is_featured ?? false,
+<<<<<<< HEAD
     allow_preorder: v.allow_preorder ?? true,
     cover_image: coverImageFinal,
     series_id: v.series_id || null,
     editions: editionsParsed.length > 0 ? editionsParsed : null,
+=======
+    cover_image: coverImageFinal,
+    series_id: v.series_id || null,
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     updated_at: new Date().toISOString(),
   };
 
@@ -101,8 +119,13 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     : await db.schema("commerce").from("products").insert(productRecord).select("id,slug").single();
 
   if (result.error) {
+<<<<<<< HEAD
     if (result.error.code === "23505") return { error: "Unikaalne väli on juba kasutusel (ISBN või URL-i nimi)." };
     return { error: "Salvestamine ebaõnnestus. Proovi uuesti." };
+=======
+    if (result.error.code === "23505") return { error: `Unikaalne v\u00e4li on juba kasutusel (ISBN v\u00f5i URL-i nimi).` };
+    return { error: `Salvestamine eba\u00f5nnestus: ${result.error.message}` };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   }
 
   const productId = result.data.id;
@@ -131,6 +154,7 @@ export async function saveProduct(_state: { error?: string; productId?: string }
 
   await db.schema("commerce").from("product_people").delete().eq("product_id", productId);
 
+<<<<<<< HEAD
   const allNames: string[] = [];
   const roleMap = new Map<string, string[]>();
   for (const { key, role } of personRoles) {
@@ -163,6 +187,17 @@ export async function saveProduct(_state: { error?: string; productId?: string }
   if (personRows.length > 0) {
     await db.schema("commerce").from("product_people").insert(personRows);
   }
+=======
+  for (const { key, role } of personRoles) {
+    const names = parsePersonList(raw[key] as string);
+    for (const name of names) {
+      const { data: person } = await db.schema("people").from("people").select("id").eq("name", name).maybeSingle();
+      if (person) {
+        await db.schema("commerce").from("product_people").insert({ product_id: productId, person_id: person.id, role });
+      }
+    }
+  }
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   await audit(session.user.id, v.id ? "product.updated" : "product.created", "commerce.product", productId, {
     after: { title: v.title_et, sku: v.sku, slug: productSlug, cover_image: String(coverImageFinal ?? "") },

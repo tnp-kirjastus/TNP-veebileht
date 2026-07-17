@@ -1,11 +1,15 @@
 import { readFileSync } from "fs";
 
 const BASE = "https://gqgliwbcazcixvyealsx.supabase.co/rest/v1";
+<<<<<<< HEAD
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!KEY) {
   console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is required");
   process.exit(1);
 }
+=======
+const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZ2xpd2JjYXpjaXh2eWVhbHN4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjk5Mzc0NSwiZXhwIjoyMDk4NTY5NzQ1fQ.uGmndg0PZ4CThNRYbiqwBrN9CpWkprzX71BJ8G_ljMo";
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
 function slugify(text) {
   const t = { "õ": "o", "ä": "a", "ö": "o", "ü": "u", "š": "s", "ž": "z", "Õ": "O", "Ä": "A", "Ö": "O", "Ü": "U", "Š": "S", "Ž": "Z" };

@@ -10,12 +10,17 @@ import { revalidateCampaign, revalidateSeries } from "@/lib/revalidate";
 const campaignSchema = z.object({
   id: z.string().uuid().optional(),
   name_et: z.string().trim().min(1).max(200),
+<<<<<<< HEAD
   slug: z.string().trim().min(1).max(200).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+=======
+  slug: z.string().trim().min(1).max(200).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   description_et: z.string().trim().max(5000).optional(),
   banner_url: z.string().trim().max(500).optional(),
   starts_at: z.string().optional(),
   ends_at: z.string().optional(),
   is_active: z.coerce.boolean().optional(),
+<<<<<<< HEAD
   product_ids: z.array(z.string().uuid()).optional(),
 });
 
@@ -49,6 +54,10 @@ async function uniqueCampaignSlug(db: ReturnType<typeof createAdminClient>, name
   }
 }
 
+=======
+});
+
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 const categorySchema = z.object({
   id: z.string().uuid().optional(),
   name_et: z.string().trim().min(1).max(200),
@@ -75,6 +84,7 @@ const personSchema = z.object({
 export async function saveCampaign(_state: { error?: string } | undefined, formData: FormData) {
   const session = await requireAdminSession(["editor", "admin"]);
   const raw = Object.fromEntries(formData.entries());
+<<<<<<< HEAD
   const productIds = [...new Set(formData.getAll("product_ids").map(String))];
   const parsed = campaignSchema.safeParse({
     ...raw,
@@ -85,10 +95,19 @@ export async function saveCampaign(_state: { error?: string } | undefined, formD
   const db = createAdminClient();
   const record: Record<string, unknown> = {
     name_et: v.name_et, description_et: v.description_et || null,
+=======
+  const parsed = campaignSchema.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
+  const v = parsed.data;
+  const db = createAdminClient();
+  const record = {
+    name_et: v.name_et, slug: v.slug, description_et: v.description_et || null,
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     banner_url: v.banner_url || null,
     starts_at: v.starts_at || null, ends_at: v.ends_at || null,
     is_active: v.is_active ?? true,
   };
+<<<<<<< HEAD
 
   if (v.slug) {
     record.slug = v.slug;
@@ -233,13 +252,35 @@ export async function deleteCampaign(
   revalidateCampaign();
   revalidatePath("/haldus/kampaaniad");
   return { success: true };
+=======
+  const result = v.id
+    ? await db.schema("content").from("campaigns").update(record).eq("id", v.id).select("id").single()
+    : await db.schema("content").from("campaigns").insert(record).select("id").single();
+  if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
+  await audit(session.user.id, v.id ? "campaign.updated" : "campaign.created", "content.campaign", result.data.id, { after: { name: v.name_et } });
+  revalidateCampaign();
+  return { success: true, id: result.data.id };
+}
+
+export async function deleteCampaign(formData: FormData) {
+  const session = await requireAdminSession(["admin"]);
+  const id = z.string().uuid().parse(formData.get("id"));
+  const db = createAdminClient();
+  const { data } = await db.schema("content").from("campaigns").delete().eq("id", id).select("name_et").single();
+  await audit(session.user.id, "campaign.deleted", "content.campaign", id, { before: { name: data?.name_et } });
+  revalidateCampaign();
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export async function saveCategory(_state: { error?: string } | undefined, formData: FormData) {
   const session = await requireAdminSession(["editor", "admin"]);
   const raw = Object.fromEntries(formData.entries());
   const parsed = categorySchema.safeParse(raw);
+<<<<<<< HEAD
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
+=======
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const v = parsed.data;
   const db = createAdminClient();
   const record = {
@@ -250,10 +291,16 @@ export async function saveCategory(_state: { error?: string } | undefined, formD
   const result = v.id
     ? await db.schema("commerce").from("categories").update(record).eq("id", v.id).select("id").single()
     : await db.schema("commerce").from("categories").insert(record).select("id").single();
+<<<<<<< HEAD
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
   await audit(session.user.id, v.id ? "category.updated" : "category.created", "content.category", result.data.id, { after: { name: v.name_et } });
   revalidatePath("/raamatud");
   revalidatePath("/haldus/kategooriad");
+=======
+  if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
+  await audit(session.user.id, v.id ? "category.updated" : "category.created", "content.category", result.data.id, { after: { name: v.name_et } });
+  revalidatePath("/raamatud");
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   return { success: true, id: result.data.id };
 }
 
@@ -270,17 +317,27 @@ export async function saveSeries(_state: { error?: string } | undefined, formDat
   const session = await requireAdminSession(["editor", "admin"]);
   const raw = Object.fromEntries(formData.entries());
   const parsed = seriesSchema.safeParse(raw);
+<<<<<<< HEAD
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
+=======
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const v = parsed.data;
   const db = createAdminClient();
   const record = { name_et: v.name_et, slug: v.slug, description_et: v.description_et || null, cover_image: v.cover_image || null };
   const result = v.id
     ? await db.schema("content").from("series").update(record).eq("id", v.id).select("id").single()
     : await db.schema("content").from("series").insert(record).select("id").single();
+<<<<<<< HEAD
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
   await audit(session.user.id, v.id ? "series.updated" : "series.created", "content.series", result.data.id, { after: { name: v.name_et } });
   revalidateSeries(v.slug);
   revalidatePath("/haldus/sarjad");
+=======
+  if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
+  await audit(session.user.id, v.id ? "series.updated" : "series.created", "content.series", result.data.id, { after: { name: v.name_et } });
+  revalidateSeries(v.slug);
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   return { success: true, id: result.data.id };
 }
 
@@ -297,17 +354,27 @@ export async function savePerson(_state: { error?: string } | undefined, formDat
   const session = await requireAdminSession(["editor", "admin"]);
   const raw = Object.fromEntries(formData.entries());
   const parsed = personSchema.safeParse(raw);
+<<<<<<< HEAD
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
+=======
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const v = parsed.data;
   const db = createAdminClient();
   const record = { name: v.name, slug: v.slug, bio_et: v.bio_et || null, updated_at: new Date().toISOString() };
   const result = v.id
     ? await db.schema("people").from("people").update(record).eq("id", v.id).select("id").single()
     : await db.schema("people").from("people").insert({ ...record, created_at: new Date().toISOString() }).select("id").single();
+<<<<<<< HEAD
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
   await audit(session.user.id, v.id ? "person.updated" : "person.created", "people.person", result.data.id, { after: { name: v.name } });
   revalidatePath("/raamatud");
   revalidatePath("/haldus/autorid");
+=======
+  if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine eba\u00f5nnestus." };
+  await audit(session.user.id, v.id ? "person.updated" : "person.created", "people.person", result.data.id, { after: { name: v.name } });
+  revalidatePath("/raamatud");
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   return { success: true, id: result.data.id };
 }
 

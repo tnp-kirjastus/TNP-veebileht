@@ -1,15 +1,22 @@
+<<<<<<< HEAD
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 const { createClient } = require("@supabase/supabase-js");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
 const SUPABASE_URL = "https://gqgliwbcazcixvyealsx.supabase.co";
+<<<<<<< HEAD
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SERVICE_ROLE_KEY) {
   console.error("SUPABASE_SERVICE_ROLE_KEY environment variable is required");
   process.exit(1);
 }
+=======
+const SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZ2xpd2JjYXpjaXh2eWVhbHN4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjk5Mzc0NSwiZXhwIjoyMDk4NTY5NzQ1fQ.uGmndg0PZ4CThNRYbiqwBrN9CpWkprzX71BJ8G_ljMo";
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 

@@ -41,7 +41,10 @@ export function revalidateProduct(slug: string) {
 export function revalidateCampaign() {
   revalidatePath("/");
   revalidatePath("/pakkumised");
+<<<<<<< HEAD
   revalidatePath("/haldus/kampaaniad");
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export function revalidateBlog(slug?: string) {

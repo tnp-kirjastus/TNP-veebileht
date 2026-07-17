@@ -16,7 +16,11 @@ export async function createUser(_state: { error?: string; success?: string } | 
   const session = await requireAdminSession(["admin"]);
   const raw = Object.fromEntries(formData.entries());
   const parsed = createUserSchema.safeParse(raw);
+<<<<<<< HEAD
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
+=======
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli v\u00e4lju." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   const { email, password, role } = parsed.data;
   const db = createAdminClient();
@@ -31,7 +35,11 @@ export async function createUser(_state: { error?: string; success?: string } | 
     if (authError.message?.includes("already") || authError.message?.includes("duplicate")) {
       return { error: "Selle e-postiga kasutaja on juba olemas." };
     }
+<<<<<<< HEAD
     return { error: "Kasutaja loomine ebaõnnestus." };
+=======
+    return { error: "Kasutaja loomine eba\u00f5nnestus." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   }
 
   const { error: profileError } = await db.from("profiles").insert({
@@ -42,7 +50,11 @@ export async function createUser(_state: { error?: string; success?: string } | 
   });
 
   if (profileError) {
+<<<<<<< HEAD
     return { error: "Profiili loomine ebaõnnestus." };
+=======
+    return { error: "Profiili loomine eba\u00f5nnestus." };
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   }
 
   await audit(session.user.id, "user.created", "auth.user", created.user.id, {

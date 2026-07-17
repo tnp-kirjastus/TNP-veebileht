@@ -98,7 +98,11 @@ export async function processImage(source: Buffer): Promise<{ buffer: Buffer; wi
     throw new Error("Pildi mõõtmed on määramata");
   }
 
+<<<<<<< HEAD
   const pipeline = image
+=======
+  let pipeline = image
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     .rotate()
     .resize({ width: OUTPUT_WIDTH, height: OUTPUT_HEIGHT, fit: "inside", withoutEnlargement: true })
     .webp({ quality: WEBP_QUALITY, effort: 4 });

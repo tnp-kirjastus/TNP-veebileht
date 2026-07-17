@@ -37,10 +37,15 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     is_upcoming: product.is_upcoming ?? false,
     is_archived: product.is_archived ?? false,
     is_featured: product.is_featured ?? false,
+<<<<<<< HEAD
     allow_preorder: product.allow_preorder ?? true,
     cover_image: product.cover_image,
     series_id: product.series_id,
     editions: product.editions ?? [],
+=======
+    cover_image: product.cover_image,
+    series_id: product.series_id,
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   };
 
   return (

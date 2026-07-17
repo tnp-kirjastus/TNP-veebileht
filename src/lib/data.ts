@@ -4,7 +4,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Product, Category, Series, Person } from "./data-types";
 import { isOnSale } from "./product-utils";
+<<<<<<< HEAD
 export { getEffectivePrice, isOnSale, getSalePercent, formatEuro, formatDate, formatEditions } from "./product-utils";
+=======
+export { getEffectivePrice, isOnSale, getSalePercent, formatEuro, formatDate } from "./product-utils";
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 export type { Product, Category, Series, Person } from "./data-types";
 
 let _cache: {
@@ -53,6 +57,7 @@ function allPeople(): Person[] {
 }
 
 const activeProducts = (): Product[] => allProducts().filter((p) => !p.is_archived);
+<<<<<<< HEAD
 type ProductScope = "active" | "archived" | "all";
 
 function productsByScope(scope: ProductScope = "active"): Product[] {
@@ -71,6 +76,15 @@ export function getCatalogueProducts(scope: ProductScope = "active"): Product[] 
 
 export function getArchivedProducts(): Product[] {
   return productsByScope("archived");
+=======
+
+export function getActiveProducts(): Product[] {
+  return activeProducts();
+}
+
+export function getArchivedProducts(): Product[] {
+  return allProducts().filter((p) => p.is_archived);
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export function getProductBySlug(slug: string): Product | undefined {
@@ -126,7 +140,11 @@ export function getForeignProducts(): Product[] {
 
 export function searchProducts(query: string, scope: ProductScope = "active"): Product[] {
   const q = query.toLowerCase();
+<<<<<<< HEAD
   return productsByScope(scope).filter(
+=======
+  return activeProducts().filter(
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     (p) =>
       p.title_et.toLowerCase().includes(q) ||
       p.sku.includes(q) ||
@@ -147,6 +165,7 @@ export function filterProductsByPerson(products: Product[], role: string, slugOr
 
 export function getCategories(): Category[] {
   return allCategories();
+<<<<<<< HEAD
 }
 
 export function getChildCategories(parentSlug: string): Category[] {
@@ -178,6 +197,8 @@ export function getProductsByCategories(categorySlugs: string[], scope: ProductS
   return productsByScope(scope).filter((p) =>
     p.categories.some((c) => categoryNames.includes(c))
   );
+=======
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export function getSeries(): Series[] {

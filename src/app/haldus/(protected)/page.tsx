@@ -16,7 +16,11 @@ export default async function AdminDashboardPage() {
     db.schema("system").from("audit_log").select("id,action,resource_type,resource_id,created_at").order("created_at", { ascending: false }).limit(10),
   ]);
 
+<<<<<<< HEAD
   function c(result: unknown) { if (result && typeof result === "object" && "status" in result && (result as Record<string, unknown>).status === "fulfilled") { const v = (result as { value?: { count?: number } }).value; if (v && typeof v.count === "number") return v.count; } return 0; }
+=======
+  function c(v: unknown) { return (v && typeof v === "object" && "count" in v) ? (v as { count: number }).count : 0; }
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const stats = [
     { label: "Aktiivsed tooted", value: c(results[0]), href: "/haldus/tooted" },
     { label: "Ilmumas", value: c(results[1]), href: "/haldus/tooted?status=upcoming" },

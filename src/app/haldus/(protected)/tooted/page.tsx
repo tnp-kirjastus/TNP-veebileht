@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { createAdminClient } from "@/lib/supabase/admin";
+<<<<<<< HEAD
 import { formatEuro } from "@/lib/product-utils";
 
 interface ProductRow {
@@ -14,6 +15,16 @@ interface ProductRow {
   archived: boolean;
   upcoming: boolean;
   isOnSale: boolean;
+=======
+import { formatEuro } from "@/lib/data";
+
+interface ProductRow extends Record<string, unknown> {
+  id: string;
+  titleCell: string;
+  priceCell: string;
+  stockCell: string;
+  statusCell: string;
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   dateCell: string;
 }
 
@@ -27,7 +38,11 @@ export default async function ProductsAdminPage({
   const query = (params.q ?? "").trim();
   const statusFilter = params.status ?? "";
   const originFilter = params.origin ?? "";
+<<<<<<< HEAD
   const activeTab = params.tab ?? "all";
+=======
+  const activeTab = params.tab ?? "active";
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const perPage = 25;
   const from = (page - 1) * perPage;
 
@@ -63,6 +78,7 @@ export default async function ProductsAdminPage({
     const upcoming = Boolean(p.is_upcoming);
     const isOnSale = salePrice != null && salePrice < price;
 
+<<<<<<< HEAD
     return {
       id: String(p.id),
       sku: String(p.sku ?? ""),
@@ -79,6 +95,32 @@ export default async function ProductsAdminPage({
     };
   });
 
+=======
+    let statusCell = "";
+    if (archived) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-gray-100 text-gray-500">Arhiveeritud</span>`;
+    else if (upcoming) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-amber-100 text-amber-800">Ilmumas</span>`;
+    else if (isOnSale) statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-red-100 text-red-700">Soodus</span>`;
+    else statusCell = `<span class="inline-flex items-center px-2 py-0.5 text-xs font-extrabold bg-green-100 text-green-700">Aktiivne</span>`;
+
+    return {
+      id: String(p.id),
+      titleCell: `<a href="/haldus/tooted/${p.id}" class="font-bold hover:text-accent">${String(p.title_et)}</a><div class="text-xs text-muted mt-0.5">${String(p.sku)}</div>`,
+      priceCell: isOnSale
+        ? `<span class="text-muted line-through text-xs">${formatEuro(price)}</span><span class="text-accent font-bold ml-2">${formatEuro(salePrice!)}</span>`
+        : `<span class="font-bold">${formatEuro(price)}</span>`,
+      stockCell: archived ? statusCell : stock === 0 ? statusCell : stock <= 5 ? statusCell : String(stock),
+      statusCell,
+      dateCell: p.release_date
+        ? new Date(String(p.release_date)).toLocaleDateString("et-EE")
+        : "\u2014",
+    };
+  });
+
+  if (statusFilter === "sale") {
+    products.sort((a, b) => 0);
+  }
+
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const totalCount = count ?? 0;
   const totalPages = Math.ceil(totalCount / perPage);
 
@@ -92,16 +134,25 @@ export default async function ProductsAdminPage({
     if (q) parts.push(`q=${encodeURIComponent(q)}`);
     if (s) parts.push(`status=${encodeURIComponent(s)}`);
     if (o) parts.push(`origin=${encodeURIComponent(o)}`);
+<<<<<<< HEAD
     if (t && t !== "all") parts.push(`tab=${encodeURIComponent(t)}`);
+=======
+    if (t && t !== "active") parts.push(`tab=${encodeURIComponent(t)}`);
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     if (pg && Number(pg) > 1) parts.push(`page=${encodeURIComponent(pg)}`);
     return `/haldus/tooted${parts.length ? "?" + parts.join("&") : ""}`;
   }
 
+<<<<<<< HEAD
   function statusVariant(product: ProductRow): "archived" | "upcoming" | "sale" | "active" {
     if (product.archived) return "archived";
     if (product.upcoming) return "upcoming";
     if (product.isOnSale) return "sale";
     return "active";
+=======
+  function Cell({ html }: { html: string }) {
+    return <td className="p-4" dangerouslySetInnerHTML={{ __html: html }} />;
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   }
 
   return (
@@ -114,7 +165,11 @@ export default async function ProductsAdminPage({
             <Link href="/haldus/tooted/partii" className="inline-flex items-center gap-2 min-h-12 px-6 border border-line font-bold hover:bg-soft transition-colors">
               Partii muutmine
             </Link>
+<<<<<<< HEAD
             <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 border border-accent bg-white text-accent font-bold hover:bg-accent hover:text-white transition-colors">
+=======
+            <Link href="/haldus/tooted/uus" className="inline-flex items-center gap-2 min-h-12 px-6 bg-ink text-white font-bold hover:bg-ink/80 transition-colors">
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
               + Uus toode
             </Link>
           </div>
@@ -138,7 +193,11 @@ export default async function ProductsAdminPage({
       </div>
 
       <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">
+<<<<<<< HEAD
         <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i või URL-i nime järgi…"
+=======
+        <input type="search" name="q" defaultValue={query} placeholder="Otsi pealkirja, ISBN-i või URL-i nime järgi\u2026"
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           className="flex-1 min-w-0 h-11 border border-line bg-paper px-4 outline-none text-sm" />
         <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">Kõik olekud</option>
@@ -147,7 +206,11 @@ export default async function ProductsAdminPage({
         <select name="origin" defaultValue={originFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">Kõik päritolud</option>
           <option value="estonian">Eesti</option>
+<<<<<<< HEAD
           <option value="foreign">Välismaine</option>
+=======
+          <option value="foreign">V\u00e4lismaine</option>
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
         </select>
         <input type="hidden" name="tab" value={activeTab} />
         <button type="submit" className="h-11 px-5 border border-line bg-soft text-sm font-bold hover:bg-line/30">Filtreeri</button>
@@ -169,6 +232,7 @@ export default async function ProductsAdminPage({
           </thead>
           <tbody>
             {products.length === 0 ? (
+<<<<<<< HEAD
               <tr><td colSpan={5} className="p-12 text-center text-muted">Ühtki toodet ei leitud.</td></tr>
             ) : (
               products.map((p) => (
@@ -195,6 +259,16 @@ export default async function ProductsAdminPage({
                     )}
                   </td>
                   <td className="p-4"><StatusBadge variant={statusVariant(p)} /></td>
+=======
+              <tr><td colSpan={5} className="p-12 text-center text-muted">\u00dchtki toodet ei leitud.</td></tr>
+            ) : (
+              products.map((p) => (
+                <tr key={p.id} className="border-t border-line hover:bg-soft/50 transition-colors">
+                  <Cell html={p.titleCell} />
+                  <Cell html={p.priceCell} />
+                  <Cell html={p.stockCell} />
+                  <Cell html={p.statusCell} />
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                   <td className="p-4 text-xs text-muted">{p.dateCell}</td>
                 </tr>
               ))
@@ -207,18 +281,30 @@ export default async function ProductsAdminPage({
         <div className="flex items-center justify-between mt-6 gap-4 flex-wrap">
           <p className="text-xs text-muted">Lehekülg {page} / {totalPages} ({totalCount} toodet)</p>
           <div className="flex gap-1">
+<<<<<<< HEAD
             {page > 1 && <Link href={buildHref({ page: String(page - 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">← Eelmine</Link>}
+=======
+            {page > 1 && <Link href={buildHref({ page: String(page - 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">\u2190 Eelmine</Link>}
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
               const pageNum = page <= 4 ? i + 1 : page + i - 3;
               if (pageNum < 1 || pageNum > totalPages) return null;
               return (
                 <Link key={pageNum} href={buildHref(pageNum === 1 ? {} : { page: String(pageNum) })}
+<<<<<<< HEAD
                   className={`px-4 py-2 border text-sm font-bold ${pageNum === page ? "border-ink bg-white text-ink" : "border-line hover:bg-soft"}`}>
+=======
+                  className={`px-4 py-2 border text-sm font-bold ${pageNum === page ? "bg-ink text-white border-ink" : "border-line hover:bg-soft"}`}>
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                   {pageNum}
                 </Link>
               );
             })}
+<<<<<<< HEAD
             {page < totalPages && <Link href={buildHref({ page: String(page + 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">Järgmine →</Link>}
+=======
+            {page < totalPages && <Link href={buildHref({ page: String(page + 1) })} className="px-4 py-2 border border-line text-sm font-bold hover:bg-soft">J\u00e4rgmine \u2192</Link>}
+>>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </div>
         </div>
       )}
