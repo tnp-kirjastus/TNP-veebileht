@@ -54,12 +54,9 @@ export default function ImportPage() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({
     sku: "isbn", title: "title", price: "price", stock: "stock", description: "description",
-<<<<<<< HEAD
     categories: "tootekategooriad", authors: "toote_autor", series: "toote_sari",
     sale_price: "soodushind", binding: "toote_koide", pages: "toote_lk",
     release_date: "toote_ilmumiskuupaev", origin: "eesti_valismaa", is_archived: "arhiiv",
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   });
   const [mode, setMode] = useState<ImportMode>("partial");
   const [results, setResults] = useState<ImportRow[]>([]);
@@ -229,7 +226,6 @@ export default function ImportPage() {
           {fileData.length > 0 && (
             <>
               <h3 className="font-bold text-sm mb-2">Veerude vastendamine</h3>
-<<<<<<< HEAD
               <p className="text-xs text-muted mb-3">Määra, milline veerg vastab millisele toote väljale.</p>
 
               <h4 className="font-bold text-xs text-muted mb-2 mt-2">Põhiväljad</h4>
@@ -287,14 +283,6 @@ export default function ImportPage() {
                   <label key={key} className="grid gap-1 text-xs font-bold">
                     {label}
                     <select value={mapping[key] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [key]: e.target.value }))}
-=======
-              <p className="text-xs text-muted mb-3">Määra, milline veerg vastab millisele toote väljale. Kaanepildi veerg võib olla Pilt, Toote Kaanepilt või cover_file.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-                {(["sku", "title", "price", "stock", "description"] as const).map((field) => (
-                  <label key={field} className="grid gap-1 text-xs font-bold">
-                    {field === "sku" ? "ISBN" : field === "title" ? "Pealkiri" : field === "price" ? "Hind" : field === "stock" ? "Laoseis" : "Kirjeldus"}
-                    <select value={mapping[field] ?? ""} onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                       className="border border-line bg-paper p-2 font-normal text-xs">
                       <option value="">— Ignoreeri —</option>
                       {headers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -303,11 +291,7 @@ export default function ImportPage() {
                 ))}
               </div>
               <button type="button" onClick={doCompare} disabled={busy}
-<<<<<<< HEAD
                 className="min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
-=======
-                className="min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                 {busy ? "Võrdlen…" : "2. Võrdle kataloogiga"}
               </button>
             </>
@@ -400,11 +384,7 @@ export default function ImportPage() {
           </div>
 
           <button type="button" onClick={doApply} disabled={busy}
-<<<<<<< HEAD
             className="mt-6 min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
-=======
-            className="mt-6 min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             {busy ? "Rakendan…" : "3. Rakenda muudatused"}
           </button>
         </div>
@@ -416,11 +396,7 @@ export default function ImportPage() {
           <h2 className="font-heading text-2xl mb-4 text-leaf">Import rakendatud</h2>
           <p className="text-lg font-bold">{applied} toodet imporditud või uuendatud.</p>
           <button type="button" onClick={() => { setStep("upload"); setApplied(null); setFileData([]); setResults([]); setArchiveBase64(null); setArchiveName(null); if (fileRef.current) fileRef.current.value = ""; if (zipRef.current) zipRef.current.value = ""; }}
-<<<<<<< HEAD
             className="mt-4 min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white">
-=======
-            className="mt-4 min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             Uus import
           </button>
         </div>

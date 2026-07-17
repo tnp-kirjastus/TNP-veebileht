@@ -60,11 +60,7 @@ export async function fetchParcelMachines(): Promise<ParcelMachine[]> {
       availability: String(m.availability ?? ""),
       x: typeof m.x === "number" ? m.x : undefined,
       y: typeof m.y === "number" ? m.y : undefined,
-<<<<<<< HEAD
     })).filter((m) => !m.country || m.country === "ee" || m.country === "eesti" || m.country.startsWith("est"));
-=======
-    })).filter((m) => m.country === "ee" || m.country === "est" || m.country === "estonia" || m.country === "");
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
     cache = { data: machines, expires: Date.now() + 3 * 60 * 60 * 1000 };
     return machines;
@@ -130,11 +126,7 @@ export interface ShipmentResult {
 }
 
 export async function createShipment(order: ShipmentOrder): Promise<ShipmentResult> {
-<<<<<<< HEAD
   const config = maksekeskusConfig();
-=======
-  const config = configuration();
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
 

@@ -30,11 +30,7 @@ export default async function BlogAdminPage({
           <h1 className="font-heading text-4xl">Blogi / Uudised</h1>
           <p className="text-muted mt-2">Halda mustandeid, avaldamist ja uudiste SEO-d.</p>
         </div>
-<<<<<<< HEAD
         <Link href="/haldus/blogi/uus" className="min-h-12 px-6 border border-ink bg-white text-ink font-bold inline-flex items-center hover:bg-ink hover:text-white transition-colors">+ Lisa uus postitus</Link>
-=======
-        <Link href="/haldus/blogi/uus" className="min-h-12 px-6 bg-[#151718] !text-white font-bold inline-flex items-center hover:bg-[#151718]/80 transition-colors">+ Lisa uus postitus</Link>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       </div>
 
       <form className="mb-6 flex flex-wrap items-center gap-3 max-sm:flex-col max-sm:items-stretch">
@@ -70,11 +66,7 @@ export default async function BlogAdminPage({
                   {post.is_published ? <StatusBadge variant="published" /> : <StatusBadge variant="draft" />}
                 </td>
                 <td className="p-4 text-sm text-muted">
-<<<<<<< HEAD
                   {post.published_at ? new Date(post.published_at).toLocaleDateString("et-EE", { day: "numeric", month: "long", year: "numeric" }) : "—"}
-=======
-                  {post.published_at ? new Date(post.published_at).toLocaleDateString("et-EE", { day: "numeric", month: "long", year: "numeric" }) : "\u2014"}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                 </td>
                 <td className="p-4">
                   <div className="flex gap-3">

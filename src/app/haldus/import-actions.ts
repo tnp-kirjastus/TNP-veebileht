@@ -41,7 +41,6 @@ interface ImportResult {
 
 const COVER_COLUMN_ALIASES = ["cover_file", "cover_url", "Pilt", "Toote Kaanepilt"];
 
-<<<<<<< HEAD
 function slugify(text: string): string {
   const t: Record<string, string> = { "õ": "o", "ä": "a", "ö": "o", "ü": "u", "š": "s", "ž": "z", "Õ": "O", "Ä": "A", "Ö": "O", "Ü": "U", "Š": "S", "Ž": "Z" };
   let r = String(text);
@@ -54,8 +53,6 @@ function parsePipeList(raw: string | undefined): string[] {
   return String(raw).split("|").map((s) => s.trim()).filter(Boolean);
 }
 
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 interface ExistingProduct {
   id: string;
   sku: string;
@@ -65,15 +62,12 @@ interface ExistingProduct {
   sale_price: number | null;
   stock: number;
   cover_image: string | null;
-<<<<<<< HEAD
   binding: string | null;
   pages: number | null;
   release_date: string | null;
   origin: string;
   is_archived: boolean;
   is_upcoming: boolean;
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 function findCoverColumn(mapping: Record<string, string>): string | null {
@@ -189,7 +183,6 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
   const coverCol = findCoverColumn(mapping);
 
   const db = createAdminClient();
-<<<<<<< HEAD
   const allExisting: ExistingProduct[] = [];
   let eFrom = 0;
   while (true) {
@@ -202,14 +195,6 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
   const existingBySku = new Map<string, ExistingProduct>();
   for (const p of allExisting) {
     if (p.sku) existingBySku.set(String(p.sku).trim().toUpperCase(), p);
-=======
-  const { data: existing } = await db.schema("commerce").from("products").select("id,sku,slug,title_et,price,sale_price,stock,cover_image");
-  const existingBySku = new Map<string, ExistingProduct>();
-  if (existing) {
-    for (const p of existing as ExistingProduct[]) {
-      if (p.sku) existingBySku.set(String(p.sku).trim().toUpperCase(), p);
-    }
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   }
 
   const results: ImportResult[] = [];
@@ -234,11 +219,7 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
     const changes: Array<{ field: string; before: unknown; after: unknown }> = [];
 
     let mediaStatus: MediaStatus = "unchanged";
-<<<<<<< HEAD
     const mediaInfo: {
-=======
-    let mediaInfo: {
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       sourceFile: string | null;
       width: number | null;
       height: number | null;
@@ -327,7 +308,6 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
       changes.push({ field: "title_et", before: oldTitle, after: title });
     }
 
-<<<<<<< HEAD
     const salePriceFieldC = mapping.sale_price || mapping.salePrice || null;
     if (salePriceFieldC && row[salePriceFieldC] != null) {
       const newSp = parseFloat(String(row[salePriceFieldC]).replace(",", "."));
@@ -383,8 +363,6 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
       }
     }
 
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     if (mediaStatus === "replace" || mediaStatus === "new") {
       changes.push({ field: "cover_image", before: existingProduct.cover_image || "", after: mediaInfo.sourceFile || "(uus fail)" });
     }
@@ -428,7 +406,6 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     }
   }
 
-<<<<<<< HEAD
     const coverCol = findCoverColumn(mapping);
     const db = createAdminClient();
     const batchId = crypto.randomUUID();
@@ -528,15 +505,6 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     }
 
     const productIdsBySku = new Map<string, string>();
-=======
-  const coverCol = findCoverColumn(mapping);
-  const db = createAdminClient();
-  const batchId = crypto.randomUUID();
-  let applied = 0;
-  let mediaProcessed = 0;
-  const mediaErrors: string[] = [];
-  const coverChanges: Array<{ sku: string; before: string | null; after: string | null }> = [];
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   for (const row of rows) {
     const sku = String(row[skuField] ?? "").trim();
@@ -567,10 +535,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     }
 
     try {
-<<<<<<< HEAD
       let productId: string;
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       if (existing) {
         const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
         if (!isNaN(price)) update.price = price;
@@ -578,7 +543,6 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         if (description) update.description_et = sanitizeRichText(description);
         if (newCoverKey) update.cover_image = newCoverKey;
 
-<<<<<<< HEAD
         if (salePriceField && row[salePriceField] != null) {
           const sp = parseFloat(String(row[salePriceField]).replace(",", "."));
           if (!isNaN(sp)) update.sale_price = sp;
@@ -656,19 +620,12 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         }
 
         const insert: Record<string, unknown> = {
-=======
-        const { error: updErr } = await db.schema("commerce").from("products").update(update).eq("id", existing.id);
-        if (updErr) throw new Error(`DB uuendamine ebaõnnestus: ${updErr.message}`);
-      } else {
-        const insert = {
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           sku,
           title_et: title,
           slug: sku.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
           price: isNaN(price) ? 0 : price,
           stock: isNaN(stock) ? 0 : Math.max(0, stock),
           description_et: description ? sanitizeRichText(description) : null,
-<<<<<<< HEAD
           origin: originVal,
           cover_image: newCoverKey || null,
           series_id: seriesId,
@@ -766,17 +723,6 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
       }
       if (!existingPp.has(productId)) existingPp.set(productId, ppSet);
 
-=======
-          origin: "estonian" as const,
-          cover_image: newCoverKey || null,
-          updated_at: new Date().toISOString(),
-        };
-
-        const { data: inserted, error: insErr } = await db.schema("commerce").from("products").insert(insert).select("id,slug").single();
-        if (insErr) throw new Error(`DB lisamine ebaõnnestus: ${insErr.message}`);
-      }
-
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       if (newCoverKey !== beforeCover) {
         coverChanges.push({ sku, before: beforeCover, after: newCoverKey });
       }
@@ -786,13 +732,9 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         try {
           const { removeUnreferencedObject } = await import("@/lib/media");
           await removeUnreferencedObject(newCoverKey);
-<<<<<<< HEAD
         } catch (cleanupErr) {
           console.error("import cleanup: failed to remove orphaned upload", newCoverKey, cleanupErr);
         }
-=======
-        } catch {}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       }
       mediaErrors.push(`${sku}: ${err instanceof Error ? err.message : "Salvestamine ebaõnnestus"}`);
     }

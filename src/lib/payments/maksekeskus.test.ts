@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-=======
-import { describe, expect, it, vi } from "vitest";
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 import { euroDecimalToCents } from "../money";
 import { calculateMaksekeskusMac } from "../payments/mac";
 
@@ -19,7 +15,6 @@ vi.mock("@/lib/env", () => ({
   siteUrl: () => new URL("http://localhost:3000"),
 }));
 
-<<<<<<< HEAD
 vi.mock("@/lib/maksekeskus/config", () => ({
   maksekeskusConfig: () => ({
     mode: "test" as const,
@@ -30,9 +25,6 @@ vi.mock("@/lib/maksekeskus/config", () => ({
 }));
 
 import { createPayment, verifyPaymentMessage, verifyPaymentReturn } from "../payments/maksekeskus";
-=======
-import { verifyPaymentMessage, verifyPaymentReturn } from "../payments/maksekeskus";
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
 function makeMessage(overrides: Record<string, unknown> = {}) {
   const payload = {
@@ -244,23 +236,11 @@ describe("shipping cost calculation", () => {
     expect(calculateShippingCost("smartpost", 40)).toBe(0);
   });
 
-<<<<<<< HEAD
   it("returns 0 for unknown carrier (e.g. courier no longer supported)", () => {
     expect(calculateShippingCost("courier", 10)).toBe(0);
   });
 
   it("returns 0 for completely unknown carrier", () => {
-=======
-  it("charges 5 EUR for courier under 40 EUR", () => {
-    expect(calculateShippingCost("courier", 10)).toBe(5.0);
-  });
-
-  it("free delivery for courier at 40 EUR and above", () => {
-    expect(calculateShippingCost("courier", 40)).toBe(0);
-  });
-
-  it("returns 0 for unknown carrier", () => {
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     expect(calculateShippingCost("dpd", 10)).toBe(0);
   });
 
@@ -280,7 +260,6 @@ describe("shipping cost calculation", () => {
     expect(euroDecimalToCents(total.toFixed(2))).toBe(4499);
   });
 });
-<<<<<<< HEAD
 
 const originalFetch = globalThis.fetch;
 
@@ -408,5 +387,3 @@ describe("createPayment", () => {
     expect(decoded).toBe("test-shop-id:test-secret-32-bytes-minimum-xx");
   });
 });
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc

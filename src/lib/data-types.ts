@@ -16,30 +16,21 @@ export interface Product {
   origin: "estonian" | "foreign";
   is_upcoming: boolean;
   is_archived: boolean;
-<<<<<<< HEAD
   allow_preorder: boolean;
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   cover_image: string | null;
   series_name: string | null;
   series_slug: string | null;
   categories: string[];
   people: Record<string, string[]>;
-<<<<<<< HEAD
   editions?: { type: string; date: string }[];
   latest_release_date?: string;
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export interface Category {
   name: string;
   slug: string;
-<<<<<<< HEAD
   parent?: string;
   children?: Category[];
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 export interface Series {

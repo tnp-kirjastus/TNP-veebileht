@@ -1,20 +1,14 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { createAdminClient } from "@/lib/supabase/admin";
-<<<<<<< HEAD
 import { requireAdminSession } from "@/lib/admin-auth";
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
 export default async function CustomersAdminPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; role?: string }>;
 }) {
-<<<<<<< HEAD
   await requireAdminSession(["admin"]);
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const params = await searchParams;
   const query = (params.q ?? "").trim();
 
@@ -56,11 +50,7 @@ export default async function CustomersAdminPage({
                    <span className="text-xs text-muted">Klient</span>}
                 </td>
                 <td className="p-4 text-xs text-muted">
-<<<<<<< HEAD
                   {profile.created_at ? new Date(String(profile.created_at)).toLocaleDateString("et-EE") : "—"}
-=======
-                  {profile.created_at ? new Date(String(profile.created_at)).toLocaleDateString("et-EE") : "\u2014"}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                 </td>
                 <td className="p-4">
                   <div className="flex gap-3 text-sm">

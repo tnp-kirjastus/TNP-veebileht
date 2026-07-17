@@ -27,11 +27,7 @@ export function CreateUserForm() {
       </FormField>
       {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
       {state?.success && <p className="text-green-700 dark:text-green-400 text-sm font-bold">{state.success}</p>}
-<<<<<<< HEAD
       <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50">
-=======
-      <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 bg-ink text-white text-sm font-bold disabled:opacity-50">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
         {pending ? "Loon…" : "Loo kasutaja"}
       </button>
     </form>

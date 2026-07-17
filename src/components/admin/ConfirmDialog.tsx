@@ -55,13 +55,8 @@ export function ConfirmDialog({
           </button>
           <button type="button" onClick={handleConfirm} disabled={busy}
             className={variant === "danger"
-<<<<<<< HEAD
               ? "px-5 py-2.5 border border-accent bg-white text-accent text-sm font-bold hover:bg-accent hover:text-white disabled:opacity-50"
               : "px-5 py-2.5 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50"}>
-=======
-              ? "px-5 py-2.5 bg-accent text-white text-sm font-bold hover:bg-accent/80 disabled:opacity-50"
-              : "px-5 py-2.5 bg-ink text-white text-sm font-bold hover:bg-ink/80 disabled:opacity-50"}>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             {busy ? "Palun oota…" : confirmLabel}
           </button>
         </div>

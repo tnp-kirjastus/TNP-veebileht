@@ -6,11 +6,7 @@ import { ProductGrid } from "@/components/store/ProductGrid";
 import { NewsletterSection } from "@/components/store/NewsletterSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { t } from "@/lib/translations";
-<<<<<<< HEAD
 import { getHomepageHero, getHomepageCards, getHomepageSections, type HomepageSection, type HomepageCard } from "@/lib/homepage";
-=======
-import { getHomepageHero } from "@/lib/homepage";
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 import { getNewProducts, getSaleProducts, getUpcomingProducts, getActiveProducts, isOnSale, type Product } from "@/lib/data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
@@ -22,7 +18,6 @@ function mapProduct(p: Product) {
   return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, isOnSale: onSale, salePercent: onSale && p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0 };
 }
 
-<<<<<<< HEAD
 const FALLBACK_CARDS: HomepageCard[] = [
   {
     id: "fallback-1",
@@ -137,17 +132,6 @@ export default async function HomePage() {
 
   const cmsCards = await getHomepageCards();
   const featuredCards: HomepageCard[] = cmsCards.length >= 3 ? cmsCards.slice(0, 3) : FALLBACK_CARDS;
-=======
-export default async function HomePage() {
-  const newBooks = getNewProducts(10).map(mapProduct);
-  const campaignBooks = getSaleProducts().slice(0, 5).map(mapProduct);
-  const upcomingBooks = getUpcomingProducts().slice(0, 5).map(mapProduct);
-  const discountBooks = getActiveProducts().filter(p => isOnSale(p)).slice(5, 10).map(mapProduct);
-  const heroConfig = await getHomepageHero();
-  const heroHeading = heroConfig?.heading || t.home.hero_title;
-  const heroSubtext = heroConfig?.subtext || "Suur valik ilukirjandust, lasteraamatuid, ajaloo- ja praktilisi teoseid.";
-  const showSearch = heroConfig?.showSearch !== false;
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   return (
     <LayoutFull>
@@ -173,7 +157,6 @@ export default async function HomePage() {
                 </>
               )}
               <div>
-<<<<<<< HEAD
                 {heroEyebrow && <span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">{heroEyebrow}</span>}
                 <h1
                   className="font-heading leading-[0.94] max-w-[680px]"
@@ -188,10 +171,6 @@ export default async function HomePage() {
                     {hasSecondary && <Link href={heroConfig!.secondaryHref!} className="min-h-[48px] inline-flex items-center px-6 border border-ink text-ink font-bold text-sm hover:bg-ink hover:text-white transition-colors">{heroConfig!.secondaryLabel}</Link>}
                   </div>
                 )}
-=======
-                <h1 className="font-heading text-[clamp(56px,6vw,71px)] leading-[0.94] max-w-[680px]">{heroHeading}</h1>
-                <p className="mt-[14px] max-w-[640px] text-muted text-[17px] leading-[1.4]">{heroSubtext}</p>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                 {showSearch && (
                 <form action="/raamatud" method="GET" className="mt-[56px] grid grid-cols-[1fr_auto] max-w-[640px] border border-line bg-panel filter drop-shadow-[4px_8px_16px_rgba(36,26,16,0.12)] overflow-hidden max-[760px]:grid-cols-1">
                   <input name="q" type="search" placeholder="Otsi pealkirja, autorit või kategooriat" autoComplete="off" className="min-w-0 h-[58px] bg-transparent px-6 outline-none max-[760px]:h-[54px]" />
@@ -204,22 +183,7 @@ export default async function HomePage() {
             </div>
 
             <div className="min-h-[520px] grid grid-cols-[1fr_1fr] grid-rows-[1.18fr_.82fr] gap-[18px] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[repeat(3,270px)]" aria-label="Esiletõstetud raamatud">
-<<<<<<< HEAD
               {featuredCards.map((card, i) => <FeaturedCard key={card.id || i} card={card} index={i} />)}
-=======
-              <a href="/raamatud?category=ajalugu" className="row-[span_2] flex flex-col items-start justify-start gap-6 overflow-hidden border border-line bg-[#dfebdf] p-[28px] group max-[760px]:row-auto">
-                <div className="max-w-full"><span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">Ajalugu</span><h2 className="font-heading text-[30px] leading-[1.08] mt-2">Eesti lood ja kadunud vaated</h2><p className="text-[#465057] text-sm font-semibold mt-[10px]">Ajalooraamatud, mälestused ja kohalikud lood.</p></div>
-                <img src="/books/eesti-moisad-836x1024.jpg" alt="Eesti mõisad" className="w-[min(80%,360px)] max-h-[62%] self-center mt-auto transform rotate-[3deg] translate-y-2 transition-all duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04] group-hover:translate-y-0" />
-              </a>
-              <a href="/raamatud?category=laste-ja-noorteraamatud" className="flex items-center justify-between gap-4 overflow-hidden border border-line bg-[#dbe9ee] p-[28px] group">
-                <div className="flex-shrink-0 max-w-[55%]"><span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">Lastele</span><h2 className="font-heading text-[30px] leading-[1.08] mt-2">Suvised seiklused</h2><p className="text-[#465057] text-sm font-semibold mt-[10px]">Rõõmsad lood väiksemale lugejale.</p></div>
-                <img src="/books/naksitrallid2013-190x254.jpg" alt="Naksitrallid" className="w-[min(40%,200px)] max-h-[85%] object-contain flex-shrink-0 filter drop-shadow-[_-14px_18px_18px_rgba(28,22,16,0.22)] transform rotate-[3deg] transition-transform duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04]" />
-              </a>
-              <a href="/raamat/90-rododendronit" className="flex items-center justify-between gap-4 overflow-hidden border border-line bg-[#f2e1c7] p-[28px] group">
-                <div className="flex-shrink-0 max-w-[55%]"><span className="text-accent font-extrabold text-[13px] uppercase tracking-[0.08em]">Kodu ja hobi</span><h2 className="font-heading text-[30px] leading-[1.08] mt-2">Praktilised lemmikud</h2><p className="text-[#465057] text-sm font-semibold mt-[10px]">Aed, käsitöö ja kodused oskused.</p></div>
-                <img src="/books/90-rododendronit-e1466156951724-190x300.jpg" alt="90 rododendronit" className="w-[min(40%,200px)] max-h-[85%] object-contain flex-shrink-0 filter drop-shadow-[_-14px_18px_18px_rgba(28,22,16,0.22)] transform rotate-[3deg] transition-transform duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04]" />
-              </a>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             </div>
           </div>
         </Shell>

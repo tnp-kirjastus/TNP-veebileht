@@ -7,11 +7,8 @@ import { getCoverUrlClient } from "@/lib/media-url";
 
 interface SeriesData { id: string; slug: string; name_et: string; }
 
-<<<<<<< HEAD
 interface Edition { type: string; date: string; }
 
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 type ProductStatus = "draft" | "active" | "upcoming" | "archived";
 
 export interface EditableProduct {
@@ -34,10 +31,7 @@ export interface EditableProduct {
   is_upcoming?: boolean;
   is_archived?: boolean;
   is_featured?: boolean;
-<<<<<<< HEAD
   allow_preorder?: boolean;
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   cover_image?: string | null;
   series_id?: string | null;
   status?: ProductStatus;
@@ -45,10 +39,7 @@ export interface EditableProduct {
   person_ids?: Record<string, string[]>;
   seo_title?: string | null;
   seo_description?: string | null;
-<<<<<<< HEAD
   editions?: Edition[];
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 }
 
 function computeStatus(product: EditableProduct): ProductStatus {
@@ -57,11 +48,7 @@ function computeStatus(product: EditableProduct): ProductStatus {
   return "active";
 }
 
-<<<<<<< HEAD
 const TABS = ["identity", "content", "commerce", "meta", "cover", "people", "seo", "editions"] as const;
-=======
-const TABS = ["identity", "content", "commerce", "meta", "cover", "people", "seo"] as const;
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 type Tab = (typeof TABS)[number];
 
 type CoverAction = "keep" | "replace" | "remove";
@@ -75,10 +62,7 @@ function tabLabel(tab: Tab): string {
     case "cover": return "Kaanepilt";
     case "people": return "Autorid";
     case "seo": return "SEO";
-<<<<<<< HEAD
     case "editions": return "Trükid";
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   }
 }
 
@@ -99,10 +83,7 @@ export function ProductForm({
   const [uploadWarning, setUploadWarning] = useState("");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [dropActive, setDropActive] = useState(false);
-<<<<<<< HEAD
   const [editions, setEditions] = useState<Edition[]>(product.editions ?? []);
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   const fileRef = useRef<HTMLInputElement>(null);
 
   const originalCover = product.cover_image ?? null;
@@ -204,10 +185,7 @@ export function ProductForm({
     <form action={action} className="max-w-5xl">
       {product.id && <input type="hidden" name="id" value={product.id} />}
       <input type="hidden" name="cover_image" value={coverImageValue} />
-<<<<<<< HEAD
       <input type="hidden" name="editions" value={JSON.stringify(editions)} />
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
       <div className="border border-line bg-panel">
         {/* Tab bar */}
@@ -282,7 +260,6 @@ export function ProductForm({
                 </select>
               </FormField>
             </div>
-<<<<<<< HEAD
             {status === "upcoming" && (
               <div className="mt-5 flex gap-4">
                 <input type="hidden" name="allow_preorder" value="false" />
@@ -291,8 +268,6 @@ export function ProductForm({
                 </label>
               </div>
             )}
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </fieldset>
 
           {/* Metadata */}
@@ -475,7 +450,6 @@ export function ProductForm({
               </FormField>
             </div>
           </fieldset>
-<<<<<<< HEAD
 
           {/* Editions */}
           <fieldset id="tab-editions" className="border-t border-line pt-6">
@@ -523,8 +497,6 @@ export function ProductForm({
               </button>
             </div>
           </fieldset>
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
         </div>
       </div>
 
@@ -532,11 +504,7 @@ export function ProductForm({
       {state?.success && <p role="status" className="text-leaf font-bold mt-4">Toode salvestatud!</p>}
 
       <div className="flex gap-3 mt-6">
-<<<<<<< HEAD
         <button type="submit" disabled={pending || uploadBusy} className="min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
-=======
-        <button type="submit" disabled={pending || uploadBusy} className="min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           {pending ? "Salvestan…" : product.id ? "Salvesta muudatused" : "Loo toode"}
         </button>
         {product.id && (

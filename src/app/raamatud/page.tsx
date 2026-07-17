@@ -20,14 +20,9 @@ interface SearchParams {
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
   const params = await searchParams;
-<<<<<<< HEAD
   const categoryList = params.category ? (Array.isArray(params.category) ? params.category : [params.category]) : [];
   const hasFilters = !!(params.q || params.sort || params.page || params.origin || params.sale || params.upcoming || params.archive || params.archived || params.author || params.translator || params.designer || params.illustrator || params.editor || categoryList.length > 0);
   const canonicalPath = categoryList.length > 0 ? `/raamatud?${categoryList.map(c => `category=${encodeURIComponent(c)}`).join("&")}` : "/raamatud";
-=======
-  const hasFilters = !!(params.q || params.sort || params.page || params.origin || params.sale || params.upcoming || params.author || params.translator || params.designer || params.illustrator || params.editor);
-  const canonicalPath = params.category ? `/raamatud?category=${encodeURIComponent(params.category)}` : "/raamatud";
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   return {
     title: params.q ? `Otsing: ${params.q}` : categoryList.length > 0 ? `${categoryList.join(", ")} — Raamatud` : "Raamatud",
     description: "Sirvi raamatuid kategooriate, autorite ja pakkumiste järgi.",

@@ -21,11 +21,7 @@ export async function consumeRateLimit(
   });
   if (error) {
     console.error("rate_limit_rpc_error", { endpoint, error: error.message });
-<<<<<<< HEAD
     if (serverEnv().NODE_ENV === "production") return false;
-=======
-    if (serverEnv().NODE_ENV === "production") return true;
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     return true;
   }
   return data as boolean;

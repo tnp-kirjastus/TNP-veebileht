@@ -5,7 +5,6 @@
 	},
 	{
 		"name": "Ajaviitekirjandus",
-<<<<<<< HEAD
 		"slug": "ajaviitekirjandus",
 		"parent": "ilukirjandus"
 	},
@@ -28,25 +27,6 @@
 		"name": "Käsitöö",
 		"slug": "kasitoo",
 		"parent": "hobid"
-=======
-		"slug": "ajaviitekirjandus"
-	},
-	{
-		"name": "Ilukirjandus",
-		"slug": "laste-ilukirjandus"
-	},
-	{
-		"name": "Teatmeteosed",
-		"slug": "teatmeteosed"
-	},
-	{
-		"name": "Psühholoogia",
-		"slug": "psuhholoogia"
-	},
-	{
-		"name": "Käsitöö",
-		"slug": "kasitoo"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Elulood ja memuaarid",
@@ -54,7 +34,6 @@
 	},
 	{
 		"name": "Kaasaegne ilukirjandus",
-<<<<<<< HEAD
 		"slug": "kaasaegne-ilukirjandus",
 		"parent": "ilukirjandus"
 	},
@@ -77,25 +56,6 @@
 		"name": "Sport",
 		"slug": "sport",
 		"parent": "hobid"
-=======
-		"slug": "kaasaegne-ilukirjandus"
-	},
-	{
-		"name": "Teatmekirjandus",
-		"slug": "laste-teatmekirjandus"
-	},
-	{
-		"name": "Teater, muusika, film",
-		"slug": "teater-muusika-film"
-	},
-	{
-		"name": "Suhted ja perekond",
-		"slug": "suhted-ja-perekond"
-	},
-	{
-		"name": "Sport",
-		"slug": "sport"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Ilukirjandus",
@@ -103,7 +63,6 @@
 	},
 	{
 		"name": "Põnevus ja krimi",
-<<<<<<< HEAD
 		"slug": "ponevus-ja-krimi",
 		"parent": "ilukirjandus"
 	},
@@ -126,25 +85,6 @@
 		"name": "Reisimine",
 		"slug": "reisimine",
 		"parent": "hobid"
-=======
-		"slug": "ponevus-ja-krimi"
-	},
-	{
-		"name": "Lastekirjanduskeskus soovitab",
-		"slug": "lastekirjanduskeskus-soovitab"
-	},
-	{
-		"name": "Kirjandus",
-		"slug": "kirjandus"
-	},
-	{
-		"name": "Tervis",
-		"slug": "tervis"
-	},
-	{
-		"name": "Reisimine",
-		"slug": "reisimine"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Lasteraamatud",
@@ -152,7 +92,6 @@
 	},
 	{
 		"name": "Ulme ja fantaasia",
-<<<<<<< HEAD
 		"slug": "ulme-ja-fantaasia",
 		"parent": "ilukirjandus"
 	},
@@ -160,13 +99,6 @@
 		"name": "Lemmikloomad",
 		"slug": "lemmikloomad",
 		"parent": "hobid"
-=======
-		"slug": "ulme-ja-fantaasia"
-	},
-	{
-		"name": "Lemmikloomad",
-		"slug": "lemmikloomad"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Kultuur",
@@ -174,7 +106,6 @@
 	},
 	{
 		"name": "Noortekirjandus",
-<<<<<<< HEAD
 		"slug": "noortekirjandus",
 		"parent": "ilukirjandus"
 	},
@@ -182,13 +113,6 @@
 		"name": "Varia",
 		"slug": "varia",
 		"parent": "hobid"
-=======
-		"slug": "noortekirjandus"
-	},
-	{
-		"name": "Varia",
-		"slug": "varia"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Loodus",
@@ -196,12 +120,8 @@
 	},
 	{
 		"name": "Luule",
-<<<<<<< HEAD
 		"slug": "luule",
 		"parent": "ilukirjandus"
-=======
-		"slug": "luule"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Keha ja hing",
@@ -209,12 +129,8 @@
 	},
 	{
 		"name": "Huumor",
-<<<<<<< HEAD
 		"slug": "huumor",
 		"parent": "ilukirjandus"
-=======
-		"slug": "huumor"
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 	},
 	{
 		"name": "Hobid",

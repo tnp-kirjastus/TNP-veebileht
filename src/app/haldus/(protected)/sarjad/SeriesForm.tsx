@@ -26,11 +26,7 @@ export function SeriesForm({ series }: { series?: Record<string, unknown> }) {
         <input name="cover_image" maxLength={500} defaultValue={series ? String(series.cover_image ?? "") : ""} className="border border-line bg-paper p-2 text-sm font-normal" />
       </FormField>
       {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
-<<<<<<< HEAD
       <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 border border-ink bg-white text-ink text-sm font-bold hover:bg-ink hover:text-white disabled:opacity-50">
-=======
-      <button type="submit" disabled={pending} className="justify-self-start min-h-10 px-6 bg-ink text-white text-sm font-bold disabled:opacity-50">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
         {pending ? "Salvestan…" : series ? "Salvesta" : "Loo sari"}
       </button>
     </form>

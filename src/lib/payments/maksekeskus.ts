@@ -54,7 +54,6 @@ export async function createPayment(order: PaymentOrder) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10_000);
   try {
-<<<<<<< HEAD
     let response: Response;
     try {
       response = await fetch(`${config.base}/v1/transactions`, {
@@ -98,23 +97,6 @@ export async function createPayment(order: PaymentOrder) {
       }
       throw err;
     }
-=======
-    const response = await fetch(`${config.base}/v1/transactions`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "content-type": "application/json", authorization: `Basic ${Buffer.from(`${config.shopId}:${config.secret}`).toString("base64")}` },
-      body: JSON.stringify({
-        amount: `${Math.floor(order.totalCents / 100)}.${String(order.totalCents % 100).padStart(2, "0")}`, currency: order.currency, ip: order.ip,
-        reference: order.orderNumber, merchant_data: order.id,
-        customer: { name: order.customer.name, email: order.customer.email, country: order.customer.country ?? "ee", locale: order.customer.locale ?? "et" },
-        transaction_url: {
-          return_url: new URL("/api/maksekeskus/return", base).toString(),
-          cancel_url: new URL("/api/maksekeskus/return", base).toString(),
-          notifications_url: new URL("/api/maksekeskus/webhook", base).toString(),
-        },
-      }),
-    });
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
     if (!response.ok) {
       let body = "";
       try { body = await response.text(); } catch { /* ignore */ }

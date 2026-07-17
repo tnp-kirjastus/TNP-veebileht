@@ -30,11 +30,7 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
             <input ref={inputRef} name="q" type="search" placeholder={t.search.placeholder}
               className="flex-1 min-w-0 h-[60px] px-6 text-lg bg-transparent outline-none" />
             <button type="submit"
-<<<<<<< HEAD
               className="h-[60px] px-6 border border-ink bg-white text-ink font-extrabold hover:bg-ink hover:text-white transition-colors">
-=======
-              className="h-[60px] px-6 bg-ink text-white font-extrabold hover:bg-[#2a2d30] transition-colors">
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
               {t.search.button}
             </button>
           </div>

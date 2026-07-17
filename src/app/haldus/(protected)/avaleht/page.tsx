@@ -1,28 +1,17 @@
 "use client";
 
-<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
-=======
-import { useState, useEffect } from "react";
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 import { useActionState } from "react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { FormField } from "@/components/admin/FormField";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-<<<<<<< HEAD
 import { saveHeroSettings, getHomepageSettings, saveCardsSettings, saveSectionsSettings } from "@/app/haldus/homepage-actions";
-=======
-import { saveHeroSettings, getHomepageSettings } from "@/app/haldus/homepage-actions";
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
 interface HeroConfig {
   versionName: string;
   eyebrow: string;
   heading: string;
-<<<<<<< HEAD
   headingSize: string;
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   subtext: string;
   ctaLabel: string;
   ctaHref: string;
@@ -58,14 +47,9 @@ interface Section {
 const defaultHero: HeroConfig = {
   versionName: "",
   eyebrow: "",
-<<<<<<< HEAD
   heading: "Tänapäev",
   headingSize: "clamp(56px,6vw,71px)",
   subtext: "",
-=======
-  heading: "Raamatud, mis kutsuvad edasi lugema.",
-  subtext: "Suur valik ilukirjandust, lasteraamatuid, ajaloo- ja praktilisi teoseid.",
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   ctaLabel: "",
   ctaHref: "",
   secondaryLabel: "",
@@ -73,11 +57,7 @@ const defaultHero: HeroConfig = {
   desktopImage: "",
   mobileImage: "",
   bgClass: "bg-[#f2eee6]",
-<<<<<<< HEAD
   showSearch: false,
-=======
-  showSearch: true,
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   isPublished: false,
 };
 
@@ -89,20 +69,13 @@ export default function HomepageAdminPage() {
   const [state, action, pending] = useActionState(saveHeroSettings, undefined);
 
   const [cards, setCards] = useState<HeroCard[]>([
-<<<<<<< HEAD
     { id: "1", label: "Ajalugu", heading: "Eesti ajaloo suurteosed", description: "Avasta meie ajalooraamatute kollektsiooni.", linkHref: "/raamatud?category=ajalugu-ja-poliitika", desktopImage: "", mobileImage: "", position: 1 },
     { id: "2", label: "Lastele", heading: "Lasteraamatud igas vanuses", description: "Põnevad lood ja kaunid illustratsioonid.", linkHref: "/raamatud?category=lasteraamatud", desktopImage: "", mobileImage: "", position: 2 },
     { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=hobid", desktopImage: "", mobileImage: "", position: 3 },
-=======
-    { id: "1", label: "Ajalugu", heading: "Eesti ajaloo suurteosed", description: "Avasta meie ajalooraamatute kollektsiooni.", linkHref: "/raamatud?category=ajalugu", desktopImage: "", mobileImage: "", position: 1 },
-    { id: "2", label: "Lastele", heading: "Lasteraamatud igas vanuses", description: "Põnevad lood ja kaunid illustratsioonid.", linkHref: "/raamatud?category=laste-ja-noorteraamatud", desktopImage: "", mobileImage: "", position: 2 },
-    { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=kasiraamatud", desktopImage: "", mobileImage: "", position: 3 },
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   ]);
 
   const [sections, setSections] = useState<Section[]>([
     { id: "1", heading: "Uued raamatud", source: "newest", productCount: 8, viewAllHref: "/raamatud", isVisible: true },
-<<<<<<< HEAD
     { id: "2", heading: "Ilmumas", source: "upcoming", productCount: 4, viewAllHref: "/raamatud?upcoming=true", isVisible: true },
     { id: "3", heading: "Soodus", source: "sale", productCount: 4, viewAllHref: "/pakkumised", isVisible: true },
   ]);
@@ -163,39 +136,22 @@ export default function HomepageAdminPage() {
     }
   }
 
-=======
-    { id: "2", heading: "Ilmumas", source: "upcoming", productCount: 4, viewAllHref: "/raamatud", isVisible: true },
-    { id: "3", heading: "Pakkumised", source: "sale", productCount: 4, viewAllHref: "/pakkumised", isVisible: true },
-  ]);
-
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   useEffect(() => {
     getHomepageSettings().then((data) => {
       if (data.hero) {
         setHero((prev) => ({ ...prev, ...data.hero }));
       }
-<<<<<<< HEAD
       if (data.cards && Array.isArray(data.cards) && data.cards.length > 0) {
         setCards(data.cards as unknown as HeroCard[]);
       }
       if (data.sections && Array.isArray(data.sections) && data.sections.length > 0) {
         setSections(data.sections as unknown as Section[]);
       }
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       setLoaded(true);
     });
   }, []);
 
-<<<<<<< HEAD
   const isPublished = hero.isPublished || state?.success;
-=======
-  useEffect(() => {
-    if (state?.success) {
-      setHero((prev) => ({ ...prev, isPublished: true }));
-    }
-  }, [state]);
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
 
   function updateHeroField(field: keyof HeroConfig, value: string | boolean) {
     setHero((prev) => ({ ...prev, [field]: value }));
@@ -209,7 +165,6 @@ export default function HomepageAdminPage() {
     setSections((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   }
 
-<<<<<<< HEAD
   function addCard() {
     const maxPos = cards.reduce((m, c) => Math.max(m, c.position), 0);
     const newCard: HeroCard = {
@@ -271,30 +226,19 @@ export default function HomepageAdminPage() {
     }
   }
 
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
   return (
     <>
       <AdminPageHeader
         title="Avalehe haldus"
-<<<<<<< HEAD
         description="Päise ala, esiletõstetud kaartide ja kodulehe sektsioonide redigeerimine."
         breadcrumbs={[{ label: "Ülevaade", href: "/haldus" }, { label: "Avaleht" }]}
-=======
-        description="Päise ala, esilet\u00f5stetud kaartide ja kodulehe sektsioonide redigeerimine."
-        breadcrumbs={[{ label: "\u00dclevaade", href: "/haldus" }, { label: "Avaleht" }]}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
       />
 
       <div className="flex border-b border-line mb-6">
         {(["hero", "cards", "sections"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-5 py-3 font-bold text-sm border-b-2 transition-colors ${tab === t ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-<<<<<<< HEAD
             {t === "hero" ? "Päise haldus" : t === "cards" ? "Esiletõstetud kaardid" : "Sektsioonid"}
-=======
-            {t === "hero" ? "Päise haldus" : t === "cards" ? "Esilet\u00f5stetud kaardid" : "Sektsioonid"}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </button>
         ))}
       </div>
@@ -303,13 +247,8 @@ export default function HomepageAdminPage() {
       {tab === "hero" && (
         <div className="max-w-3xl grid gap-5">
           <div className="flex items-center gap-3 mb-2">
-<<<<<<< HEAD
             <StatusBadge variant={isPublished ? "published" : "draft"} />
             <span className="text-sm text-muted">{!loaded ? "Laen…" : isPublished ? "Avaldatud" : "Mustand"}</span>
-=======
-            <StatusBadge variant={hero.isPublished ? "published" : "draft"} />
-            <span className="text-sm text-muted">{!loaded ? "Laen\u2026" : hero.isPublished ? "Avaldatud" : "Mustand"}</span>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </div>
 
           <FormField label="Versiooni nimi">
@@ -325,13 +264,10 @@ export default function HomepageAdminPage() {
             </FormField>
           </div>
 
-<<<<<<< HEAD
           <FormField label="Pealkirja suurus (CSS)">
             <input name="headingSize" value={hero.headingSize} onChange={(e) => updateHeroField("headingSize", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="clamp(56px,6vw,71px)" />
           </FormField>
 
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           <FormField label="Alatekst">
             <textarea name="subtext" value={hero.subtext} onChange={(e) => updateHeroField("subtext", e.target.value)} rows={3} className="border border-line bg-paper p-3 text-sm font-normal" />
           </FormField>
@@ -352,7 +288,6 @@ export default function HomepageAdminPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-5 max-sm:grid-cols-1">
-<<<<<<< HEAD
             <div className="grid gap-2">
               <FormField label="Lauaarvuti pilt">
                 <input
@@ -387,14 +322,6 @@ export default function HomepageAdminPage() {
               )}
               {uploadBusy === "mobileImage" && <p className="text-xs text-muted">Laadin üles…</p>}
             </div>
-=======
-            <FormField label="Lauaarvuti pilt (failinimi)">
-              <input name="desktopImage" value={hero.desktopImage} onChange={(e) => updateHeroField("desktopImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
-            </FormField>
-            <FormField label="Mobiili pilt (failinimi)">
-              <input name="mobileImage" value={hero.mobileImage} onChange={(e) => updateHeroField("mobileImage", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" />
-            </FormField>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </div>
 
           <label className="flex items-center gap-2 text-sm font-bold">
@@ -402,10 +329,7 @@ export default function HomepageAdminPage() {
             Näita otsingukasti
           </label>
 
-<<<<<<< HEAD
           {uploadError && <p className="text-accent text-sm font-bold">{uploadError}</p>}
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           {state?.error && <p className="text-accent text-sm font-bold">{state.error}</p>}
           {state?.success && <p className="text-leaf text-sm font-bold">Päise salvestatud!</p>}
 
@@ -413,10 +337,7 @@ export default function HomepageAdminPage() {
             <input type="hidden" name="versionName" value={hero.versionName} />
             <input type="hidden" name="eyebrow" value={hero.eyebrow} />
             <input type="hidden" name="heading" value={hero.heading} />
-<<<<<<< HEAD
             <input type="hidden" name="headingSize" value={hero.headingSize} />
-=======
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             <input type="hidden" name="subtext" value={hero.subtext} />
             <input type="hidden" name="ctaLabel" value={hero.ctaLabel} />
             <input type="hidden" name="ctaHref" value={hero.ctaHref} />
@@ -427,13 +348,8 @@ export default function HomepageAdminPage() {
             <input type="hidden" name="bgClass" value={hero.bgClass} />
             <input type="hidden" name="showSearch" value={String(hero.showSearch)} />
             <input type="hidden" name="isPublished" value="true" />
-<<<<<<< HEAD
             <button type="submit" disabled={pending} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
               {pending ? "Salvestan…" : "Salvesta päise seaded"}
-=======
-            <button type="submit" disabled={pending} className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80 disabled:opacity-50">
-              {pending ? "Salvestan\u2026" : "Salvesta p\u00e4ise seaded"}
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
             </button>
           </form>
         </div>
@@ -463,7 +379,6 @@ export default function HomepageAdminPage() {
                 <FormField label="URL">
                   <input value={card.linkHref} onChange={(e) => updateCard(card.id, "linkHref", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
                 </FormField>
-<<<<<<< HEAD
                 <div className="grid gap-1">
                   <FormField label="Lauaarvuti pilt">
                     <input
@@ -503,22 +418,6 @@ export default function HomepageAdminPage() {
           )}
           <button onClick={handleSaveCards} disabled={cardsBusy} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
             {cardsBusy ? "Salvestan…" : "Salvesta kaardid"}
-=======
-                <FormField label="Lauaarvuti pilt">
-                  <input value={card.desktopImage} onChange={(e) => updateCard(card.id, "desktopImage", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
-                </FormField>
-                <FormField label="Mobiili pilt">
-                  <input value={card.mobileImage} onChange={(e) => updateCard(card.id, "mobileImage", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
-                </FormField>
-              </div>
-            </div>
-          ))}
-          <button className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
-            + Lisa kaart
-          </button>
-          <button className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80">
-            Salvesta kaardid
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </button>
         </div>
       )}
@@ -532,11 +431,7 @@ export default function HomepageAdminPage() {
                 <h3 className="font-heading text-lg">{section.heading || "Uus sektsioon"}</h3>
                 <label className="flex items-center gap-2 text-sm font-bold">
                   <input type="checkbox" checked={section.isVisible} onChange={(e) => updateSection(section.id, "isVisible", e.target.checked)} className="accent-ink h-4 w-4" />
-<<<<<<< HEAD
                   Nähtav
-=======
-                  N\u00e4htav
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                 </label>
               </div>
               <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-1">
@@ -549,11 +444,7 @@ export default function HomepageAdminPage() {
                     <option value="upcoming">Ilmumas</option>
                     <option value="sale">Soodustusega</option>
                     <option value="category">Kategooriast</option>
-<<<<<<< HEAD
                     <option value="manual">Käsitsi valitud</option>
-=======
-                    <option value="manual">K\u00e4sitsi valitud</option>
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
                   </select>
                 </FormField>
                 <FormField label="Toodete arv">
@@ -565,7 +456,6 @@ export default function HomepageAdminPage() {
               </FormField>
             </div>
           ))}
-<<<<<<< HEAD
           <button onClick={addSection} className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
             + Lisa sektsioon
           </button>
@@ -574,13 +464,6 @@ export default function HomepageAdminPage() {
           )}
           <button onClick={handleSaveSections} disabled={sectionsBusy} className="justify-self-start min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white disabled:opacity-50">
             {sectionsBusy ? "Salvestan…" : "Salvesta sektsioonid"}
-=======
-          <button className="justify-self-start min-h-10 px-6 border border-line font-bold text-sm hover:bg-soft">
-            + Lisa sektsioon
-          </button>
-          <button className="justify-self-start min-h-12 px-8 bg-ink text-white font-bold hover:bg-ink/80">
-            Salvesta sektsioonid
->>>>>>> f6f908b09423191058bfebcab71fda76084816dc
           </button>
         </div>
       )}
