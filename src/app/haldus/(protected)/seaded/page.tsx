@@ -17,9 +17,10 @@ async function loadSettings(): Promise<StoreSettings> {
     .select("shipping, email, vat, company, social, theme")
     .eq("key", "store")
     .maybeSingle();
+  const shipping = data?.shipping as { rates?: unknown[] } | null | undefined;
 
   return {
-    shipping: ((data?.shipping as { rates?: unknown[] } | null)?.rates?.length ? data.shipping : DEFAULT_SHIPPING_RATES) as StoreSettings["shipping"],
+    shipping: (shipping?.rates?.length ? shipping : DEFAULT_SHIPPING_RATES) as StoreSettings["shipping"],
     email: (data?.email ?? { fromAddress: "", orderSubject: "", orderBody: "" }) as StoreSettings["email"],
     vat: (data?.vat ?? { percent: 9 }) as StoreSettings["vat"],
     company: (data?.company ?? { name: "", email: "", phone: "", address: "", regCode: "" }) as StoreSettings["company"],
