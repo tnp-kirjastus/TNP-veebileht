@@ -5,18 +5,39 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 
+function cleanSingleLine(value: string): string {
+  return value.trim().replace(/[\r\n\t]+/g, "");
+}
+
+function safeHeadingSize(value: string): string {
+  const compact = cleanSingleLine(value).replace(/\s+/g, "");
+  const clampMatch = compact.match(/^clamp\((\d{2})px,(\d+(?:\.\d+)?)vw,(\d{2})px\)$/);
+  if (clampMatch) {
+    const minimum = Math.min(96, Math.max(28, Number(clampMatch[1])));
+    const viewport = Math.min(10, Math.max(1, Number(clampMatch[2])));
+    const maximum = Math.min(96, Math.max(36, Number(clampMatch[3])));
+    return `clamp(${Math.min(minimum, maximum)}px,${viewport}vw,${maximum}px)`;
+  }
+  const pixelMatch = compact.match(/^(\d{2})px$/);
+  if (pixelMatch) {
+    const maximum = Math.min(96, Math.max(36, Number(pixelMatch[1])));
+    return `clamp(${Math.max(28, Math.round(maximum * 0.7))}px,6vw,${maximum}px)`;
+  }
+  return "clamp(50px,6vw,71px)";
+}
+
 const heroSchema = z.object({
   versionName: z.string().optional(),
   eyebrow: z.string().optional(),
   heading: z.string().optional(),
-  headingSize: z.string().optional(),
+  headingSize: z.string().transform(safeHeadingSize).optional(),
   subtext: z.string().optional(),
   ctaLabel: z.string().optional(),
-  ctaHref: z.string().optional(),
+  ctaHref: z.string().transform(cleanSingleLine).optional(),
   secondaryLabel: z.string().optional(),
-  secondaryHref: z.string().optional(),
-  desktopImage: z.string().optional(),
-  mobileImage: z.string().optional(),
+  secondaryHref: z.string().transform(cleanSingleLine).optional(),
+  desktopImage: z.string().transform(cleanSingleLine).optional(),
+  mobileImage: z.string().transform(cleanSingleLine).optional(),
   bgClass: z.string().optional(),
   showSearch: z.string().transform((v) => v === "true").optional(),
   isPublished: z.string().transform((v) => v === "true").optional(),

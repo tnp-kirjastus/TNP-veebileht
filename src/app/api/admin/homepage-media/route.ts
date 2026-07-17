@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gqgliwbcazcixvyealsx.supabase.co")
+    .trim()
     .replace(/\/rest\/v1\/?$/, "")
     .replace(/\/$/, "");
   const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${objectKey}`;

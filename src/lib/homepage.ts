@@ -16,6 +16,19 @@ type HomepageHeroData = {
   eyebrow: string | null;
 };
 
+function safeHeadingSize(value: unknown): string {
+  const compact = String(value ?? "").trim().replace(/[\r\n\t\s]+/g, "");
+  if (/^clamp\(\d{2}px,\d+(?:\.\d+)?vw,\d{2}px\)$/.test(compact)) return compact;
+  if (/^\d{2}px$/.test(compact)) return compact;
+  return "clamp(50px,6vw,71px)";
+}
+
+function cleanMediaUrl(value: unknown): string | null {
+  if (!value) return null;
+  const cleaned = String(value).trim().replace(/[\r\n\t]+/g, "");
+  return /^https?:\/\//.test(cleaned) || cleaned.startsWith("/") ? cleaned : null;
+}
+
 export async function getHomepageHero(): Promise<HomepageHeroData | null> {
   try {
     const db = createAdminClient();
@@ -34,11 +47,11 @@ export async function getHomepageHero(): Promise<HomepageHeroData | null> {
     }
     return {
       heading: String(hero.heading ?? ""),
-      headingSize: String(hero.headingSize || "clamp(56px,6vw,71px)"),
+      headingSize: safeHeadingSize(hero.headingSize),
       subtext: String(hero.subtext ?? ""),
       showSearch: hero.showSearch !== false,
-      desktopImage: hero.desktopImage ? String(hero.desktopImage) : null,
-      mobileImage: hero.mobileImage ? String(hero.mobileImage) : null,
+      desktopImage: cleanMediaUrl(hero.desktopImage),
+      mobileImage: cleanMediaUrl(hero.mobileImage),
       ctaLabel: hero.ctaLabel ? String(hero.ctaLabel) : null,
       ctaHref: hero.ctaHref ? String(hero.ctaHref) : null,
       secondaryLabel: hero.secondaryLabel ? String(hero.secondaryLabel) : null,

@@ -61,6 +61,18 @@ const defaultHero: HeroConfig = {
   isPublished: false,
 };
 
+function headingSizePixels(value: string): number {
+  const pixelValues = [...value.matchAll(/(\d+(?:\.\d+)?)px/g)].map((match) => Number(match[1]));
+  const size = pixelValues.at(-1) ?? 71;
+  return Math.min(96, Math.max(36, Math.round(size)));
+}
+
+function responsiveHeadingSize(size: number): string {
+  const maximum = Math.min(96, Math.max(36, Math.round(size)));
+  const minimum = Math.max(28, Math.round(maximum * 0.7));
+  return `clamp(${minimum}px,6vw,${maximum}px)`;
+}
+
 export default function HomepageAdminPage() {
   const [tab, setTab] = useState<"hero" | "cards" | "sections">("hero");
   const [loaded, setLoaded] = useState(false);
@@ -264,9 +276,25 @@ export default function HomepageAdminPage() {
             </FormField>
           </div>
 
-          <FormField label="Pealkirja suurus (CSS)">
-            <input name="headingSize" value={hero.headingSize} onChange={(e) => updateHeroField("headingSize", e.target.value)} className="border border-line bg-paper p-3 text-sm font-normal" placeholder="clamp(56px,6vw,71px)" />
-          </FormField>
+          <div className="grid gap-2 text-sm font-bold">
+            <div className="flex items-center justify-between gap-4">
+              <label htmlFor="hero-heading-size">Pealkirja suurus</label>
+              <output htmlFor="hero-heading-size" className="min-w-14 text-right font-mono text-sm text-muted">
+                {headingSizePixels(hero.headingSize)} px
+              </output>
+            </div>
+            <input
+              id="hero-heading-size"
+              type="range"
+              min="36"
+              max="96"
+              step="1"
+              value={headingSizePixels(hero.headingSize)}
+              onChange={(event) => updateHeroField("headingSize", responsiveHeadingSize(Number(event.target.value)))}
+              className="w-full accent-ink"
+            />
+            <span className="text-xs font-normal text-muted">Mobiilivaates kohandub suurus automaatselt.</span>
+          </div>
 
           <FormField label="Alatekst">
             <textarea name="subtext" value={hero.subtext} onChange={(e) => updateHeroField("subtext", e.target.value)} rows={3} className="border border-line bg-paper p-3 text-sm font-normal" />
