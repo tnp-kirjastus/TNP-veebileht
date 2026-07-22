@@ -97,7 +97,7 @@ export default async function HomePage() {
       visible: s ? s.isVisible : true,
     };
   }
-  const newSec = sec("newest", "Uued raamatud", "/raamatud?sort=newest", 10);
+  const newSec = sec("newest", "Uued raamatud", "/raamatud?sort=newest", 5);
   const upcomingSec = sec("upcoming", "Ilmuvad raamatud", "/raamatud?upcoming=true", 5);
 
   const getCampaignName = unstable_cache(
