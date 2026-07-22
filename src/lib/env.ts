@@ -25,6 +25,10 @@ const schema = z.object({
   OMNIVA_USERNAME: optionalSecret,
   OMNIVA_PASSWORD: optionalSecret,
   SMARTPOST_API_KEY: optionalSecret,
+  SMTP_HOST: optionalSecret,
+  SMTP_PORT: optionalSecret,
+  SMTP_USER: optionalSecret,
+  SMTP_PASS: optionalSecret,
 });
 
 export type ServerEnv = z.infer<typeof schema>;

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { serverEnv } from "./env";
 import { createAdminClient } from "./supabase/admin";
 import { getStoreSettings } from "@/lib/settings";
@@ -12,15 +13,24 @@ import {
 } from "@/lib/email-templates";
 
 const DEFAULT_FROM = "tellimused@tnp.ee";
-const TEST_MODE_FROM = "noreply@resend.dev";
 
-function isTestMode(): boolean {
+function getSmtpTransport() {
   const env = serverEnv();
-  return !!env.RESEND_API_KEY?.startsWith("re_test_");
+  if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: parseInt(env.SMTP_PORT ?? "587", 10),
+      secure: env.SMTP_PORT === "465",
+      auth: {
+        user: env.SMTP_USER,
+        pass: env.SMTP_PASS,
+      },
+    });
+  }
+  return null;
 }
 
 async function getFromAddress(): Promise<string> {
-  if (isTestMode()) return TEST_MODE_FROM;
   const settings = await getStoreSettings();
   return settings.email.fromAddress || DEFAULT_FROM;
 }
@@ -85,6 +95,55 @@ async function markOutboxFailed(db: ReturnType<typeof createAdminClient>, outbox
   }
 }
 
+async function sendEmail(params: {
+  from: string;
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  // 1. Try SMTP first
+  const transport = getSmtpTransport();
+  if (transport) {
+    try {
+      await transport.sendMail({
+        from: params.from,
+        to: params.to,
+        subject: params.subject,
+        text: params.text,
+        html: params.html,
+      });
+      return { success: true };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error("smtp_send_failed", errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }
+
+  // 2. Fall back to Resend
+  const env = serverEnv();
+  if (!env.RESEND_API_KEY) {
+    return { success: false, error: "No email transport configured (SMTP or RESEND_API_KEY)" };
+  }
+
+  const resend = new Resend(env.RESEND_API_KEY);
+  try {
+    await resend.emails.send({
+      from: params.from,
+      to: params.to,
+      subject: params.subject,
+      text: params.text,
+      html: params.html,
+    } as Parameters<typeof resend.emails.send>[0]);
+    return { success: true };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("resend_send_failed", errorMsg);
+    return { success: false, error: errorMsg };
+  }
+}
+
 export async function sendOrderConfirmationEmail(params: {
   orderId: string;
   orderNumber: string;
@@ -93,12 +152,6 @@ export async function sendOrderConfirmationEmail(params: {
   total: number;
   items: Array<{ title: string; quantity: number; price: number }>;
 }): Promise<{ success: boolean; error?: string }> {
-  const env = serverEnv();
-  if (!env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY not configured, skipping confirmation email");
-    return { success: false, error: "RESEND_API_KEY not configured" };
-  }
-
   const settings = await getStoreSettings();
   const fromAddress = await getFromAddress();
   const subject = settings.email.orderSubject.replace("{{orderNumber}}", params.orderNumber);
@@ -120,28 +173,24 @@ export async function sendOrderConfirmationEmail(params: {
     customer_name: params.customerName,
     total: params.total,
     items: params.items,
-    provider: "resend",
+    provider: "nodemailer",
     template: "order_confirmation",
   });
 
-  const resend = new Resend(env.RESEND_API_KEY);
+  const result = await sendEmail({
+    from: fromAddress,
+    to: params.to,
+    subject,
+    text: body,
+  });
 
-  try {
-    await resend.emails.send({
-      from: fromAddress,
-      to: params.to,
-      subject,
-      text: body,
-    });
-
+  if (result.success) {
     await markOutboxProcessed(db, outboxId);
-    return { success: true };
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("confirmation_email_failed", errorMsg);
-    await markOutboxFailed(db, outboxId, errorMsg);
-    return { success: false, error: errorMsg };
+  } else {
+    await markOutboxFailed(db, outboxId, result.error ?? "unknown");
   }
+
+  return result;
 }
 
 export async function sendOrderStatusUpdate(params: {
@@ -152,9 +201,6 @@ export async function sendOrderStatusUpdate(params: {
   customerName: string | null;
   note?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const env = serverEnv();
-  if (!env.RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
-
   const notifKey = `notify_${params.newStatus}`;
   if (!(await isNotifEnabled(notifKey))) {
     console.log(`Notification ${notifKey} disabled, skipping status update email`);
@@ -179,28 +225,24 @@ export async function sendOrderStatusUpdate(params: {
     customer_email: params.to,
     customer_name: params.customerName,
     note: params.note ?? null,
-    provider: "resend",
+    provider: "nodemailer",
     template: "status_update",
   });
 
-  const resend = new Resend(env.RESEND_API_KEY);
+  const result = await sendEmail({
+    from: fromAddress,
+    to: params.to,
+    subject,
+    html,
+  });
 
-  try {
-    await resend.emails.send({
-      from: fromAddress,
-      to: params.to,
-      subject,
-      html,
-    });
-
+  if (result.success) {
     await markOutboxProcessed(db, outboxId);
-    return { success: true };
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("status_update_email_failed", errorMsg);
-    await markOutboxFailed(db, outboxId, errorMsg);
-    return { success: false, error: errorMsg };
+  } else {
+    await markOutboxFailed(db, outboxId, result.error ?? "unknown");
   }
+
+  return result;
 }
 
 export async function sendOrderShippedEmail(params: {
@@ -212,9 +254,6 @@ export async function sendOrderShippedEmail(params: {
   trackingNumber: string;
   trackingUrl?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const env = serverEnv();
-  if (!env.RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
-
   if (!(await isNotifEnabled("notify_shipped"))) {
     console.log("notify_shipped disabled, skipping shipped email");
     return { success: false, error: "Notification disabled: notify_shipped" };
@@ -240,28 +279,24 @@ export async function sendOrderShippedEmail(params: {
     carrier: params.carrier,
     tracking_number: params.trackingNumber,
     tracking_url: params.trackingUrl ?? null,
-    provider: "resend",
+    provider: "nodemailer",
     template: "order_shipped",
   });
 
-  const resend = new Resend(env.RESEND_API_KEY);
+  const result = await sendEmail({
+    from: fromAddress,
+    to: params.to,
+    subject,
+    html,
+  });
 
-  try {
-    await resend.emails.send({
-      from: fromAddress,
-      to: params.to,
-      subject,
-      html,
-    });
-
+  if (result.success) {
     await markOutboxProcessed(db, outboxId);
-    return { success: true };
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("shipped_email_failed", errorMsg);
-    await markOutboxFailed(db, outboxId, errorMsg);
-    return { success: false, error: errorMsg };
+  } else {
+    await markOutboxFailed(db, outboxId, result.error ?? "unknown");
   }
+
+  return result;
 }
 
 export async function sendNewOrderAdminEmail(params: {
@@ -274,9 +309,6 @@ export async function sendNewOrderAdminEmail(params: {
   customerPhone?: string | null;
   items: Array<{ productName: string; quantity: number; unitPrice: number }>;
 }): Promise<{ success: boolean; error?: string }> {
-  const env = serverEnv();
-  if (!env.RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
-
   if (!(await isNotifEnabled("notify_pending"))) {
     console.log("notify_pending disabled, skipping new order admin email");
     return { success: false, error: "Notification disabled: notify_pending" };
@@ -304,26 +336,22 @@ export async function sendNewOrderAdminEmail(params: {
     order_number: params.orderNumber,
     admin_email: adminEmail,
     total: params.total,
-    provider: "resend",
+    provider: "nodemailer",
     template: "admin_notification",
   });
 
-  const resend = new Resend(env.RESEND_API_KEY);
+  const result = await sendEmail({
+    from: fromAddress,
+    to: adminEmail,
+    subject,
+    html,
+  });
 
-  try {
-    await resend.emails.send({
-      from: fromAddress,
-      to: adminEmail,
-      subject,
-      html,
-    });
-
+  if (result.success) {
     await markOutboxProcessed(db, outboxId);
-    return { success: true };
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("admin_notification_email_failed", errorMsg);
-    await markOutboxFailed(db, outboxId, errorMsg);
-    return { success: false, error: errorMsg };
+  } else {
+    await markOutboxFailed(db, outboxId, result.error ?? "unknown");
   }
+
+  return result;
 }
