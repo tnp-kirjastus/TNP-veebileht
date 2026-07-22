@@ -12,8 +12,15 @@ import {
 } from "@/lib/email-templates";
 
 const DEFAULT_FROM = "tellimused@tnp.ee";
+const TEST_MODE_FROM = "noreply@resend.dev";
+
+function isTestMode(): boolean {
+  const env = serverEnv();
+  return !!env.RESEND_API_KEY?.startsWith("re_test_");
+}
 
 async function getFromAddress(): Promise<string> {
+  if (isTestMode()) return TEST_MODE_FROM;
   const settings = await getStoreSettings();
   return settings.email.fromAddress || DEFAULT_FROM;
 }
