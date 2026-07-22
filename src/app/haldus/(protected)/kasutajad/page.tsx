@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { CreateUserForm } from "./CreateUserForm";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { EditUserButton } from "./EditUserButton";
 import { DeleteUserButton } from "./DeleteUserButton";
 
 export default async function UsersAdminPage() {
@@ -29,6 +30,7 @@ export default async function UsersAdminPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs text-muted">{new Date(p.created_at).toLocaleDateString("et-EE")}</span>
+              <EditUserButton userId={p.id} email={p.email} role={p.role} />
               <DeleteUserButton userId={p.id} email={p.email} />
             </div>
           </div>

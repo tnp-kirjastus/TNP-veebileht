@@ -53,6 +53,50 @@ export async function createUser(_state: { error?: string; success?: string } | 
   return { success: `Kasutaja ${email} loodud rolliga "${role}".` };
 }
 
+const updateUserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email().max(255),
+  role: z.enum(["viewer", "editor", "admin"]),
+  password: z.string().min(8).max(128).optional().or(z.literal("")),
+});
+
+export async function updateUser(_state: { error?: string; success?: string } | undefined, formData: FormData) {
+  const session = await requireAdminSession(["admin"]);
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = updateUserSchema.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Kontrolli välju." };
+
+  const { id, email, role, password } = parsed.data;
+  const db = createAdminClient();
+
+  const { data: existing } = await db.from("profiles").select("email,role").eq("id", id).maybeSingle();
+  if (!existing) return { error: "Kasutajat ei leitud." };
+
+  const before = { email: existing.email, role: existing.role };
+  const after: Record<string, unknown> = { email, role };
+
+  if (password) {
+    after.passwordChanged = true;
+  }
+
+  const authUpdates: { email?: string; password?: string } = {};
+  if (email !== before.email) authUpdates.email = email;
+  if (password) authUpdates.password = password;
+
+  if (Object.keys(authUpdates).length > 0) {
+    const { error: authError } = await db.auth.admin.updateUserById(id, authUpdates);
+    if (authError) return { error: "Kasutaja andmete uuendamine ebaõnnestus." };
+  }
+
+  const { error: profileError } = await db.from("profiles").update({ email, role, updated_at: new Date().toISOString() }).eq("id", id);
+  if (profileError) return { error: "Profiili uuendamine ebaõnnestus." };
+
+  await audit(session.user.id, "user.updated", "auth.user", id, { before, after });
+
+  revalidatePath("/haldus/kasutajad");
+  return { success: `Kasutaja ${email} andmed uuendatud.` };
+}
+
 export async function deleteUser(formData: FormData) {
   const session = await requireAdminSession(["admin"]);
   const id = z.string().uuid().parse(formData.get("id"));
