@@ -100,7 +100,7 @@ export async function sendOrderConfirmationEmail(params: {
   }
 
   const settings = await getStoreSettings();
-  const fromAddress = settings.email.fromAddress || DEFAULT_FROM;
+  const fromAddress = await getFromAddress();
   const subject = settings.email.orderSubject.replace("{{orderNumber}}", params.orderNumber);
   const itemLines = params.items.map(
     (item) => `${item.quantity} x ${item.title} — ${item.price.toFixed(2)} €`
