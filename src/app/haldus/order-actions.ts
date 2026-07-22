@@ -10,7 +10,7 @@ import { roundEuro } from "@/lib/money";
 import { sendOrderStatusUpdate, sendOrderShippedEmail } from "@/lib/email";
 
 const ORDER_STATUSES = [
-  "pending", "payment_pending", "paid", "processing", "shipped",
+  "pending", "payment_pending", "paid", "processing", "shipped", "delivered",
   "cancelled", "payment_failed", "expired", "manual_review", "refunded", "preorder",
 ] as const;
 
@@ -21,20 +21,11 @@ const TIMESTAMP_FIELDS: Record<string, string> = {
   cancelled: "cancelled_at",
 };
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ["payment_pending", "cancelled", "expired", "manual_review", "preorder"],
-  payment_pending: ["paid", "cancelled", "expired", "payment_failed"],
-  paid: ["processing", "shipped", "cancelled", "refunded", "manual_review"],
-  processing: ["shipped", "cancelled", "manual_review"],
-  shipped: ["delivered", "cancelled"],
-  delivered: [],
-  cancelled: ["pending", "refunded"],
-  payment_failed: ["pending", "cancelled"],
-  expired: ["pending", "cancelled"],
-  manual_review: ["paid", "processing", "cancelled", "refunded", "shipped"],
-  refunded: [],
-  preorder: ["pending", "cancelled", "manual_review"],
-};
+const allStatuses = [...ORDER_STATUSES, "delivered"];
+
+const VALID_TRANSITIONS: Record<string, string[]> = Object.fromEntries(
+  allStatuses.map((s) => [s, allStatuses.filter((t) => t !== s)]),
+) as Record<string, string[]>;
 
 const deleteOrdersSchema = z.object({
   ids: z.string().min(1),
