@@ -5,36 +5,36 @@ import { FormField } from "@/components/admin/FormField";
 import { saveStoreSettings } from "@/app/haldus/settings-actions";
 import type { StoreSettings } from "@/app/haldus/settings-actions";
 
-type Tab = "shipping" | "email" | "notifications" | "vat" | "company" | "social" | "theme";
+type Tab = "shipping" | "email" | "vat" | "company" | "social" | "theme";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "shipping", label: "Tarne" },
   { key: "email", label: "E-kirjad" },
-  { key: "notifications", label: "Teavitused" },
   { key: "vat", label: "Käibemaks" },
   { key: "company", label: "Poe info" },
   { key: "social", label: "Sotsiaalmeedia" },
   { key: "theme", label: "Kujundus" },
 ];
 
-const NOTIFICATION_KEYS = [
-  { key: "notify_pending", label: "Ootel (tellimus vastu võetud)" },
-  { key: "notify_payment_pending", label: "Makse ootel" },
-  { key: "notify_paid", label: "Makstud" },
-  { key: "notify_processing", label: "Töötlemisel" },
-  { key: "notify_shipped", label: "Saadetud" },
-  { key: "notify_delivered", label: "Kohale toimetatud" },
-  { key: "notify_cancelled", label: "Tühistatud" },
-  { key: "notify_payment_failed", label: "Makse ebaõnnestus" },
-  { key: "notify_expired", label: "Aegunud" },
-  { key: "notify_manual_review", label: "Käsitsi ülevaatus" },
-  { key: "notify_refunded", label: "Tagastatud" },
-  { key: "notify_preorder", label: "Ettetellimus" },
+const STATUS_KEYS = [
+  { key: "pending", label: "Ootel" },
+  { key: "payment_pending", label: "Makse ootel" },
+  { key: "paid", label: "Makstud" },
+  { key: "processing", label: "Töötlemisel" },
+  { key: "shipped", label: "Saadetud" },
+  { key: "delivered", label: "Kohale toimetatud" },
+  { key: "cancelled", label: "Tühistatud" },
+  { key: "payment_failed", label: "Makse ebaõnnestus" },
+  { key: "expired", label: "Aegunud" },
+  { key: "manual_review", label: "Käsitsi ülevaatus" },
+  { key: "refunded", label: "Tagastatud" },
+  { key: "preorder", label: "Ettetellimus" },
 ];
 
 export function SettingsForm({ settings }: { settings: StoreSettings }) {
   const [tab, setTab] = useState<Tab>("shipping");
   const [local, setLocal] = useState(settings);
+  const [expandedStatus, setExpandedStatus] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function updateShipping(rateIndex: number, field: string, value: string) {
@@ -44,12 +44,48 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         ...rates[rateIndex],
         [field]: field === "price" || field === "freeFrom" ? Number(value) || 0 : value,
       };
-      return { ...prev, shipping: { rates } };
+      return { ...prev, shipping: { ...prev.shipping, rates } };
     });
+  }
+
+  function updateShippingApi(field: string, value: string) {
+    setLocal((prev) => ({
+      ...prev,
+      shipping: { ...prev.shipping, api: { ...prev.shipping.api, [field]: value } },
+    }));
   }
 
   function updateEmail(field: string, value: string) {
     setLocal((prev) => ({ ...prev, email: { ...prev.email, [field]: value } }));
+  }
+
+  function updateStatusTemplate(statusKey: string, field: string, value: string) {
+    setLocal((prev) => ({
+      ...prev,
+      email: {
+        ...prev.email,
+        statusTemplates: {
+          ...(prev.email.statusTemplates ?? {}),
+          [statusKey]: {
+            ...(prev.email.statusTemplates?.[statusKey] ?? { subject: "", heading: "", bodyHtml: "" }),
+            [field]: value,
+          },
+        },
+      },
+    }));
+  }
+
+  function toggleNotification(statusKey: string) {
+    setLocal((prev) => ({
+      ...prev,
+      email: {
+        ...prev.email,
+        notifications: {
+          ...(prev.email.notifications ?? {}),
+          [`notify_${statusKey}`]: !(prev.email.notifications?.[`notify_${statusKey}`] ?? true),
+        },
+      },
+    }));
   }
 
   function updateVat(value: string) {
@@ -66,19 +102,6 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
 
   function updateTheme(field: string, value: string) {
     setLocal((prev) => ({ ...prev, theme: { ...prev.theme, [field]: value } }));
-  }
-
-  function toggleNotification(key: string) {
-    setLocal((prev) => ({
-      ...prev,
-      email: {
-        ...prev.email,
-        notifications: {
-          ...(prev.email.notifications ?? {}),
-          [key]: !(prev.email.notifications?.[key] ?? true),
-        },
-      },
-    }));
   }
 
   const [state, action, pending] = useActionState(saveStoreSettings, undefined);
@@ -104,98 +127,240 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         ))}
       </div>
 
+      {/* ===== SHIPPING TAB ===== */}
       {tab === "shipping" && (
-        <div className="grid gap-6 max-w-2xl">
-          {local.shipping.rates.map((rate, i) => (
-            <fieldset key={rate.carrier} className="border border-line p-4 grid gap-4">
-              <legend className="font-heading text-lg px-2">{rate.label_et}</legend>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField label="Hind (€)" required>
+        <div className="space-y-8 max-w-2xl">
+          <div className="grid gap-6">
+            <h3 className="font-heading text-lg">Tarnehinnad</h3>
+            {local.shipping.rates.map((rate, i) => (
+              <fieldset key={rate.carrier} className="border border-line p-4 grid gap-4">
+                <legend className="font-heading text-lg px-2">{rate.label_et}</legend>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField label="Hind (€)" required>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={rate.price}
+                      onChange={(e) => updateShipping(i, "price", e.target.value)}
+                      className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                    />
+                  </FormField>
+                  <FormField label="Tasuta alates (€)" required>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={rate.freeFrom}
+                      onChange={(e) => updateShipping(i, "freeFrom", e.target.value)}
+                      className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                    />
+                  </FormField>
+                </div>
+                <FormField label="Kuvatav nimi" required>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={rate.price}
-                    onChange={(e) => updateShipping(i, "price", e.target.value)}
+                    type="text"
+                    value={rate.label_et}
+                    onChange={(e) => updateShipping(i, "label_et", e.target.value)}
                     className="w-full border border-line px-3 py-2 text-sm bg-paper"
                   />
                 </FormField>
-                <FormField label="Tasuta alates (€)" required>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField label="Carrier ID (API)">
+                    <input
+                      type="text"
+                      value={rate.carrier}
+                      onChange={(e) => updateShipping(i, "carrier", e.target.value)}
+                      className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                    />
+                  </FormField>
+                  <FormField label="Meetod (API)">
+                    <input
+                      type="text"
+                      value={rate.method}
+                      onChange={(e) => updateShipping(i, "method", e.target.value)}
+                      className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                    />
+                  </FormField>
+                </div>
+              </fieldset>
+            ))}
+          </div>
+
+          <div className="grid gap-6">
+            <h3 className="font-heading text-lg">Maksekeskus API seaded</h3>
+            <p className="text-xs text-muted -mt-2">
+              API võtmed (MAKSEKESKUS_SHOP_ID, MAKSEKESKUS_SECRET) on määratud Vercel keskkonnamuutujates.
+            </p>
+            <fieldset className="border border-line p-4 grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Live API URL" required>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={rate.freeFrom}
-                    onChange={(e) => updateShipping(i, "freeFrom", e.target.value)}
+                    type="text"
+                    value={local.shipping.api.maksekeskusLiveUrl}
+                    onChange={(e) => updateShippingApi("maksekeskusLiveUrl", e.target.value)}
+                    className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                  />
+                </FormField>
+                <FormField label="Test API URL" required>
+                  <input
+                    type="text"
+                    value={local.shipping.api.maksekeskusTestUrl}
+                    onChange={(e) => updateShippingApi("maksekeskusTestUrl", e.target.value)}
                     className="w-full border border-line px-3 py-2 text-sm bg-paper"
                   />
                 </FormField>
               </div>
-              <FormField label="Silt" required>
-                <input
-                  type="text"
-                  value={rate.label_et}
-                  onChange={(e) => updateShipping(i, "label_et", e.target.value)}
-                  className="w-full border border-line px-3 py-2 text-sm bg-paper"
-                />
-              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Pakiautomaadi tüüpide filter" required>
+                  <input
+                    type="text"
+                    value={local.shipping.api.parcelMachineType}
+                    onChange={(e) => updateShippingApi("parcelMachineType", e.target.value)}
+                    className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                  />
+                </FormField>
+                <FormField label="Riigi filter" required>
+                  <input
+                    type="text"
+                    value={local.shipping.api.parcelMachineCountryFilter}
+                    onChange={(e) => updateShippingApi("parcelMachineCountryFilter", e.target.value)}
+                    className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                  />
+                </FormField>
+              </div>
             </fieldset>
-          ))}
-        </div>
-      )}
-
-      {tab === "email" && (
-        <div className="grid gap-4 max-w-2xl">
-          <FormField label="Saatja aadress" required>
-            <input
-              type="text"
-              value={local.email.fromAddress}
-              onChange={(e) => updateEmail("fromAddress", e.target.value)}
-              className="w-full border border-line px-3 py-2 text-sm bg-paper"
-              placeholder="Kirjastus Tänapäev <tellimused@tnp.ee>"
-            />
-          </FormField>
-          <FormField label="Tellimuse kinnituse teema" required>
-            <input
-              type="text"
-              value={local.email.orderSubject}
-              onChange={(e) => updateEmail("orderSubject", e.target.value)}
-              className="w-full border border-line px-3 py-2 text-sm bg-paper"
-            />
-          </FormField>
-          <div className="text-xs text-muted mb-1">
-            Muutujad: {"{{customerName}}"}, {"{{orderNumber}}"}, {"{{total}}"}, {"{{itemLines}}"}
           </div>
-          <FormField label="Tellimuse kinnituse sisu" required>
-            <textarea
-              rows={10}
-              value={local.email.orderBody}
-              onChange={(e) => updateEmail("orderBody", e.target.value)}
-              className="w-full border border-line px-3 py-2 text-sm bg-paper font-mono"
-            />
-          </FormField>
         </div>
       )}
 
-      {tab === "notifications" && (
-        <div className="grid gap-3 max-w-lg">
-          <p className="text-sm text-muted mb-2">
-            Vali, milliste tellimuse staatuse muutuste korral saadetakse kliendile automaatne e-kiri.
-          </p>
-          {NOTIFICATION_KEYS.map(({ key, label }) => (
-            <label
-              key={key}
-              className="flex items-center gap-3 p-3 border border-line cursor-pointer hover:bg-soft/30 transition-colors"
-            >
+      {/* ===== EMAIL TAB ===== */}
+      {tab === "email" && (
+        <div className="space-y-8 max-w-3xl">
+          {/* General email settings */}
+          <div className="grid gap-4">
+            <h3 className="font-heading text-lg">Üldised e-kirja seaded</h3>
+            <FormField label="Saatja aadress" required>
               <input
-                type="checkbox"
-                checked={local.email.notifications?.[key] !== false}
-                onChange={() => toggleNotification(key)}
-                className="accent-ink h-4 w-4 flex-shrink-0"
+                type="text"
+                value={local.email.fromAddress}
+                onChange={(e) => updateEmail("fromAddress", e.target.value)}
+                className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                placeholder="tellimused@tnp.ee"
               />
-              <span className="text-sm font-bold">{label}</span>
-            </label>
-          ))}
+            </FormField>
+            <FormField label="Kontakti e-posti aadress" required>
+              <input
+                type="text"
+                value={local.email.contactEmail}
+                onChange={(e) => updateEmail("contactEmail", e.target.value)}
+                className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                placeholder="tellimused@tnp.ee"
+              />
+            </FormField>
+            <FormField label="Tellimuse kinnituse teema" required>
+              <input
+                type="text"
+                value={local.email.orderSubject}
+                onChange={(e) => updateEmail("orderSubject", e.target.value)}
+                className="w-full border border-line px-3 py-2 text-sm bg-paper"
+              />
+            </FormField>
+            <div className="text-xs text-muted mb-1">
+              Muutujad: {"{{customerName}}"}, {"{{orderNumber}}"}, {"{{total}}"}, {"{{itemLines}}"}
+            </div>
+            <FormField label="Tellimuse kinnituse sisu (plain text)" required>
+              <textarea
+                rows={10}
+                value={local.email.orderBody}
+                onChange={(e) => updateEmail("orderBody", e.target.value)}
+                className="w-full border border-line px-3 py-2 text-sm bg-paper font-mono"
+              />
+            </FormField>
+          </div>
+
+          {/* Status-specific templates */}
+          <div className="grid gap-4">
+            <h3 className="font-heading text-lg">Staatuse teavituste mallid</h3>
+            <p className="text-xs text-muted -mt-2">
+              Muutujad: {"{{orderNumber}}"}, {"{{customerName}}"}, {"{{statusLabel}}"}. Kliki staatusel, et muuta selle e-kirja malli.
+            </p>
+
+            {STATUS_KEYS.map(({ key, label }) => {
+              const tpl = local.email.statusTemplates?.[key] ?? { subject: "", heading: "", bodyHtml: "" };
+              const notifyKey = `notify_${key}`;
+              const isEnabled = local.email.notifications?.[notifyKey] !== false;
+              const isExpanded = expandedStatus === key;
+
+              return (
+                <div key={key} className="border border-line">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedStatus(isExpanded ? null : key)}
+                    className="w-full flex items-center justify-between p-4 hover:bg-soft/30 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        className={`transform transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                      >
+                        <path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                      <span className="font-bold text-sm">{label}</span>
+                    </div>
+                    <label
+                      className="flex items-center gap-2 text-xs cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); toggleNotification(key); }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={() => toggleNotification(key)}
+                        className="accent-ink h-3.5 w-3.5"
+                      />
+                      <span className={isEnabled ? "text-leaf" : "text-muted"}>
+                        {isEnabled ? "Saadetakse" : "Ei saadeta"}
+                      </span>
+                    </label>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="p-4 border-t border-line bg-soft/20 space-y-4">
+                      <FormField label="Teema" required>
+                        <input
+                          type="text"
+                          value={tpl.subject}
+                          onChange={(e) => updateStatusTemplate(key, "subject", e.target.value)}
+                          className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                        />
+                      </FormField>
+                      <FormField label="Pealkiri" required>
+                        <input
+                          type="text"
+                          value={tpl.heading}
+                          onChange={(e) => updateStatusTemplate(key, "heading", e.target.value)}
+                          className="w-full border border-line px-3 py-2 text-sm bg-paper"
+                        />
+                      </FormField>
+                      <FormField label="Sisu (HTML)" required>
+                        <textarea
+                          rows={6}
+                          value={tpl.bodyHtml}
+                          onChange={(e) => updateStatusTemplate(key, "bodyHtml", e.target.value)}
+                          className="w-full border border-line px-3 py-2 text-sm bg-paper font-mono"
+                        />
+                      </FormField>
+                      <div className="text-xs text-muted">
+                        Mustache tingimus: {"{{#customerName}}...{{/customerName}}"} — kuvatakse ainult kui kliendi nimi on olemas.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

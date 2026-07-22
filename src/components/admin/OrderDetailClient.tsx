@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { clsx } from "clsx";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { ShipOrderDialog } from "@/components/admin/ShipOrderDialog";
@@ -125,7 +124,11 @@ export function OrderDetailClient({ order: initialOrder }: { order: OrderData })
       if (result?.error) {
         toast(result.error, "error");
       } else if (result?.success) {
-        toast("Staatus uuendatud!", "success");
+        if (result.emailError) {
+          toast(`Staatus uuendatud, kuid e-kirja saatmine ebaõnnestus: ${result.emailError}`, "error");
+        } else {
+          toast("Staatus uuendatud!", "success");
+        }
         setOrder((prev) => ({ ...prev, status: newStatus }));
         setNote("");
         router.refresh();
@@ -149,7 +152,11 @@ export function OrderDetailClient({ order: initialOrder }: { order: OrderData })
         if (result?.error) {
           reject(new Error(result.error));
         } else if (result?.success) {
-          toast("Tellimus saadetud!", "success");
+          if (result.emailError) {
+            toast(`Tellimus saadetud, kuid e-kirja saatmine ebaõnnestus: ${result.emailError}`, "error");
+          } else {
+            toast("Tellimus saadetud!", "success");
+          }
           setShipOpen(false);
           router.refresh();
           resolve();

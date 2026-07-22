@@ -230,19 +230,20 @@ export async function updateOrderStatus(
     changed_by: session.user.id,
   });
 
+  let emailError: string | undefined;
   const sendEmail = parsed.data.sendEmail !== false;
   if (sendEmail && order.customer_email) {
-    try {
-      await sendOrderStatusUpdate({
-        orderId: order.id,
-        orderNumber: order.order_number,
-        newStatus: parsed.data.status,
-        to: order.customer_email,
-        customerName: order.customer_name ?? null,
-        note: parsed.data.note,
-      });
-    } catch (emailErr) {
-      console.error("status_update_email_error", emailErr);
+    const emailResult = await sendOrderStatusUpdate({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      newStatus: parsed.data.status,
+      to: order.customer_email,
+      customerName: order.customer_name ?? null,
+      note: parsed.data.note,
+    });
+    if (!emailResult.success && emailResult.error) {
+      emailError = emailResult.error;
+      console.error("status_update_email_error", emailResult.error);
     }
   }
 
@@ -253,7 +254,7 @@ export async function updateOrderStatus(
 
   revalidatePath(`/haldus/tellimused/${parsed.data.orderId}`);
   revalidatePath("/haldus/tellimused");
-  return { success: true };
+  return { success: true, emailError };
 }
 
 export async function shipOrder(
@@ -310,19 +311,20 @@ export async function shipOrder(
     changed_by: session.user.id,
   });
 
+  let emailError: string | undefined;
   if (order.customer_email) {
-    try {
-      await sendOrderShippedEmail({
-        orderId: order.id,
-        orderNumber: order.order_number,
-        to: order.customer_email,
-        customerName: order.customer_name ?? order.customer_email.split("@")[0],
-        carrier: parsed.data.carrier,
-        trackingNumber: parsed.data.trackingNumber,
-        trackingUrl: parsed.data.trackingUrl,
-      });
-    } catch (emailErr) {
-      console.error("shipped_email_error", emailErr);
+    const emailResult = await sendOrderShippedEmail({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      to: order.customer_email,
+      customerName: order.customer_name ?? order.customer_email.split("@")[0],
+      carrier: parsed.data.carrier,
+      trackingNumber: parsed.data.trackingNumber,
+      trackingUrl: parsed.data.trackingUrl,
+    });
+    if (!emailResult.success && emailResult.error) {
+      emailError = emailResult.error;
+      console.error("shipped_email_error", emailResult.error);
     }
   }
 
@@ -332,5 +334,5 @@ export async function shipOrder(
 
   revalidatePath(`/haldus/tellimused/${parsed.data.orderId}`);
   revalidatePath("/haldus/tellimused");
-  return { success: true };
+  return { success: true, emailError };
 }

@@ -22,6 +22,9 @@ const schema = z.object({
   SMAILY_SUBDOMAIN: optionalSecret,
   SMAILY_API_USER: optionalSecret,
   SMAILY_API_PASSWORD: optionalSecret,
+  OMNIVA_USERNAME: optionalSecret,
+  OMNIVA_PASSWORD: optionalSecret,
+  SMARTPOST_API_KEY: optionalSecret,
 });
 
 export type ServerEnv = z.infer<typeof schema>;

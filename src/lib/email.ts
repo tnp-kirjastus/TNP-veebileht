@@ -11,7 +11,7 @@ import {
   buildOrderShippedHtml,
 } from "@/lib/email-templates";
 
-const DEFAULT_FROM = "Kirjastus Tänapäev <tellimused@tnp.ee>";
+const DEFAULT_FROM = "tellimused@tnp.ee";
 
 async function getFromAddress(): Promise<string> {
   const settings = await getStoreSettings();
@@ -36,6 +36,48 @@ export async function isNotifEnabled(statusKey: string): Promise<boolean> {
   }
 }
 
+async function insertOutbox(
+  db: ReturnType<typeof createAdminClient>,
+  eventType: string,
+  payload: Record<string, unknown>,
+): Promise<string | null> {
+  const { data: outboxRow, error: outboxErr } = await db.schema("commerce").from("outbox")
+    .insert({
+      event_type: eventType,
+      payload,
+    })
+    .select("id")
+    .single();
+
+  if (outboxErr || !outboxRow) {
+    console.error("outbox_insert_failed", { eventType, error: outboxErr?.message });
+    return null;
+  }
+  return outboxRow.id;
+}
+
+async function markOutboxProcessed(db: ReturnType<typeof createAdminClient>, outboxId: string | null) {
+  if (!outboxId) return;
+  try {
+    await db.schema("commerce").from("outbox")
+      .update({ processed_at: new Date().toISOString() })
+      .eq("id", outboxId);
+  } catch (err) {
+    console.error("outbox_mark_processed_failed", err instanceof Error ? err.message : String(err));
+  }
+}
+
+async function markOutboxFailed(db: ReturnType<typeof createAdminClient>, outboxId: string | null, errorMsg: string) {
+  if (!outboxId) return;
+  try {
+    await db.schema("commerce").from("outbox")
+      .update({ attempts: 1, error_code: errorMsg.slice(0, 500) })
+      .eq("id", outboxId);
+  } catch (err) {
+    console.error("outbox_mark_failed_failed", err instanceof Error ? err.message : String(err));
+  }
+}
+
 export async function sendOrderConfirmationEmail(params: {
   orderId: string;
   orderNumber: string;
@@ -43,11 +85,11 @@ export async function sendOrderConfirmationEmail(params: {
   customerName: string;
   total: number;
   items: Array<{ title: string; quantity: number; price: number }>;
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   const env = serverEnv();
   if (!env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY not configured, skipping confirmation email");
-    return;
+    return { success: false, error: "RESEND_API_KEY not configured" };
   }
 
   const settings = await getStoreSettings();
@@ -64,27 +106,16 @@ export async function sendOrderConfirmationEmail(params: {
 
   const db = createAdminClient();
 
-  const { data: outboxRow, error: outboxErr } = await db.schema("commerce").from("outbox")
-    .insert({
-      event_type: "email.order_confirmation",
-      payload: {
-        order_id: params.orderId,
-        order_number: params.orderNumber,
-        customer_email: params.to,
-        customer_name: params.customerName,
-        total: params.total,
-        items: params.items,
-        provider: "resend",
-        template: "order_confirmation",
-      },
-    })
-    .select("id")
-    .single();
-
-  if (outboxErr || !outboxRow) {
-    console.error("outbox_insert_failed", outboxErr?.message);
-    return;
-  }
+  const outboxId = await insertOutbox(db, "email.order_confirmation", {
+    order_id: params.orderId,
+    order_number: params.orderNumber,
+    customer_email: params.to,
+    customer_name: params.customerName,
+    total: params.total,
+    items: params.items,
+    provider: "resend",
+    template: "order_confirmation",
+  });
 
   const resend = new Resend(env.RESEND_API_KEY);
 
@@ -96,15 +127,13 @@ export async function sendOrderConfirmationEmail(params: {
       text: body,
     });
 
-    await db.schema("commerce").from("outbox")
-      .update({ processed_at: new Date().toISOString() })
-      .eq("id", outboxRow.id);
+    await markOutboxProcessed(db, outboxId);
+    return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("confirmation_email_failed", errorMsg);
-    await db.schema("commerce").from("outbox")
-      .update({ attempts: 1, error_code: errorMsg.slice(0, 500) })
-      .eq("id", outboxRow.id);
+    await markOutboxFailed(db, outboxId, errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -115,19 +144,19 @@ export async function sendOrderStatusUpdate(params: {
   to: string;
   customerName: string | null;
   note?: string;
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   const env = serverEnv();
-  if (!env.RESEND_API_KEY) return;
+  if (!env.RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
 
   const notifKey = `notify_${params.newStatus}`;
   if (!(await isNotifEnabled(notifKey))) {
     console.log(`Notification ${notifKey} disabled, skipping status update email`);
-    return;
+    return { success: false, error: `Notification disabled: ${notifKey}` };
   }
 
   const fromAddress = await getFromAddress();
-  const subject = statusSubject(params.newStatus, params.orderNumber);
-  const html = buildStatusUpdateHtml({
+  const subject = await statusSubject(params.newStatus, params.orderNumber);
+  const html = await buildStatusUpdateHtml({
     orderRef: params.orderNumber,
     customerName: params.customerName,
     newStatus: params.newStatus,
@@ -136,26 +165,16 @@ export async function sendOrderStatusUpdate(params: {
 
   const db = createAdminClient();
 
-  const { data: outboxRow, error: outboxErr } = await db.schema("commerce").from("outbox")
-    .insert({
-      event_type: "email.status_update",
-      payload: {
-        order_id: params.orderId,
-        order_number: params.orderNumber,
-        status: params.newStatus,
-        customer_email: params.to,
-        customer_name: params.customerName,
-        note: params.note ?? null,
-        provider: "resend",
-        template: "status_update",
-      },
-    })
-    .select("id")
-    .single();
-
-  if (outboxErr || !outboxRow) {
-    console.error("outbox_insert_failed", outboxErr?.message);
-  }
+  const outboxId = await insertOutbox(db, "email.status_update", {
+    order_id: params.orderId,
+    order_number: params.orderNumber,
+    status: params.newStatus,
+    customer_email: params.to,
+    customer_name: params.customerName,
+    note: params.note ?? null,
+    provider: "resend",
+    template: "status_update",
+  });
 
   const resend = new Resend(env.RESEND_API_KEY);
 
@@ -167,19 +186,13 @@ export async function sendOrderStatusUpdate(params: {
       html,
     });
 
-    if (outboxRow) {
-      await db.schema("commerce").from("outbox")
-        .update({ processed_at: new Date().toISOString() })
-        .eq("id", outboxRow.id);
-    }
+    await markOutboxProcessed(db, outboxId);
+    return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("status_update_email_failed", errorMsg);
-    if (outboxRow) {
-      await db.schema("commerce").from("outbox")
-        .update({ attempts: 1, error_code: errorMsg.slice(0, 500) })
-        .eq("id", outboxRow.id);
-    }
+    await markOutboxFailed(db, outboxId, errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -191,18 +204,18 @@ export async function sendOrderShippedEmail(params: {
   carrier: string;
   trackingNumber: string;
   trackingUrl?: string;
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   const env = serverEnv();
-  if (!env.RESEND_API_KEY) return;
+  if (!env.RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
 
   if (!(await isNotifEnabled("notify_shipped"))) {
     console.log("notify_shipped disabled, skipping shipped email");
-    return;
+    return { success: false, error: "Notification disabled: notify_shipped" };
   }
 
   const fromAddress = await getFromAddress();
-  const subject = `${DEFAULT_FROM.split("<")[0].trim()}: Tellimus ${params.orderNumber} on saadetud`;
-  const html = buildOrderShippedHtml({
+  const subject = `Tellimus ${params.orderNumber} on saadetud`;
+  const html = await buildOrderShippedHtml({
     orderRef: params.orderNumber,
     customerName: params.customerName,
     carrier: params.carrier,
@@ -212,27 +225,17 @@ export async function sendOrderShippedEmail(params: {
 
   const db = createAdminClient();
 
-  const { data: outboxRow, error: outboxErr } = await db.schema("commerce").from("outbox")
-    .insert({
-      event_type: "email.order_shipped",
-      payload: {
-        order_id: params.orderId,
-        order_number: params.orderNumber,
-        customer_email: params.to,
-        customer_name: params.customerName,
-        carrier: params.carrier,
-        tracking_number: params.trackingNumber,
-        tracking_url: params.trackingUrl ?? null,
-        provider: "resend",
-        template: "order_shipped",
-      },
-    })
-    .select("id")
-    .single();
-
-  if (outboxErr || !outboxRow) {
-    console.error("outbox_insert_failed", outboxErr?.message);
-  }
+  const outboxId = await insertOutbox(db, "email.order_shipped", {
+    order_id: params.orderId,
+    order_number: params.orderNumber,
+    customer_email: params.to,
+    customer_name: params.customerName,
+    carrier: params.carrier,
+    tracking_number: params.trackingNumber,
+    tracking_url: params.trackingUrl ?? null,
+    provider: "resend",
+    template: "order_shipped",
+  });
 
   const resend = new Resend(env.RESEND_API_KEY);
 
@@ -244,19 +247,13 @@ export async function sendOrderShippedEmail(params: {
       html,
     });
 
-    if (outboxRow) {
-      await db.schema("commerce").from("outbox")
-        .update({ processed_at: new Date().toISOString() })
-        .eq("id", outboxRow.id);
-    }
+    await markOutboxProcessed(db, outboxId);
+    return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("shipped_email_failed", errorMsg);
-    if (outboxRow) {
-      await db.schema("commerce").from("outbox")
-        .update({ attempts: 1, error_code: errorMsg.slice(0, 500) })
-        .eq("id", outboxRow.id);
-    }
+    await markOutboxFailed(db, outboxId, errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
@@ -269,18 +266,18 @@ export async function sendNewOrderAdminEmail(params: {
   customerEmail: string | null;
   customerPhone?: string | null;
   items: Array<{ productName: string; quantity: number; unitPrice: number }>;
-}) {
+}): Promise<{ success: boolean; error?: string }> {
   const env = serverEnv();
-  if (!env.RESEND_API_KEY) return;
+  if (!env.RESEND_API_KEY) return { success: false, error: "RESEND_API_KEY not configured" };
 
   if (!(await isNotifEnabled("notify_pending"))) {
     console.log("notify_pending disabled, skipping new order admin email");
-    return;
+    return { success: false, error: "Notification disabled: notify_pending" };
   }
 
   const fromAddress = await getFromAddress();
   const subject = `Uus tellimus: ${params.orderNumber}`;
-  const html = buildNewOrderAdminHtml({
+  const html = await buildNewOrderAdminHtml({
     orderRef: params.orderNumber,
     total: params.total,
     createdAt: params.createdAt,
@@ -293,6 +290,17 @@ export async function sendNewOrderAdminEmail(params: {
   const settings = await getStoreSettings();
   const adminEmail = settings.company.email || "tellimused@tnp.ee";
 
+  const db = createAdminClient();
+
+  const outboxId = await insertOutbox(db, "email.admin_notification", {
+    order_id: params.orderId,
+    order_number: params.orderNumber,
+    admin_email: adminEmail,
+    total: params.total,
+    provider: "resend",
+    template: "admin_notification",
+  });
+
   const resend = new Resend(env.RESEND_API_KEY);
 
   try {
@@ -302,8 +310,13 @@ export async function sendNewOrderAdminEmail(params: {
       subject,
       html,
     });
+
+    await markOutboxProcessed(db, outboxId);
+    return { success: true };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("admin_notification_email_failed", errorMsg);
+    await markOutboxFailed(db, outboxId, errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
