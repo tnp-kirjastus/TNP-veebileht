@@ -32,13 +32,14 @@ export async function GET() {
     }
 
     try {
-      await transport.sendMail({
+      const info = await transport.sendMail({
         from: "tellimused@tnp.ee",
-        to: env.SMTP_USER,
+        to: "tellimused@tnp.ee",
         subject: "[DIAGNOSTIKA] SMTP test " + new Date().toISOString(),
         text: "SMTP diagnostika test. Kui saad kätte, töötab.",
       });
       results.smtpSend = "OK";
+      results.etherealUrl = nodemailer.getTestMessageUrl(info) || "N/A";
     } catch (err) {
       results.smtpSend = `FAIL: ${err instanceof Error ? err.message : String(err)}`;
     }

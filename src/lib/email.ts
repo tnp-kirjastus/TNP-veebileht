@@ -106,13 +106,17 @@ async function sendEmail(params: {
   const transport = getSmtpTransport();
   if (transport) {
     try {
-      await transport.sendMail({
+      const info = await transport.sendMail({
         from: params.from,
         to: params.to,
         subject: params.subject,
         text: params.text,
         html: params.html,
       });
+      const etherealUrl = nodemailer.getTestMessageUrl(info);
+      if (etherealUrl) {
+        console.log("ethereal_preview_url", etherealUrl);
+      }
       return { success: true };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
