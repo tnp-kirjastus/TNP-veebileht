@@ -23,7 +23,20 @@ const DEFAULT_EMAIL: StoreSettings["email"] = {
   orderBody: "",
   contactEmail: "",
   notifications: {},
-  statusTemplates: {},
+  statusTemplates: {
+    pending: { subject: "Tellimus {{orderNumber}} ootab makset", heading: "Tellimus ootab makset", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie tellimus <strong>#{{orderNumber}}</strong> on registreeritud ja ootab makset. Makse kinnitusel asume seda komplekteerima.</p>" },
+    payment_pending: { subject: "Tellimus {{orderNumber}} ootab makset", heading: "Tellimus ootab makset", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie tellimus <strong>#{{orderNumber}}</strong> ootab makset. Makse kinnitusel asume seda komplekteerima.</p>" },
+    paid: { subject: "Tellimus {{orderNumber}} makse kinnitatud", heading: "Aitäh tellimuse eest!", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Makse on kinnitatud. Saime teie tellimuse kätte ning asume seda komplekteerima. Saadame peatselt teavituse, kui tellimus on teele pandud.</p>" },
+    processing: { subject: "Tellimus {{orderNumber}} on töötlemisel", heading: "Tellimus on töötlemisel", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie tellimus <strong>#{{orderNumber}}</strong> on töötlemisel. Tegeleme selle komplekteerimisega.</p>" },
+    shipped: { subject: "Tellimus {{orderNumber}} on saadetud", heading: "Tellimus on saadetud", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie tellimus <strong>#{{orderNumber}}</strong> on üle antud kullerile ja on teel Teieni.</p>" },
+    delivered: { subject: "Tellimus {{orderNumber}} on kohale toimetatud", heading: "Tellimus on kohale toimetatud", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie tellimus <strong>#{{orderNumber}}</strong> on kohale toimetatud. Täname ostu eest!</p>" },
+    cancelled: { subject: "Tellimus {{orderNumber}} on tühistatud", heading: "Tellimus on tühistatud", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie tellimus <strong>#{{orderNumber}}</strong> on tühistatud. Küsimuste korral võtke meiega ühendust.</p>" },
+    payment_failed: { subject: "Tellimus {{orderNumber}} makse ebaõnnestus", heading: "Makse ebaõnnestus", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Tellimuse <strong>#{{orderNumber}}</strong> makse ebaõnnestus. Palun proovige uuesti.</p>" },
+    expired: { subject: "Tellimus {{orderNumber}} on aegunud", heading: "Tellimus on aegunud", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Tellimus <strong>#{{orderNumber}}</strong> on aegunud. Soovi korral saate teha uue tellimuse.</p>" },
+    manual_review: { subject: "Tellimus {{orderNumber}} on ülevaatusel", heading: "Tellimus on ülevaatusel", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Tellimus <strong>#{{orderNumber}}</strong> vajab käsitsi ülevaatust. Võtame peatselt ühendust.</p>" },
+    refunded: { subject: "Tellimus {{orderNumber}} on tagastatud", heading: "Tellimus on tagastatud", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Tellimuse <strong>#{{orderNumber}}</strong> summa on tagastatud.</p>" },
+    preorder: { subject: "Ettetellimus {{orderNumber}} vastu võetud", heading: "Ettetellimus vastu võetud", bodyHtml: "<p>Tere{{#customerName}}, <strong>{{customerName}}</strong>{{/customerName}}! Teie ettetellimus <strong>#{{orderNumber}}</strong> on vastu võetud. Anname teada, kui raamatud on saadaval.</p>" },
+  },
 };
 
 const DEFAULT_VAT: StoreSettings["vat"] = { percent: 9 };
@@ -34,7 +47,7 @@ const DEFAULT_THEME: StoreSettings["theme"] = { accentColor: "#4a1aa1", accentCo
 async function loadSettings(): Promise<StoreSettings> {
   const db = createAdminClient();
   const { data } = await db.schema("content").from("settings")
-    .select("shipping, email, vat, company, social, theme")
+    .select("shipping, email, vat, company, social")
     .eq("key", "store")
     .maybeSingle();
 
@@ -65,7 +78,7 @@ async function loadSettings(): Promise<StoreSettings> {
     vat: (data?.vat ?? DEFAULT_VAT) as StoreSettings["vat"],
     company: (data?.company ?? DEFAULT_COMPANY) as StoreSettings["company"],
     social: (data?.social ?? DEFAULT_SOCIAL) as StoreSettings["social"],
-    theme: (data?.theme ?? DEFAULT_THEME) as StoreSettings["theme"],
+    theme: DEFAULT_THEME,
   };
 }
 

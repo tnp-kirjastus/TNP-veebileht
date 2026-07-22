@@ -143,7 +143,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
   try {
     const db = createAdminClient();
     const { data, error } = await db.schema("content").from("settings")
-      .select("shipping, email, vat, company, social, theme")
+      .select("shipping, email, vat, company, social")
       .eq("key", "store")
       .maybeSingle();
 
@@ -191,10 +191,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
         facebook: ((data.social as Record<string, unknown> | null)?.facebook as string) || DEFAULTS.social.facebook,
         instagram: ((data.social as Record<string, unknown> | null)?.instagram as string) || DEFAULTS.social.instagram,
       },
-      theme: {
-        accentColor: ((data.theme as Record<string, unknown> | null)?.accentColor as string) || DEFAULTS.theme.accentColor,
-        accentColorDark: ((data.theme as Record<string, unknown> | null)?.accentColorDark as string) || DEFAULTS.theme.accentColorDark,
-      },
+      theme: DEFAULTS.theme,
     };
     cacheTime = now;
     return cached;

@@ -120,7 +120,7 @@ export async function getStoreSettingsAdmin(): Promise<StoreSettings> {
 
   const db = createAdminClient();
   const { data, error } = await db.schema("content").from("settings")
-    .select("shipping, email, vat, company, social, theme")
+    .select("shipping, email, vat, company, social")
     .eq("key", "store")
     .maybeSingle();
 
@@ -158,7 +158,7 @@ export async function getStoreSettingsAdmin(): Promise<StoreSettings> {
     vat: (data.vat ?? { percent: 9 }) as StoreSettings["vat"],
     company: (data.company ?? { name: "", email: "", phone: "", address: "", regCode: "" }) as StoreSettings["company"],
     social: (data.social ?? { facebook: "", instagram: "" }) as StoreSettings["social"],
-    theme: (data.theme ?? { accentColor: "#4a1aa1", accentColorDark: "#31106c" }) as StoreSettings["theme"],
+    theme: { accentColor: "#4a1aa1", accentColorDark: "#31106c" },
   };
 }
 
