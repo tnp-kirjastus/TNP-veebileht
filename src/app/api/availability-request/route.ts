@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
   const db = createAdminClient();
 
-  await db.schema("commerce").from("outbox").insert({
+  const { error: outboxError } = await db.schema("commerce").from("outbox").insert({
     event_type: "availability_request",
     payload: {
       email,
@@ -54,6 +54,10 @@ export async function POST(request: Request) {
       requested_at: new Date().toISOString(),
     },
   });
+  if (outboxError) {
+    console.error("availability_request_store_failed", { message: outboxError.message });
+    return NextResponse.json({ error: "Päringu salvestamine ebaõnnestus." }, { status: 503 });
+  }
 
   try {
     const env = serverEnv();

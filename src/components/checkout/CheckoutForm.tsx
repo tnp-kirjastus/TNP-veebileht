@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/lib/cart-context";
-import { createClient } from "@/lib/supabase/browser";
 import {
   SHIPPING_RATES,
-  calculateShippingCost,
   type ShippingRate,
 } from "@/lib/shipping/config";
 import type {
@@ -36,12 +34,18 @@ const initialData: CheckoutData = {
   companyRegCode: "",
 };
 
-function shippingRate(carrier: ShippingCarrier): ShippingRate | undefined {
-  return SHIPPING_RATES.find((r) => r.carrier === carrier);
+function shippingRate(rates: ShippingRate[], carrier: ShippingCarrier): ShippingRate | undefined {
+  return rates.find((r) => r.carrier === carrier);
 }
 
-function shippingLabel(carrier: ShippingCarrier): string {
-  return shippingRate(carrier)?.label_et ?? carrier;
+function shippingLabel(rates: ShippingRate[], carrier: ShippingCarrier): string {
+  return shippingRate(rates, carrier)?.label_et ?? carrier;
+}
+
+function configuredShippingCost(rates: ShippingRate[], carrier: ShippingCarrier, cartTotal: number): number {
+  const rate = shippingRate(rates, carrier);
+  if (!rate || cartTotal >= rate.freeFrom) return 0;
+  return rate.price;
 }
 
 export function CheckoutForm({ compact = false }: { compact?: boolean }) {
@@ -53,8 +57,8 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [createAccount, setCreateAccount] = useState(true);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>(SHIPPING_RATES);
+  const [vatPercent, setVatPercent] = useState(9);
 
   const [machines, setMachines] = useState<Record<string, GroupedMachines[]> | null>(null);
   const [machinesError, setMachinesError] = useState(false);
@@ -74,7 +78,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
     let cancelled = false;
     setMachinesError(false);
     fetch("/api/shipping/parcel-machines")
-      .then((r) => r.json())
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error("parcel_machines_failed")))
       .then((data: Record<string, GroupedMachines[]>) => {
         if (!cancelled) {
           setMachines(data);
@@ -95,6 +99,18 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- setState calls are inside async fetch callbacks
     return loadMachines();
   }, [loadMachines]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/storefront-config", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("storefront_config_failed")))
+      .then((config: { shippingRates?: ShippingRate[]; vatPercent?: number }) => {
+        if (Array.isArray(config.shippingRates) && config.shippingRates.length > 0) setShippingRates(config.shippingRates);
+        if (typeof config.vatPercent === "number" && Number.isFinite(config.vatPercent)) setVatPercent(config.vatPercent);
+      })
+      .catch((cause) => { if (cause?.name !== "AbortError") { /* defaults remain available */ } });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -156,13 +172,13 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
       .filter((g): g is GroupedMachines => g !== null);
   }, [currentCarrierMachines, machineSearch]);
 
-  const shippingCost = calculateShippingCost(data.shipping_method, total);
+  const shippingCost = configuredShippingCost(shippingRates, data.shipping_method, total);
   const orderTotal = total + shippingCost - couponDiscount;
   const needsMore = shippingCost > 0
-    ? shippingRate(data.shipping_method)!.freeFrom - total
+    ? shippingRate(shippingRates, data.shipping_method)!.freeFrom - total
     : 0;
 
-  const KM_PERCENT = 9;
+  const KM_PERCENT = vatPercent;
   const vatAmount = orderTotal - (orderTotal / (1 + KM_PERCENT / 100));
 
   const isParcelMachine = data.shipping_method === "omniva" || data.shipping_method === "smartpost";
@@ -210,16 +226,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
       return;
     }
 
-      const errors: Record<string, string> = {};
-    if (createAccount) {
-      if (!password || password.length < 6) errors.password = "Parool peab olema vähemalt 6 tähemärki.";
-      if (password !== confirmPassword) errors.confirmPassword = "Paroolid ei ühti.";
-    }
-    if (Object.keys(errors).length > 0) {
-      setError(errors.password ?? errors.confirmPassword ?? "Kontrolli parooli.");
-      return;
-    }
-
     setPending(true);
     setError("");
     try {
@@ -241,7 +247,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
           couponCode: couponCode.trim() || undefined,
           couponDiscount,
           create_account: createAccount,
-          password: createAccount ? password : undefined,
           parcel_machine: selectedMachine
             ? {
                 carrier: selectedMachine.carrier,
@@ -267,15 +272,6 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
         throw new Error("invalid_payment_redirect");
       }
       clearCart();
-      if (result.created_account && createAccount && password) {
-        try {
-          const sb = createClient();
-          const { error: signInErr } = await sb.auth.signInWithPassword({ email: data.email, password });
-          if (signInErr) {
-            console.warn("[checkout] auto sign-in after account creation failed:", signInErr.message);
-          }
-        } catch { /* ignore */ }
-      }
       window.location.assign(result.redirectUrl);
     } catch {
       setError("Makse algatamine ebaõnnestus. Proovi uuesti.");
@@ -403,36 +399,10 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                   <div>
                     <span className="font-bold text-sm">Loo konto</span>
                     <p className="text-sm text-muted mt-0.5">
-                      Loo endale konto, et näha oma tellimusi ja kiiremini
-                      järgmisi oste sooritada.
+                      Saadame pärast tellimust e-posti aadressile konto aktiveerimise lingi.
                     </p>
                   </div>
                 </label>
-
-                {createAccount && (
-                  <div className={`grid gap-4 mt-4 pl-7 ${compact ? "grid-cols-1" : "grid-cols-2 max-sm:grid-cols-1"}`}>
-                    <label className="grid gap-2 font-bold text-sm">
-                      Parool
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="new-password"
-                        className="border border-line p-3 font-normal"
-                      />
-                    </label>
-                    <label className="grid gap-2 font-bold text-sm">
-                      Korda parooli
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        autoComplete="new-password"
-                        className="border border-line p-3 font-normal"
-                      />
-                    </label>
-                  </div>
-                )}
               </div>
             </fieldset>
           )}
@@ -476,8 +446,8 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
               <legend className="font-heading text-2xl mb-5">Tarneviis</legend>
 
               {(["omniva", "smartpost"] as const).map((carrier) => {
-                const rate = shippingRate(carrier);
-                const cost = rate ? calculateShippingCost(carrier, total) : 0;
+                const rate = shippingRate(shippingRates, carrier);
+                const cost = configuredShippingCost(shippingRates, carrier, total);
                 return (
                   <label
                     key={carrier}
@@ -493,7 +463,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                       onChange={() => update("shipping_method", carrier)}
                       className="mr-2"
                     />
-                    <strong>{shippingLabel(carrier)}</strong>
+                    <strong>{shippingLabel(shippingRates, carrier)}</strong>
                     <span className="block text-sm text-muted mt-1">
                       {rate
                         ? `Tarne ${rate.price.toFixed(2)} € pakiautomaati.`
@@ -609,18 +579,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                 ) : (
                   <strong>Tasuta tarne</strong>
                 )}
-                {shippingCost === 0 && <> — Toote saatmine on tasuta alates {shippingRate(data.shipping_method)?.freeFrom ?? 40} eurosest ostust.</>}
-              </div>
-
-              <div className="text-sm text-muted">
-                <p>
-                  <strong className="text-ink">Eeldatav tarneaeg:</strong>{" "}
-                  3–14 tööpäeva pärast makse kinnitust.
-                </p>
-                <p className="mt-1">
-                  Makse turvab <strong className="text-ink">Maksekeskus</strong>. Tagastamisõigus kehtib
-                  14 päeva jooksul alates kättesaamisest.
-                </p>
+                {shippingCost === 0 && <> — Toote saatmine on tasuta alates {shippingRate(shippingRates, data.shipping_method)?.freeFrom ?? 40} eurosest ostust.</>}
               </div>
 
               <div className="text-sm text-muted">
@@ -659,7 +618,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
 
               {shippingCost > 0 && (
                 <div className="flex justify-between border border-line p-4 text-sm">
-                  <span className="text-muted">Tarne ({shippingLabel(data.shipping_method)})</span>
+                  <span className="text-muted">Tarne ({shippingLabel(shippingRates, data.shipping_method)})</span>
                   <strong>{shippingCost.toFixed(2)} €</strong>
                 </div>
               )}
@@ -679,7 +638,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                   )}
                   {shippingCost > 0 && (
                     <div className="flex justify-between">
-                      <span>Saatmine ({shippingLabel(data.shipping_method)})</span>
+                      <span>Saatmine ({shippingLabel(shippingRates, data.shipping_method)})</span>
                       <strong>{shippingCost.toFixed(2)} €</strong>
                     </div>
                   )}
@@ -701,8 +660,8 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                 <p>
                   <strong>Tarne:</strong>{" "}
                   {selectedMachine
-                    ? `${shippingLabel(data.shipping_method)} — ${selectedMachine.name}, ${selectedMachine.city}`
-                    : shippingLabel(data.shipping_method)}
+                    ? `${shippingLabel(shippingRates, data.shipping_method)} — ${selectedMachine.name}, ${selectedMachine.city}`
+                    : shippingLabel(shippingRates, data.shipping_method)}
                 </p>
                 <button
                   type="button"
@@ -817,7 +776,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
             </p>
           ) : shippingCost === 0 ? (
             <p className="text-sm text-leaf font-bold mt-3">
-              Tasuta tarne alates {shippingRate(data.shipping_method)?.freeFrom ?? 40} €
+              Tasuta tarne alates {shippingRate(shippingRates, data.shipping_method)?.freeFrom ?? 40} €
             </p>
           ) : null}
           <p className="text-xs text-muted mt-3">

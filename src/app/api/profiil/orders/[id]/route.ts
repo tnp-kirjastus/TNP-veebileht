@@ -9,13 +9,24 @@ export async function GET(request: Request) {
   const id = new URL(request.url).pathname.split("/").pop();
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
 
-  const { data } = await supabase.schema("commerce").from("orders")
+  const { data, error } = await supabase.schema("commerce").from("orders")
     .select("*, order_items(*), order_status_history(*)")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!data) return NextResponse.json({ error: "order not found" }, { status: 404 });
+  if (error) {
+    console.error("customer_order_detail_failed", { userId: user.id, orderId: id, message: error.message });
+    return NextResponse.json({ error: "Tellimuse laadimine ebaõnnestus." }, { status: 500 });
+  }
+  if (!data) return NextResponse.json({ error: "Tellimust ei leitud." }, { status: 404 });
 
-  return NextResponse.json({ order: data });
+  const { order_items, order_status_history, ...order } = data;
+  return NextResponse.json({
+    order: {
+      ...order,
+      items: order_items ?? [],
+      status_history: order_status_history ?? [],
+    },
+  });
 }

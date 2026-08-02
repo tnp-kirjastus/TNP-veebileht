@@ -7,17 +7,19 @@ import { createPayment } from "@/lib/payments/maksekeskus";
 import { euroDecimalToCents, roundEuro } from "@/lib/money";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { calculateShippingCostAsync } from "@/lib/shipping/server";
+import { fetchParcelMachines } from "@/lib/shipping/maksekeskus-shipping";
 import { validateCoupon } from "@/lib/coupons";
 import { getStoreSettings } from "@/lib/settings";
 import { sendNewOrderAdminEmail } from "@/lib/email";
+import { serverEnv } from "@/lib/env";
 
 const parcelMachineSchema = z.object({
-  carrier: z.string(),
-  id: z.string(),
-  name: z.string(),
-  city: z.string(),
-  address: z.string(),
-  zip: z.string(),
+  carrier: z.enum(["omniva", "smartpost"]),
+  id: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).max(240),
+  city: z.string().trim().max(160),
+  address: z.string().trim().max(240),
+  zip: z.string().trim().max(20),
 }).nullable();
 
 const schema = z.object({
@@ -70,33 +72,24 @@ function notifyAdmin(
 
 async function handleAccountCreation(
   createAccount: boolean,
-  password: string | undefined,
   email: string,
   name: string,
   phone: string,
   orderId: string,
 ): Promise<boolean> {
-  if (!createAccount || !password || password.length < 6) return false;
+  if (!createAccount) return false;
   try {
     const db = createAdminClient();
-    const { data: newUser, error: createErr } = await db.auth.admin.createUser({
-      email: email.toLowerCase().trim(),
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: name.trim() },
-    });
+    const { NEXT_PUBLIC_SITE_URL } = serverEnv();
+    const { data: newUser, error: createErr } = await db.auth.admin.inviteUserByEmail(
+      email.toLowerCase().trim(),
+      {
+        data: { full_name: name.trim() },
+        redirectTo: `${NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/profiil/parool-uus`,
+      },
+    );
     if (createErr) {
-      if (createErr.message?.includes("already") || createErr.status === 422) {
-        const { data: existing } = await db.auth.admin.listUsers({ page: 0, perPage: 1 });
-        const match = existing?.users?.find(
-          (u) => u.email?.toLowerCase() === email.toLowerCase().trim()
-        );
-        if (match) {
-          await db.schema("commerce").from("orders").update({ user_id: match.id }).eq("id", orderId);
-        }
-      } else {
-        console.error("checkout_account_create_failed", { error: createErr.message, email });
-      }
+      console.error("checkout_account_invite_failed", { error: createErr.message });
       return false;
     }
     if (newUser?.user) {
@@ -126,6 +119,28 @@ export async function POST(request: Request) {
 
   if ((parsed.data.shipping_method === "omniva" || parsed.data.shipping_method === "smartpost") && !parsed.data.parcel_machine) {
     return NextResponse.json({ error: "Palun vali pakiautomaat." }, { status: 400 });
+  }
+
+  if (parsed.data.parcel_machine) {
+    try {
+      const requestedMachine = parsed.data.parcel_machine;
+      const machine = (await fetchParcelMachines()).find(
+        (candidate) => candidate.carrier === parsed.data.shipping_method && candidate.id === requestedMachine.id,
+      );
+      if (!machine || requestedMachine.carrier !== parsed.data.shipping_method) {
+        return NextResponse.json({ error: "Valitud pakiautomaat ei ole kehtiv." }, { status: 400 });
+      }
+      parsed.data.parcel_machine = {
+        carrier: machine.carrier as "omniva" | "smartpost",
+        id: machine.id,
+        name: machine.name,
+        city: machine.city,
+        address: machine.address,
+        zip: machine.zip,
+      };
+    } catch {
+      return NextResponse.json({ error: "Pakiautomaadi kontrollimine ebaõnnestus. Proovi uuesti." }, { status: 502 });
+    }
   }
 
   const requestedItems = parsed.data.items ?? [];
@@ -217,7 +232,7 @@ export async function POST(request: Request) {
                 cart.items.map(oi => ({ title: oi.title, quantity: oi.quantity, price: 0 })),
               );
               const createdAccount = await handleAccountCreation(
-                parsed.data.create_account, parsed.data.password,
+                parsed.data.create_account,
                 parsed.data.email, parsed.data.name, parsed.data.phone, order.id,
               );
               return NextResponse.json({
@@ -273,7 +288,7 @@ export async function POST(request: Request) {
                 vat_percent: KM_PERCENT,
               }).eq("id", order.order_id);
               const createdAccount = await handleAccountCreation(
-                parsed.data.create_account, parsed.data.password,
+                parsed.data.create_account,
                 parsed.data.email, parsed.data.name, parsed.data.phone, order.order_id,
               );
               return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token, created_account: createdAccount });
@@ -402,7 +417,7 @@ export async function POST(request: Request) {
     );
 
     const createdAccountBPre = await handleAccountCreation(
-      parsed.data.create_account, parsed.data.password,
+      parsed.data.create_account,
       parsed.data.email, parsed.data.name, parsed.data.phone, order.id,
     );
 
@@ -464,7 +479,7 @@ export async function POST(request: Request) {
           const payment = await createPayment({ id: existing.id, orderNumber: existing.order_number, totalCents: Math.round(Number(existing.total) * 100), currency: "EUR", confirmationToken: existing.confirmation_token, customer: { name: parsed.data.name, email: parsed.data.email, country: "ee", locale: "et" }, ip: clientKey === "unknown" ? "127.0.0.1" : clientKey });
           await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", existing.id);
           const createdAccountIdem = await handleAccountCreation(
-            parsed.data.create_account, parsed.data.password,
+            parsed.data.create_account,
             parsed.data.email, parsed.data.name, parsed.data.phone, existing.id,
           );
           return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: existing.confirmation_token, created_account: createdAccountIdem });
@@ -532,7 +547,7 @@ export async function POST(request: Request) {
     });
     await db.schema("commerce").from("orders").update({ maksekeskus_id: payment.providerTransactionId }).eq("id", order.id);
     const createdAccountBNorm = await handleAccountCreation(
-      parsed.data.create_account, parsed.data.password,
+      parsed.data.create_account,
       parsed.data.email, parsed.data.name, parsed.data.phone, order.id,
     );
     return NextResponse.json({ redirectUrl: payment.redirectUrl, confirmationToken: order.confirmation_token, created_account: createdAccountBNorm });

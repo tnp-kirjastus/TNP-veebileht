@@ -9,11 +9,16 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10) || 50, 100);
 
-  const { data } = await supabase.schema("commerce").from("orders")
+  const { data, error } = await supabase.schema("commerce").from("orders")
     .select("id, order_number, status, total, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (error) {
+    console.error("customer_orders_list_failed", { userId: user.id, message: error.message });
+    return NextResponse.json({ error: "Tellimuste laadimine ebaõnnestus." }, { status: 500 });
+  }
 
   return NextResponse.json({ orders: data ?? [] });
 }

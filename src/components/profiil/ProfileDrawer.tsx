@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
 export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -14,6 +15,15 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   function closeDrawer() {
     setError("");
@@ -76,11 +86,15 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
       />
 
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-drawer-title"
         aria-hidden={!open}
+        inert={!open}
         className={`fixed top-0 right-0 bottom-0 z-40 w-[min(520px,100vw)] bg-panel border-l border-ink grid grid-rows-[auto_1fr_auto] transition-transform duration-[320ms] ${open ? "translate-x-0" : "translate-x-[104%]"}`}
       >
         <div className="p-[22px] border-b border-line flex items-center justify-between gap-[18px]">
-          <h2 className="text-[26px] font-heading">{tab === "login" ? "Logi sisse" : "Registreeri"}</h2>
+          <h2 id="profile-drawer-title" className="text-[26px] font-heading">{tab === "login" ? "Logi sisse" : "Registreeri"}</h2>
           <button className="w-[44px] h-[44px] border border-line bg-panel grid place-items-center hover:bg-soft" onClick={closeDrawer} aria-label="Sulge">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
           </button>
@@ -141,6 +155,9 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
               >
                 {pending ? "Sisse logimas..." : "Logi sisse"}
               </button>
+              <Link href="/profiil/parool-taasta" onClick={onClose} className="text-accent font-bold text-sm hover:underline text-center">
+                Unustasid parooli?
+              </Link>
               <p className="text-sm text-muted text-center">
                 Pole veel kontot?{" "}
                 <button type="button" onClick={() => switchTab("register")} className="text-accent font-bold hover:underline">

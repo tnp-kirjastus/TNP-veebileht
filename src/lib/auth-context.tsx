@@ -21,6 +21,7 @@ interface AuthContextValue {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (name: string, email: string, password: string) => Promise<{ error?: string }>;
+  requestPasswordReset: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   signIn: async () => ({ error: "not_initialized" }),
   signUp: async () => ({ error: "not_initialized" }),
+  requestPasswordReset: async () => ({ error: "not_initialized" }),
   signOut: async () => {},
   refreshProfile: async () => {},
 });
@@ -46,22 +48,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) setProfile(data as Profile);
   }, [sb]);
 
+  const ensureProfile = useCallback(async (authUser: User) => {
+    const { data } = await sb.from("profiles").select("id").eq("id", authUser.id).maybeSingle();
+    if (data) {
+      await fetchProfile(authUser.id);
+      return;
+    }
+    await fetch("/api/profiil/create-profile", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fullName: authUser.user_metadata?.full_name ?? "" }),
+    });
+    await fetchProfile(authUser.id);
+  }, [sb, fetchProfile]);
+
   useEffect(() => {
     sb.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) ensureProfile(session.user);
       setLoading(false);
     });
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) ensureProfile(session.user);
       else setProfile(null);
       setLoading(false);
     });
 
     return () => sub.subscription.unsubscribe();
-  }, [sb, fetchProfile]);
+  }, [sb, ensureProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await sb.auth.signInWithPassword({ email, password });
@@ -76,11 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error.message?.includes("password")) return { error: error.message };
       return { error: `Registreerimine ebaõnnestus: ${error.message}` };
     }
-    if (data.user) {
+    if (data.user && data.session) {
       const res = await fetch("/api/profiil/create-profile", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId: data.user.id, email, fullName: name }),
+        body: JSON.stringify({ fullName: name }),
       });
       if (!res.ok) return { error: "Konto loodi, kuid profiili salvestamine ebaõnnestus." };
     }
@@ -92,12 +108,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   }, [sb]);
 
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/profiil/parool-uus`,
+    });
+    // Keep the public response neutral so account existence is not disclosed.
+    if (error) return { error: "Parooli taastamise kirja saatmine ebaõnnestus." };
+    return {};
+  }, [sb]);
+
   const refreshProfile = useCallback(async () => {
     if (user) await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, requestPasswordReset, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

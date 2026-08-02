@@ -63,6 +63,9 @@ export default function LoginPage() {
         </button>
       </form>
       <p className="text-sm text-muted mt-6 text-center">
+        <Link href="/profiil/parool-taasta" className="text-accent font-bold hover:underline block mb-3">
+          Unustasid parooli?
+        </Link>
         Pole veel kontot?{" "}
         <Link href="/profiil/registreerimine" className="text-accent font-bold hover:underline">
           Registreeri

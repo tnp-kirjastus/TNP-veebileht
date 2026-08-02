@@ -11,7 +11,6 @@ import { useCart } from "@/lib/cart-context";
 import { useCartDrawer } from "@/lib/cart-drawer-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProfileDrawer } from "@/lib/profile-drawer-context";
-import { LanguageToggle } from "./LanguageToggle";
 import { isPublicNavActive, PUBLIC_NAV_ITEMS } from "@/lib/navigation";
 
 export function Header() {
@@ -56,6 +55,7 @@ export function Header() {
               <input
                 ref={searchInputRef}
                 type="search"
+                aria-label="Otsi raamatut, autorit, ISBN-i või kategooriat"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Otsi raamatut, autorit, ISBNi, kategooriat ..."
@@ -64,7 +64,6 @@ export function Header() {
             </form>
 
             <div className="flex items-center gap-[10px]">
-              <LanguageToggle />
               <a href="https://facebook.com/kirjastustanapaev" target="_blank" rel="noopener noreferrer"
                 className="w-[36px] h-[36px] border border-line bg-panel grid place-items-center hover:bg-ink hover:text-white transition-colors max-[760px]:hidden"
                 aria-label="Tänapäev Facebookis">

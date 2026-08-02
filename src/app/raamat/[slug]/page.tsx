@@ -12,6 +12,7 @@ import { getCategories, getPersonByName, getProductBySlug, getRelatedProducts, g
 import { plainText, sanitizeRichText } from "@/lib/sanitize";
 import { siteUrl } from "@/lib/env";
 import { getCoverUrl } from "@/lib/media-url";
+import { getStoreSettings } from "@/lib/settings";
 
 function coverAbsoluteUrl(coverImage: string | null): string | null {
   const url = getCoverUrl(coverImage);
@@ -54,6 +55,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const product = getProductBySlug(slug);
   if (!product) notFound();
+  const storeSettings = await getStoreSettings();
+  const cheapestShipping = storeSettings.shipping.rates.reduce((minimum, rate) => Math.min(minimum, rate.price), Number.POSITIVE_INFINITY);
   const onSale = isOnSale(product);
   const salePercent = onSale && product.sale_price ? Math.round(((product.price - product.sale_price) / product.price) * 100) : 0;
   const authorNames = product.people.author?.join(", ") || "";
@@ -67,7 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const primaryAuthor = product.people.author?.[0];
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Product",
+    "@type": ["Book", "Product"],
     name: product.title_et,
     sku: product.sku,
     gtin13: product.sku,
@@ -78,23 +81,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       "@type": "Offer",
       priceCurrency: "EUR",
       price: effectivePrice.toFixed(2),
-      availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      availability: product.is_upcoming && product.allow_preorder
+        ? "https://schema.org/PreOrder"
+        : product.stock > 0
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock",
       url: new URL(`/raamat/${product.slug}`, siteUrl()).toString(),
       seller: { "@type": "Organization", name: "Kirjastus Tänapäev", url: siteUrl().toString() },
       shippingDetails: {
         "@type": "OfferShippingDetails",
         shippingRate: {
           "@type": "MonetaryAmount",
-          value: "3.50",
+          value: Number.isFinite(cheapestShipping) ? cheapestShipping.toFixed(2) : "0.00",
           currency: "EUR",
         },
         shippingDestination: { "@type": "DefinedRegion", addressCountry: "EE" },
-        deliveryTime: { "@type": "ShippingDeliveryTime", handlingTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 2, unitCode: "DAY" } },
+        deliveryTime: { "@type": "ShippingDeliveryTime", transitTime: { "@type": "QuantitativeValue", minValue: 2, maxValue: 4, unitCode: "DAY" } },
       },
     },
     ...(product.series_name ? { isPartOf: { "@type": "Collection", name: product.series_name } } : {}),
     ...(product.pages ? { material: product.binding ?? undefined, depth: { "@type": "QuantitativeValue", value: product.pages, unitText: "lehekülge" } } : {}),
-    ...(product.people.author?.length ? { manufacturer: { "@type": "Organization", name: product.people.author.join(", ") } } : {}),
+    ...(product.people.author?.length ? { author: product.people.author.map((name) => ({ "@type": "Person", name })) } : {}),
   };
 
   return (

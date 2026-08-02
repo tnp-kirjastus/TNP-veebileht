@@ -3,9 +3,14 @@ import { validateCoupon } from "@/lib/coupons";
 import { consumeRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const clientKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("cf-connecting-ip") ?? "unknown";
+  const origin = request.headers.get("origin");
+  if (!origin || new URL(origin).origin !== new URL(request.url).origin) {
+    return NextResponse.json({ valid: false, error: "Päringu päritolu ei ole lubatud." }, { status: 403 });
+  }
+  const clientKey = request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()
+    ?? request.headers.get("cf-connecting-ip") ?? "unknown";
   if (!await consumeRateLimit("coupon_validate", clientKey, 60, 20)) {
-    return NextResponse.json({ valid: false, error: "Liiga palju paringuid. Proovi hetke parast uuesti." }, { status: 429 });
+    return NextResponse.json({ valid: false, error: "Liiga palju päringuid. Proovi hetke pärast uuesti." }, { status: 429 });
   }
 
   let code: string;

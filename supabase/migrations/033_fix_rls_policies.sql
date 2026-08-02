@@ -5,42 +5,54 @@
 
 -- 1. Restore admin SELECT policies for products + junction tables
 -- These were dropped in 015 (public read) and 025 split FOR ALL into INSERT/UPDATE/DELETE only.
+DROP POLICY IF EXISTS "Admins read products" ON commerce.products;
 CREATE POLICY "Admins read products" ON commerce.products
   FOR SELECT USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins read product_categories" ON commerce.product_categories;
 CREATE POLICY "Admins read product_categories" ON commerce.product_categories
   FOR SELECT USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins read product_people" ON commerce.product_people;
 CREATE POLICY "Admins read product_people" ON commerce.product_people
   FOR SELECT USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins read product_images" ON commerce.product_images;
 CREATE POLICY "Admins read product_images" ON commerce.product_images
   FOR SELECT USING (public.is_admin());
 
 -- 2. promotions / promotion_products: add complete policies
 -- These had their public SELECT policy dropped in 015 with no replacement.
 
+DROP POLICY IF EXISTS "Admins read promotions" ON commerce.promotions;
 CREATE POLICY "Admins read promotions" ON commerce.promotions
   FOR SELECT USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins insert promotions" ON commerce.promotions;
 CREATE POLICY "Admins insert promotions" ON commerce.promotions
   FOR INSERT WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins update promotions" ON commerce.promotions;
 CREATE POLICY "Admins update promotions" ON commerce.promotions
   FOR UPDATE USING (public.is_admin()) WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins delete promotions" ON commerce.promotions;
 CREATE POLICY "Admins delete promotions" ON commerce.promotions
   FOR DELETE USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins read promotion_products" ON commerce.promotion_products;
 CREATE POLICY "Admins read promotion_products" ON commerce.promotion_products
   FOR SELECT USING (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins insert promotion_products" ON commerce.promotion_products;
 CREATE POLICY "Admins insert promotion_products" ON commerce.promotion_products
   FOR INSERT WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins update promotion_products" ON commerce.promotion_products;
 CREATE POLICY "Admins update promotion_products" ON commerce.promotion_products
   FOR UPDATE USING (public.is_admin()) WITH CHECK (public.is_admin());
 
+DROP POLICY IF EXISTS "Admins delete promotion_products" ON commerce.promotion_products;
 CREATE POLICY "Admins delete promotion_products" ON commerce.promotion_products
   FOR DELETE USING (public.is_admin());
 

@@ -1,6 +1,6 @@
 /* The approved v5 publisher layout uses a fixed map embed and historical logo images. */
 /* eslint-disable @next/next/no-img-element */
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { LayoutFull, Shell } from "@/components/layout";
 // Breadcrumbs removed per client request (task 17)
@@ -56,16 +56,17 @@ const content = {
   },
 } as const;
 
-export function generateStaticParams() { return [{ locale: "et" }, { locale: "en" }]; }
+export function generateStaticParams() { return [{ locale: "et" }]; }
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
-  const locale = (await params).locale as "et" | "en";
-  if (!(locale in content)) return {};
-  return { title: content[locale].title, description: content[locale].subtitle, alternates: { canonical: `/${locale}/kirjastus`, languages: { et: "/et/kirjastus", en: "/en/kirjastus" } } };
+  const locale = (await params).locale;
+  if (locale !== "et") return { robots: { index: false, follow: false } };
+  return { title: content.et.title, description: content.et.subtitle, alternates: { canonical: "/et/kirjastus" } };
 }
 
 export default async function PublisherPage({ params }: { params: Promise<{ locale: string }> }) {
   const locale = (await params).locale;
-  if (locale !== "et" && locale !== "en") notFound();
+  if (locale === "en") permanentRedirect("/et/kirjastus");
+  if (locale !== "et") notFound();
   const t = content[locale];
   return <LayoutFull>
     <section className="py-[28px]"><Shell>

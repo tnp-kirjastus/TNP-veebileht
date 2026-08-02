@@ -5,7 +5,7 @@ import { siteUrl } from "@/lib/env";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = siteUrl().origin;
-  const staticPaths = ["", "/raamatud", "/arhiiv", "/uudised", "/sarjad", "/pakkumised", "/et/kirjastus", "/et/kontakt", "/kasutustingimused", "/privaatsuspoliitika"];
+  const staticPaths = ["", "/raamatud", "/arhiiv", "/uudised", "/sarjad", "/autorid", "/pakkumised", "/et/kirjastus", "/et/kontakt", "/kasutustingimused", "/privaatsuspoliitika"];
   const posts = await getPublishedPosts(500);
   const allSeries = getSeries();
   return [

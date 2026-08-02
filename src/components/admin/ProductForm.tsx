@@ -142,7 +142,7 @@ export function ProductForm({
     } finally {
       setUploadBusy(false);
     }
-  }, [product.id]);
+  }, [maxFileSize, product.id]);
 
   function handleRemove() {
     setCoverObjectKey("");
