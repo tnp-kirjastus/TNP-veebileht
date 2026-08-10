@@ -24,6 +24,18 @@ async function loadOrder(id: string) {
   const items = ((order.order_items ?? []) as Record<string, unknown>[]);
   const history = ((order.order_status_history ?? []) as Record<string, unknown>[]);
 
+  // Toote kaanepildid tellimusridede kõrval kuvamiseks
+  const productIds = [...new Set(items.map((i) => i.product_id as string | null).filter((x): x is string => !!x))];
+  const imageById = new Map<string, { cover_image: string | null; slug: string | null }>();
+  if (productIds.length > 0) {
+    const { data: products } = await db.schema("commerce").from("products")
+      .select("id,cover_image,slug")
+      .in("id", productIds);
+    for (const p of products ?? []) {
+      imageById.set(String(p.id), { cover_image: (p.cover_image as string) || null, slug: (p.slug as string) || null });
+    }
+  }
+
   return {
     id: order.id as string,
     order_number: order.order_number as string,
@@ -61,6 +73,8 @@ async function loadOrder(id: string) {
       title: item.title as string,
       price: Number(item.price ?? 0),
       quantity: Number(item.quantity ?? 1),
+      cover_image: item.product_id ? (imageById.get(String(item.product_id))?.cover_image ?? null) : null,
+      product_slug: item.product_id ? (imageById.get(String(item.product_id))?.slug ?? null) : null,
     })),
     history: history.map((h) => ({
       id: h.id as string,

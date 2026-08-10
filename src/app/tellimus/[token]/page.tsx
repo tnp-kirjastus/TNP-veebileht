@@ -50,7 +50,7 @@ export default async function ConfirmationPage({ params }: { params: Promise<{ t
         <Breadcrumbs crumbs={[{ label: "Esileht", href: "/" }, { label: "Tellimuse kinnitus" }]} />
       </section>
 
-      <section className="py-16 max-w-3xl">
+      <section className="py-16 max-w-3xl mx-auto min-h-[55vh] flex flex-col justify-center">
         <div className="text-center">
           {success && (
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-leaf/10 grid place-items-center">

@@ -88,15 +88,19 @@ async function BooksContent({ params }: { params: SearchParams }) {
 
   const { products, totalCount, page, totalPages } = result;
 
-  const categoryTreeForSidebar = categoryTree.map((category, index) => ({
-    id: String(index + 1), slug: category.slug, name_et: category.name,
-    children: category.children?.map((child, ci) => ({
-      id: `${index + 1}-${ci + 1}`, slug: child.slug, name_et: child.name,
-      children: child.children?.map((cc, cci) => ({
-        id: `${index + 1}-${ci + 1}-${cci + 1}`, slug: cc.slug, name_et: cc.name,
+  // "arhiiv" kategooriat külgpaneelis ei kuvata — arhiiviraamatuid filtreerib
+  // eraldi "Arhiiv / läbimüüdud" lüliti (scope=archived), kategooria ise on tühi.
+  const categoryTreeForSidebar = categoryTree
+    .filter((category) => category.slug !== "arhiiv")
+    .map((category, index) => ({
+      id: String(index + 1), slug: category.slug, name_et: category.name,
+      children: category.children?.map((child, ci) => ({
+        id: `${index + 1}-${ci + 1}`, slug: child.slug, name_et: child.name,
+        children: child.children?.map((cc, cci) => ({
+          id: `${index + 1}-${ci + 1}-${cci + 1}`, slug: cc.slug, name_et: cc.name,
+        })),
       })),
-    })),
-  }));
+    }));
 
   const activeLabel = params.q ? `Otsing: "${params.q}"`
     : showArchived

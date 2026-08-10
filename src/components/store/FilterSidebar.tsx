@@ -12,7 +12,6 @@ const QUICK_FILTERS = [
   { key: "foreign", param: "origin", value: "foreign" },
   { key: "sale", param: "sale", value: "true" },
   { key: "upcoming", param: "upcoming", value: "true" },
-  { key: "archive", param: "archive", value: "true" },
 ] as const;
 
 const QUICK_LABELS: Record<string, string> = {
@@ -22,8 +21,9 @@ const QUICK_LABELS: Record<string, string> = {
   foreign: "Välismaa autorid",
   sale: "Soodus",
   upcoming: "Ilmumas",
-  archive: "Arhiiv / läbimüüdud",
 };
+
+const ARCHIVE_FILTER = { key: "archive", param: "archive", value: "true", label: "Arhiiv / läbimüüdud" } as const;
 
 function getSelectedCategories(currentParams: Record<string, string | string[] | undefined>): string[] {
   const cat = currentParams.category;
@@ -108,10 +108,6 @@ export function FilterSidebar({ categories, currentParams }: {
 
   function toggleQuickFilter(f: (typeof QUICK_FILTERS)[number]) {
     if (f.key === "all") { router.push("/raamatud"); return; }
-    if (f.key === "archive") {
-      router.push(isQuickActive(f) ? buildUrl({ archive: undefined, archived: undefined }) : buildUrl({ archive: f.value }));
-      return;
-    }
     const cur = currentParams[f.param!];
     router.push(typeof cur === "string" && cur === f.value ? buildUrl({ [f.param!]: undefined }) : buildUrl({ [f.param!]: f.value }));
   }
@@ -126,8 +122,13 @@ export function FilterSidebar({ categories, currentParams }: {
         && selectedCategories.length === 0
         && (!currentParams.sort || currentParams.sort === "newest");
     }
-    if (f.key === "archive") return currentParams.archive === f.value || currentParams.archived === f.value;
     return f.param ? currentParams[f.param] === f.value : false;
+  }
+
+  const archiveActive = currentParams.archive === ARCHIVE_FILTER.value || currentParams.archived === ARCHIVE_FILTER.value;
+
+  function toggleArchiveFilter() {
+    router.push(archiveActive ? buildUrl({ archive: undefined, archived: undefined }) : buildUrl({ archive: ARCHIVE_FILTER.value }));
   }
 
   function handleCategoryToggle(cat: CategoryItem) {
@@ -189,6 +190,18 @@ export function FilterSidebar({ categories, currentParams }: {
           <CategoryTreeGroup key={cat.id} category={cat} selectedCategories={selectedCategories}
             onToggle={(c) => handleCategoryToggle(c)} />
         ))}
+
+        {/* Arhiivifilter paneeli kõige lõpus */}
+        <div className="grid gap-[4px] mt-[22px] pt-[22px] border-t border-line">
+          <button onClick={toggleArchiveFilter}
+            aria-pressed={archiveActive}
+            className="flex items-center gap-[10px] p-[8px_6px] bg-transparent text-left font-bold cursor-pointer hover:bg-soft transition-colors text-[#333]">
+            <span className={`w-[18px] h-[18px] border grid place-items-center flex-shrink-0 ${archiveActive ? "bg-ink border-ink" : "border-[#8e969b]"}`}>
+              {archiveActive && <span className="w-[9px] h-[5px] border-l-[2px] border-b-[2px] border-white -rotate-45 -translate-y-px" />}
+            </span>
+            {ARCHIVE_FILTER.label}
+          </button>
+        </div>
       </aside>
     </>
   );

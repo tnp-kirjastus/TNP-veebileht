@@ -8,6 +8,7 @@ import { ShipOrderDialog } from "@/components/admin/ShipOrderDialog";
 import { useToast } from "@/components/admin/Toast";
 import { updateOrderStatus, shipOrder, deleteOrders } from "@/app/haldus/order-actions";
 import { formatEuro } from "@/lib/product-utils";
+import { getCoverUrlClient } from "@/lib/media-url";
 
 interface OrderItem {
   id: string;
@@ -15,6 +16,8 @@ interface OrderItem {
   title: string;
   price: number;
   quantity: number;
+  cover_image: string | null;
+  product_slug: string | null;
 }
 
 interface HistoryEntry {
@@ -74,6 +77,19 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS);
+
+/** Pakiautomaadi aadress on salvestatud kujul "kuller||sihtkoha_kood||nimi||tänav||linn||postiindeks". */
+function formatShippingAddress(raw: string): string[] {
+  if (!raw.includes("||")) return [raw];
+  const parts = raw.split("||").map((p) => p.trim());
+  if (parts.length >= 6 && parts[2]) {
+    // Eesti konventsioon: "Tänav 1, 10141 Tallinn"
+    const streetLine = [parts[3], [parts[5], parts[4]].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+    return [parts[2], streetLine];
+  }
+  const rest = parts.slice(2).filter(Boolean);
+  return rest.length > 0 ? rest : [raw];
+}
 
 function mapStatusToVariant(status: string): "pending" | "paid" | "shipped" | "cancelled" | undefined {
   const m: Record<string, "pending" | "paid" | "shipped" | "cancelled" | undefined> = {
@@ -299,7 +315,28 @@ export function OrderDetailClient({ order: initialOrder }: { order: OrderData })
             <tbody>
               {order.items.map((item) => (
                 <tr key={item.id} className="border-t border-line">
-                  <td className="p-4 font-bold">{item.title}</td>
+                  <td className="p-4 font-bold">
+                    <div className="flex items-center gap-3">
+                      {getCoverUrlClient(item.cover_image) ? (
+                        <img
+                          src={getCoverUrlClient(item.cover_image)!}
+                          alt=""
+                          className="w-10 h-14 object-cover border border-line flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-14 bg-soft border border-line flex-shrink-0 grid place-items-center text-muted text-[10px] font-bold">
+                          —
+                        </div>
+                      )}
+                      {item.product_slug ? (
+                        <a href={`/raamat/${item.product_slug}`} target="_blank" rel="noopener noreferrer" className="hover:text-accent">
+                          {item.title}
+                        </a>
+                      ) : (
+                        <span>{item.title}</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="p-4 text-center">{item.quantity}</td>
                   <td className="p-4 text-right">{formatEuro(item.price)}</td>
                   <td className="p-4 text-right font-bold">{formatEuro(item.price * item.quantity)}</td>
@@ -425,7 +462,11 @@ export function OrderDetailClient({ order: initialOrder }: { order: OrderData })
                 <p className="font-bold">{order.shipping_method === "omniva" ? "Omniva" : order.shipping_method === "smartpost" ? "Smartpost" : order.shipping_method}</p>
               )}
               {order.shipping_address && (
-                <p className="text-muted whitespace-pre-wrap">{order.shipping_address}</p>
+                <div className="text-muted">
+                  {formatShippingAddress(order.shipping_address).map((line, i) => (
+                    <p key={i}>{line}</p>
+                  ))}
+                </div>
               )}
             </div>
           </div>

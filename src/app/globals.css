@@ -67,27 +67,31 @@
   src: url("/fonts/libre-baskerville-700.ttf") format("truetype");
 }
 
-body {
-  margin: 0;
-  color: var(--color-ink);
-  background: var(--color-paper);
-  font-family: "Inter", Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.45;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: clip;
-}
+/* Baasreeglid peavad olema @layer base kihis — muidu (kihistamata stiilidena)
+   võidavad nad kõik Tailwindi utility-klassid (nt hover:text-white, mt-*). */
+@layer base {
+  body {
+    margin: 0;
+    color: var(--color-ink);
+    background: var(--color-paper);
+    font-family: "Inter", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: clip;
+  }
 
-h1, h2, h3, p { margin: 0; }
-h1, h2, h3 { font-family: "Libre Baskerville", Georgia, serif; font-weight: 700; }
-a { color: inherit; text-decoration: none; }
-button, input, select, textarea { font: inherit; }
-button { cursor: pointer; }
-img { max-width: 100%; display: block; }
+  h1, h2, h3, p { margin: 0; }
+  h1, h2, h3 { font-family: "Libre Baskerville", Georgia, serif; font-weight: 700; }
+  a { color: inherit; text-decoration: none; }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+  img { max-width: 100%; display: block; }
 
-:focus-visible {
-  outline: 3px solid var(--color-accent);
-  outline-offset: 3px;
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 3px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

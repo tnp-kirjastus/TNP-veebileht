@@ -42,7 +42,10 @@ export async function POST(request: Request) {
     consent_text_id: "newsletter-double-opt-in-v1",
     request_evidence: evidence,
   });
-  if (logError) return NextResponse.json({ error: "Liitumist ei õnnestunud salvestada." }, { status: 503 });
+  if (logError) {
+    console.error("newsletter_consent_log_error", { code: logError.code, message: logError.message });
+    return NextResponse.json({ error: "Liitumist ei õnnestunud salvestada." }, { status: 503 });
+  }
 
   const result = await smailySubscribe(parsed.data.email);
   if (!result.ok) {

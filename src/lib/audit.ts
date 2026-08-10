@@ -27,7 +27,7 @@ export async function audit(
     }
     summary.after = safe;
   }
-  await db.schema("system").from("audit_log").insert({
+  const { error } = await db.schema("system").from("audit_log").insert({
     actor_id: actorId,
     action,
     resource_type: resourceType,
@@ -36,4 +36,5 @@ export async function audit(
     before_summary: summary.before ?? null,
     after_summary: summary.after ?? null,
   });
+  if (error) console.error("audit_log_insert_error", { action, resourceType, code: error.code, message: error.message });
 }

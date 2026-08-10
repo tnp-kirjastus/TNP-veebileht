@@ -69,7 +69,7 @@ function FeaturedCard({ card, index }: { card: HomepageCard; index: number }) {
             <p className="text-[#465057] text-sm font-semibold mt-[10px]">{card.description}</p>
           </div>
           {card.desktopImage && (
-            <img src={card.desktopImage} alt="" className="w-[min(80%,360px)] max-h-[62%] self-center mt-auto transform rotate-[3deg] translate-y-2 transition-all duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04] group-hover:translate-y-0" />
+            <img src={card.desktopImage} alt="" className="w-[min(80%,360px)] max-h-[62%] self-center mt-auto transition-transform duration-[450ms] group-hover:scale-[1.04]" />
           )}
         </>
       ) : (
@@ -80,7 +80,7 @@ function FeaturedCard({ card, index }: { card: HomepageCard; index: number }) {
             <p className="text-[#465057] text-sm font-semibold mt-[10px]">{card.description}</p>
           </div>
           {card.desktopImage && (
-            <img src={card.desktopImage} alt="" className="w-[min(40%,200px)] max-h-[85%] object-contain flex-shrink-0 filter drop-shadow-[_-14px_18px_18px_rgba(28,22,16,0.22)] transform rotate-[3deg] transition-transform duration-[450ms] group-hover:rotate-0 group-hover:scale-[1.04]" />
+            <img src={card.desktopImage} alt="" className="w-[min(40%,200px)] max-h-[85%] object-contain flex-shrink-0 filter drop-shadow-[_-14px_18px_18px_rgba(28,22,16,0.22)] transition-transform duration-[450ms] group-hover:scale-[1.04]" />
           )}
         </>
       )}

@@ -39,17 +39,20 @@ export default async function ProductsAdminPage({
     builder = builder.or(`title_et.ilike.%${query}%,sku.ilike.%${query}%`);
   }
 
-  if (activeTab === "archived") {
+  // Olekufilter (nt ülevaate lehe "Madal laoseis"/"Otsas" kaartidelt) on
+  // vahekaardi-filtrist tugevam — arvestatakse vaid aktiivseid (mittearhiveeritud) tooteid.
+  if (statusFilter === "upcoming") builder = builder.eq("is_upcoming", true).eq("is_archived", false);
+  else if (statusFilter === "archived") builder = builder.eq("is_archived", true);
+  else if (statusFilter === "sale") builder = builder.not("sale_price", "is", null);
+  else if (statusFilter === "low") builder = builder.eq("is_archived", false).lte("stock", 5).gt("stock", 0);
+  else if (statusFilter === "out") builder = builder.eq("is_archived", false).eq("stock", 0);
+  else if (activeTab === "archived") {
     builder = builder.eq("is_archived", true);
   } else if (activeTab === "all") {
     // no filter
   } else {
     builder = builder.eq("is_archived", false).eq("is_upcoming", false);
   }
-
-  if (statusFilter === "upcoming") builder = builder.eq("is_upcoming", true).eq("is_archived", false);
-  else if (statusFilter === "archived") builder = builder.eq("is_archived", true);
-  else if (statusFilter === "sale") builder = builder.not("sale_price", "is", null);
 
   if (originFilter) builder = builder.eq("origin", originFilter);
 
@@ -143,6 +146,8 @@ export default async function ProductsAdminPage({
         <select name="status" defaultValue={statusFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">Kõik olekud</option>
           <option value="sale">Soodus</option>
+          <option value="low">Madal laoseis</option>
+          <option value="out">Otsas</option>
         </select>
         <select name="origin" defaultValue={originFilter} className="h-11 border border-line bg-paper px-3 text-sm font-bold">
           <option value="">Kõik päritolud</option>
@@ -188,8 +193,12 @@ export default async function ProductsAdminPage({
                     )}
                   </td>
                   <td className="p-4">
-                    {p.archived || p.stock === 0 || p.stock <= 5 ? (
-                      <StatusBadge variant={statusVariant(p)} />
+                    {p.archived ? (
+                      <StatusBadge variant="archived" />
+                    ) : p.stock === 0 ? (
+                      <StatusBadge variant="out" />
+                    ) : p.stock <= 5 ? (
+                      <StatusBadge variant="low" label={`Madal laoseis (${p.stock})`} />
                     ) : (
                       p.stock
                     )}
