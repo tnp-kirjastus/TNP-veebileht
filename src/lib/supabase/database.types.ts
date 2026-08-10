@@ -159,6 +159,33 @@ export type Database = {
       };
       Relationships: [];
     };
+    coupons: {
+      Row: {
+      id: string;
+      code: string;
+      percent: number;
+      max_discount: number;
+      is_active: boolean;
+      created_at: string;
+      };
+      Insert: {
+      id?: string;
+      code: string;
+      percent: number;
+      max_discount?: number;
+      is_active?: boolean;
+      created_at?: string;
+      };
+      Update: {
+      id?: string;
+      code?: string;
+      percent?: number;
+      max_discount?: number;
+      is_active?: boolean;
+      created_at?: string;
+      };
+      Relationships: [];
+    };
     order_items: {
       Row: {
       id: string;
@@ -615,6 +642,111 @@ export type Database = {
       };
       Relationships: [];
     };
+    v_products: {
+      Row: {
+      id: string | null;
+      sku: string | null;
+      title_et: string | null;
+      title_en: string | null;
+      slug: string | null;
+      description_et: string | null;
+      description_en: string | null;
+      price: number | null;
+      sale_price: number | null;
+      sale_start: string | null;
+      sale_end: string | null;
+      stock: number | null;
+      binding: string | null;
+      pages: number | null;
+      release_date: string | null;
+      origin: string | null;
+      is_upcoming: boolean | null;
+      is_archived: boolean | null;
+      is_featured: boolean | null;
+      allow_preorder: boolean | null;
+      cover_image: string | null;
+      editions: Json | null;
+      created_at: string | null;
+      updated_at: string | null;
+      effective_price: number | null;
+      is_on_sale: boolean | null;
+      series_name: string | null;
+      series_slug: string | null;
+      categories: Json | null;
+      category_ids: string[] | null;
+      author_ids: string[] | null;
+      people: Json | null;
+      };
+      Insert: {
+      id?: string | null;
+      sku?: string | null;
+      title_et?: string | null;
+      title_en?: string | null;
+      slug?: string | null;
+      description_et?: string | null;
+      description_en?: string | null;
+      price?: number | null;
+      sale_price?: number | null;
+      sale_start?: string | null;
+      sale_end?: string | null;
+      stock?: number | null;
+      binding?: string | null;
+      pages?: number | null;
+      release_date?: string | null;
+      origin?: string | null;
+      is_upcoming?: boolean | null;
+      is_archived?: boolean | null;
+      is_featured?: boolean | null;
+      allow_preorder?: boolean | null;
+      cover_image?: string | null;
+      editions?: Json | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+      effective_price?: number | null;
+      is_on_sale?: boolean | null;
+      series_name?: string | null;
+      series_slug?: string | null;
+      categories?: Json | null;
+      category_ids?: string[] | null;
+      author_ids?: string[] | null;
+      people?: Json | null;
+      };
+      Update: {
+      id?: string | null;
+      sku?: string | null;
+      title_et?: string | null;
+      title_en?: string | null;
+      slug?: string | null;
+      description_et?: string | null;
+      description_en?: string | null;
+      price?: number | null;
+      sale_price?: number | null;
+      sale_start?: string | null;
+      sale_end?: string | null;
+      stock?: number | null;
+      binding?: string | null;
+      pages?: number | null;
+      release_date?: string | null;
+      origin?: string | null;
+      is_upcoming?: boolean | null;
+      is_archived?: boolean | null;
+      is_featured?: boolean | null;
+      allow_preorder?: boolean | null;
+      cover_image?: string | null;
+      editions?: Json | null;
+      created_at?: string | null;
+      updated_at?: string | null;
+      effective_price?: number | null;
+      is_on_sale?: boolean | null;
+      series_name?: string | null;
+      series_slug?: string | null;
+      categories?: Json | null;
+      category_ids?: string[] | null;
+      author_ids?: string[] | null;
+      people?: Json | null;
+      };
+      Relationships: [];
+    };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -629,13 +761,16 @@ export type Database = {
     };
     search_products: {
       Args: {
-      category_slug: string;
+      category_slugs: string[];
       origin_filter: string;
       page_num: number;
       page_size: number;
-      person_role: string;
-      person_slug: string;
+      person_filters: Json;
+      sale_end: string;
       sale_only: boolean;
+      sale_open: boolean;
+      sale_start: string;
+      scope: string;
       search_term: string;
       sort_by: string;
       upcoming_only: boolean;
@@ -645,16 +780,6 @@ export type Database = {
     get_order_by_token: {
       Args: {
       p_token: string;
-      };
-      Returns: unknown;
-    };
-    create_order_from_cart: {
-      Args: {
-      p_customer: Json;
-      p_idempotency_key: string;
-      p_session_id: string;
-      p_shipping_cost: number;
-      p_total: number;
       };
       Returns: unknown;
     };
@@ -682,6 +807,18 @@ export type Database = {
     rebuild_product_search_vector: {
       Args: {
       p_product_id: string;
+      };
+      Returns: unknown;
+    };
+    checkout_cart: {
+      Args: {
+      p_company_name: string;
+      p_company_reg_code: string;
+      p_coupon_code: string;
+      p_customer: Json;
+      p_idempotency_key: string;
+      p_invoice_requested: boolean;
+      p_session_id: string;
       };
       Returns: unknown;
     };
