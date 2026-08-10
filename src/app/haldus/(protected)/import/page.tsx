@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import { compareImport, applyImport } from "@/app/haldus/import-actions";
+import { compareImport, applyImport, requestArchiveUpload } from "@/app/haldus/import-actions";
 import { getCoverUrlClient } from "@/lib/media-url";
 
 interface ImportRow {
@@ -63,8 +64,10 @@ export default function ImportPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [applied, setApplied] = useState<number | null>(null);
-  const [archiveBase64, setArchiveBase64] = useState<string | null>(null);
+  const [failedRows, setFailedRows] = useState<Array<{ sku: string; title: string; error: string }>>([]);
+  const [archivePath, setArchivePath] = useState<string | null>(null);
   const [archiveName, setArchiveName] = useState<string | null>(null);
+  const [archiveUploading, setArchiveUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const zipRef = useRef<HTMLInputElement>(null);
 
@@ -112,13 +115,25 @@ export default function ImportPage() {
       return;
     }
 
+    // Otseüleslaadimine Supabase Storage'isse signeeritud URL-iga —
+    // sadu megasaidi ei liigu läbi server action'i.
+    setArchiveUploading(true);
     try {
-      const buf = await file.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-      setArchiveBase64(base64);
+      const { path, token } = await requestArchiveUpload();
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      );
+      const { error: uploadError } = await supabase.storage
+        .from("import-archives")
+        .uploadToSignedUrl(path, token, file);
+      if (uploadError) throw new Error(uploadError.message);
+      setArchivePath(path);
       setArchiveName(file.name);
-    } catch {
-      setError("ZIP-faili lugemine ebaõnnestus");
+    } catch (err) {
+      setError(`ZIP-i üleslaadimine ebaõnnestus: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setArchiveUploading(false);
     }
   }
 
@@ -126,7 +141,7 @@ export default function ImportPage() {
     setBusy(true);
     setError("");
     try {
-      const payload = JSON.stringify({ rows: fileData, mode, mapping, archiveBase64: archiveBase64 ?? undefined });
+      const payload = JSON.stringify({ rows: fileData, mode, mapping, archivePath: archivePath ?? undefined });
       const fd = new FormData();
       fd.set("payload", payload);
       const result = await compareImport({}, fd);
@@ -147,12 +162,13 @@ export default function ImportPage() {
     setBusy(true);
     setError("");
     try {
-      const payload = JSON.stringify({ rows: fileData, mode, mapping, archiveBase64: archiveBase64 ?? undefined });
+      const payload = JSON.stringify({ rows: fileData, mode, mapping, archivePath: archivePath ?? undefined });
       const fd = new FormData();
       fd.set("payload", payload);
       const result = await applyImport({}, fd);
       if (result.success) {
         setApplied(result.applied ?? 0);
+        setFailedRows(result.failed ?? []);
         setStep("apply");
       } else {
         setError(result.error ?? "Rakendamine ebaõnnestus.");
@@ -209,15 +225,16 @@ export default function ImportPage() {
             </div>
           </div>
 
-          {/* ZIP upload */}
+          {/* ZIP upload — otse Storage'isse, faili suurus ei takista */}
           <div className="mb-4">
-            <label className="text-xs font-bold text-muted mb-1 block">Kaanepiltide arhiiv (ZIP, valikuline)</label>
-            <input ref={zipRef} type="file" accept=".zip" onChange={handleZip}
+            <label className="text-xs font-bold text-muted mb-1 block">Kaanepiltide arhiiv (ZIP, valikuline, failinimed = ISBN)</label>
+            <input ref={zipRef} type="file" accept=".zip" onChange={handleZip} disabled={archiveUploading}
               className="border border-line bg-paper p-3 text-sm w-full max-w-md" />
-            {archiveName && (
+            {archiveUploading && <p className="text-xs text-muted mt-1">Laen arhiivi üles…</p>}
+            {archiveName && !archiveUploading && (
               <p className="text-xs text-muted mt-1">
-                {archiveName} — laaditud
-                <button type="button" onClick={() => { setArchiveBase64(null); setArchiveName(null); if (zipRef.current) zipRef.current.value = ""; }}
+                {archiveName} — üles laaditud
+                <button type="button" onClick={() => { setArchivePath(null); setArchiveName(null); if (zipRef.current) zipRef.current.value = ""; }}
                   className="ml-2 text-accent hover:underline">Eemalda</button>
               </p>
             )}
@@ -392,10 +409,22 @@ export default function ImportPage() {
 
       {/* Applied */}
       {step === "apply" && applied !== null && (
-        <div className="p-8 border border-leaf/30 bg-leaf/5 text-center">
-          <h2 className="font-heading text-2xl mb-4 text-leaf">Import rakendatud</h2>
+        <div className={`p-8 border text-center ${failedRows.length > 0 ? "border-amber-300 bg-amber-50" : "border-leaf/30 bg-leaf/5"}`}>
+          <h2 className={`font-heading text-2xl mb-4 ${failedRows.length > 0 ? "text-amber-700" : "text-leaf"}`}>
+            {failedRows.length > 0 ? "Import osaliselt rakendatud" : "Import rakendatud"}
+          </h2>
           <p className="text-lg font-bold">{applied} toodet imporditud või uuendatud.</p>
-          <button type="button" onClick={() => { setStep("upload"); setApplied(null); setFileData([]); setResults([]); setArchiveBase64(null); setArchiveName(null); if (fileRef.current) fileRef.current.value = ""; if (zipRef.current) zipRef.current.value = ""; }}
+          {failedRows.length > 0 && (
+            <div className="mt-4 text-left max-w-2xl mx-auto">
+              <p className="font-bold text-sm text-accent mb-2">{failedRows.length} rida ebaõnnestus — paranda fail ja impordi uuesti (õnnestunud read jäävad):</p>
+              <ul className="text-xs grid gap-1 max-h-64 overflow-auto border border-line bg-white p-4">
+                {failedRows.map((f, i) => (
+                  <li key={i}><span className="font-mono font-bold">{f.sku}</span> {f.title} — <span className="text-accent">{f.error}</span></li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <button type="button" onClick={() => { setStep("upload"); setApplied(null); setFailedRows([]); setFileData([]); setResults([]); setArchivePath(null); setArchiveName(null); if (fileRef.current) fileRef.current.value = ""; if (zipRef.current) zipRef.current.value = ""; }}
             className="mt-4 min-h-12 px-8 border border-ink bg-white text-ink font-bold hover:bg-ink hover:text-white">
             Uus import
           </button>

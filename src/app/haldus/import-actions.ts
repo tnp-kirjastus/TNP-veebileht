@@ -8,14 +8,25 @@ import { audit } from "@/lib/audit";
 import { getMediaInfo, processImage, uploadCover, generateObjectKey, isValidZipEntryPath, normalizeIsbn, isbn10To13 } from "@/lib/media";
 import { createHash } from "node:crypto";
 import { extractZip } from "@/lib/zip";
+import { createArchiveUploadUrl, downloadArchive, deleteArchive } from "@/lib/import-archive";
+import { slugify } from "@/lib/slugify";
 
 const rowSchema = z.record(z.string(), z.any());
 const importSchema = z.object({
   rows: z.array(rowSchema),
   mode: z.enum(["full", "partial", "stock", "price"]),
   mapping: z.record(z.string(), z.string()),
-  archiveBase64: z.string().optional(),
+  archivePath: z.string().regex(/^[0-9a-f-]{36}\.zip$/).optional(),
 });
+
+/**
+ * Brauser palub signeeritud URL-i ja laeb ZIP-i otse Supabase Storage'isse —
+ * server action'i payload-piirang ei takista suuri arhiive.
+ */
+export async function requestArchiveUpload(): Promise<{ path: string; token: string }> {
+  await requireAdminSession(["admin"]);
+  return createArchiveUploadUrl();
+}
 
 type MediaStatus = "new" | "replace" | "unchanged" | "missing" | "ambiguous" | "invalid";
 
@@ -38,13 +49,6 @@ interface ImportResult {
 }
 
 const COVER_COLUMN_ALIASES = ["cover_file", "cover_url", "Pilt", "Toote Kaanepilt"];
-
-function slugify(text: string): string {
-  const t: Record<string, string> = { "õ": "o", "ä": "a", "ö": "o", "ü": "u", "š": "s", "ž": "z", "Õ": "O", "Ä": "A", "Ö": "O", "Ü": "U", "Š": "S", "Ž": "Z" };
-  let r = String(text);
-  for (const [k, v] of Object.entries(t)) r = r.replace(new RegExp(k, "g"), v);
-  return r.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-}
 
 function parsePipeList(raw: string | undefined): string[] {
   if (!raw) return [];
@@ -77,17 +81,8 @@ function findCoverColumn(mapping: Record<string, string>): string | null {
   return null;
 }
 
-async function parseZipEntries(base64: string): Promise<Map<string, { buffer: Buffer; name: string }>> {
+async function parseZipEntries(buffer: Buffer): Promise<Map<string, { buffer: Buffer; name: string }>> {
   const entries = new Map<string, { buffer: Buffer; name: string }>();
-
-  if (!base64) return entries;
-
-  let buffer: Buffer;
-  try {
-    buffer = Buffer.from(base64, "base64");
-  } catch {
-    throw new Error("Vigane ZIP-faili kodeering");
-  }
 
   if (buffer.length > 200 * 1024 * 1024) {
     throw new Error("ZIP-arhiiv on liiga suur (max 200 MB)");
@@ -163,16 +158,16 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
   const parsed = importSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Vigane sisend." };
 
-  const { rows, mapping, archiveBase64 } = parsed.data;
+  const { rows, mapping, archivePath } = parsed.data;
   const skuField = mapping.sku || "isbn";
   const titleField = mapping.title || "title";
   const priceField = mapping.price || "price";
   const stockField = mapping.stock || "stock";
 
   let archiveEntries: Map<string, { buffer: Buffer; name: string }> = new Map();
-  if (archiveBase64) {
+  if (archivePath) {
     try {
-      archiveEntries = await parseZipEntries(archiveBase64);
+      archiveEntries = await parseZipEntries(await downloadArchive(archivePath));
     } catch (err) {
       return { error: err instanceof Error ? err.message : "ZIP-arhiivi töötlemine ebaõnnestus" };
     }
@@ -380,6 +375,7 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
 export async function applyImport(_state: unknown, formData: FormData): Promise<{
   success?: boolean;
   applied?: number;
+  failed?: Array<{ sku: string; title: string; error: string }>;
   error?: string;
   batchId?: string;
 }> {
@@ -388,7 +384,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
   const parsed = importSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Vigane sisend." };
 
-  const { rows, mapping, archiveBase64 } = parsed.data;
+  const { rows, mapping, archivePath } = parsed.data;
   const skuField = mapping.sku || "isbn";
   const titleField = mapping.title || "title";
   const priceField = mapping.price || "price";
@@ -396,9 +392,9 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
   const descField = mapping.description || "description";
 
   let archiveEntries: Map<string, { buffer: Buffer; name: string }> = new Map();
-  if (archiveBase64) {
+  if (archivePath) {
     try {
-      archiveEntries = await parseZipEntries(archiveBase64);
+      archiveEntries = await parseZipEntries(await downloadArchive(archivePath));
     } catch (err) {
       return { error: err instanceof Error ? err.message : "ZIP-arhiivi töötlemine ebaõnnestus" };
     }
@@ -409,7 +405,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     const batchId = crypto.randomUUID();
     let applied = 0;
     let mediaProcessed = 0;
-    const mediaErrors: string[] = [];
+    const failed: Array<{ sku: string; title: string; error: string }> = [];
     const coverChanges: Array<{ sku: string; before: string | null; after: string | null }> = [];
 
     const catField = mapping.categories || null;
@@ -528,7 +524,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
         newCoverKey = objectKey;
         mediaProcessed++;
       } catch (err) {
-        mediaErrors.push(`${sku}: ${err instanceof Error ? err.message : "Töötlemine ebaõnnestus"}`);
+        failed.push({ sku, title, error: `Pildi töötlemine ebaõnnestus: ${err instanceof Error ? err.message : "tundmatu"}` });
       }
     }
 
@@ -536,6 +532,9 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
       let productId: string;
       if (existing) {
         const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        // Pealkiri uuendatakse samuti (võrdluseelvaade näitas seda muudatust);
+        // slug jääb SEO huvides muutmata.
+        if (title) update.title_et = title;
         if (!isNaN(price)) update.price = price;
         if (!isNaN(stock)) update.stock = Math.max(0, stock);
         if (description) update.description_et = sanitizeRichText(description);
@@ -734,15 +733,18 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
           console.error("import cleanup: failed to remove orphaned upload", newCoverKey, cleanupErr);
         }
       }
-      mediaErrors.push(`${sku}: ${err instanceof Error ? err.message : "Salvestamine ebaõnnestus"}`);
+      failed.push({ sku, title, error: err instanceof Error ? err.message : "Salvestamine ebaõnnestus" });
     }
   }
+
+  // Töödeldud arhiiv kustutatakse (orphan'id ei koguks ruumi)
+  if (archivePath) await deleteArchive(archivePath);
 
   await audit(session.user.id, "import.applied", "commerce.product", batchId, {
     after: {
       count: applied,
+      failed: failed.length,
       mediaProcessed,
-      mediaErrors: mediaErrors.length,
       coverChanges: coverChanges.map((c) => ({ sku: c.sku, before: c.before ?? "", after: c.after ?? "" })),
     },
     correlationId: batchId,
@@ -751,6 +753,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
   return {
     success: true,
     applied,
+    failed,
     batchId,
   };
 }

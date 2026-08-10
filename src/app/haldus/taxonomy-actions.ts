@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { audit } from "@/lib/audit";
+import { slugify } from "@/lib/slugify";
 
 const campaignSchema = z.object({
   id: z.string().uuid().optional(),
@@ -17,18 +18,8 @@ const campaignSchema = z.object({
   product_ids: z.array(z.string().uuid()).optional(),
 });
 
-function slugify(text: string) {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 180) || "kampaania";
-}
-
 async function uniqueCampaignSlug(db: ReturnType<typeof createAdminClient>, name: string) {
-  const base = slugify(name);
+  const base = slugify(name).slice(0, 180) || "kampaania";
   let slug = base;
   let i = 2;
 
