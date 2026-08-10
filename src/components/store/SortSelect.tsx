@@ -16,6 +16,7 @@ export function SortSelect() {
 
   return (
     <select
+      aria-label="Raamatute järjestamine"
       value={currentSort}
       onChange={(e) => handleChange(e.target.value)}
       className="h-[46px] min-w-[240px] px-[14px] pr-[42px] border border-line bg-panel max-[640px]:w-full"

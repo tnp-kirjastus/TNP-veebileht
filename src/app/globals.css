@@ -4,7 +4,7 @@
 
 @theme {
   --color-ink: #151718;
-  --color-muted: #667078;
+  --color-muted: #5f6870; /* WCAG AA ≥4.5:1 ka soft-taustal */
   --color-paper: #fbfaf7;
   --color-panel: #ffffff;
   --color-line: #ded8cf;

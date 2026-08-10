@@ -213,6 +213,7 @@ function CategoryTreeGroup({ category, selectedCategories, onToggle }: {
     <div className="border-b border-line">
       <div className="flex items-center">
         <button onClick={() => onToggle(category)} role="checkbox" aria-checked={isChecked ? "true" : isIndeterminate ? "mixed" : "false"}
+          aria-label={category.name_et}
           className="flex-shrink-0 w-[18px] h-[18px] border grid place-items-center bg-transparent cursor-pointer mr-[8px]"
           style={{ borderColor: isActive ? "#333" : "#8e969b", backgroundColor: isActive ? "#333" : "transparent" }}>
           {isIndeterminate && <span className="w-[8px] h-[2px] bg-white" />}
@@ -231,6 +232,7 @@ function CategoryTreeGroup({ category, selectedCategories, onToggle }: {
             return (
               <div key={child.id} className="flex items-center">
                 <button onClick={() => onToggle(child)} role="checkbox" aria-checked={childActive}
+                  aria-label={child.name_et}
                   className="flex-shrink-0 w-[18px] h-[18px] border grid place-items-center bg-transparent cursor-pointer mr-[8px]"
                   style={{ borderColor: childActive ? "#333" : "#8e969b", backgroundColor: childActive ? "#333" : "transparent" }}>
                   {childActive && <span className="w-[9px] h-[5px] border-l-[2px] border-b-[2px] border-white -rotate-45 -translate-y-px" />}

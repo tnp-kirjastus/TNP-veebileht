@@ -11,15 +11,23 @@ test.describe("kataloog (andmebaasist)", () => {
   });
 
   test("otsing filtreerib tulemusi", async ({ page }) => {
-    await page.goto("/raamatud");
-    const firstTitle = await page.locator("a[href^='/raamat/'] h3, a[href^='/raamat/'] [class*='title']").first().textContent();
-    if (!firstTitle) {
+    // Deterministlik: võtame DB-st tegeliku toote pealkirja sõna
+    const { testDb } = await import("./helpers/supabase");
+    const db = testDb();
+    const { data: product } = await db.schema("commerce").from("products")
+      .select("title_et, slug").eq("is_archived", false).limit(1).single();
+    if (!product) {
       test.skip(true, "tooteid pole");
       return;
     }
-    const word = firstTitle.trim().split(/\s+/)[0];
+    const p = product as { title_et: string; slug: string };
+    const word = p.title_et.trim().split(/\s+/).find((w) => w.replace(/[^a-zA-ZõäöüÕÄÖÜ]/g, "").length >= 4)
+      ?? p.title_et.trim().split(/\s+/)[0];
+
     await page.goto(`/raamatud?q=${encodeURIComponent(word)}`);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(`Otsing: "${word}"`);
+    // Otsitav toode peab tulemustes olema
+    await expect(page.locator(`a[href='/raamat/${p.slug}']`).first()).toBeVisible();
   });
 
   test("tooteleht sisaldab JSON-LD struktuurandmeid (SEO/AI)", async ({ page }) => {

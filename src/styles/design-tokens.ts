@@ -1,7 +1,7 @@
 export const tokens = {
   colors: {
     ink: "#151718",
-    muted: "#667078",
+    muted: "#5f6870", // WCAG AA ≥4.5:1 ka soft-taustal (oli #667078)
     paper: "#fbfaf7",
     panel: "#ffffff",
     line: "#ded8cf",
