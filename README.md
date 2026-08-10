@@ -1,38 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tänapäeva veebipood (tnp-store)
 
-## Getting Started
+Kirjastus Tänapäev e-pood. **Kõik andmed elavad Supabase'i andmebaasis** ja kogu
+sisu haldamine käib admin-liidese kaudu (`/haldus`) — muudatused on lehel kohe
+näha, ilma deploy'ta.
 
-Maksekeskus sandbox setup notes live in [docs/maksekeskus-sandbox.md](docs/maksekeskus-sandbox.md).
+## Stack
 
-First, run the development server:
+- **Next.js 16** (App Router, React 19), Tailwind 4
+- **Supabase** (Postgres) — kataloog, tellimused, CMS, seaded
+- **Maksekeskus** — maksed (HMAC-allkirjastatud, webhook + return)
+- **Smaily** — uudiskiri; **Resend/SMTP** — tellimuskirjad
+
+## Arhitektuur lühidalt
+
+| Kiht | Asukoht | Märkus |
+|---|---|---|
+| Kataloogi lugemine | `src/lib/db/catalog.ts` | AINUS koht — view `commerce.v_products` + RPC `search_products` |
+| DB tüübid | `src/lib/supabase/database.types.ts` | genereeritud: `npm run db:types` |
+| Seaded (tarne, KM, e-post) | `content.settings` + `src/lib/settings.ts` | ainus tõde, adminis hallatav |
+| Kupongid | `commerce.coupons` | adminis hallatav (`/haldus/seaded`) |
+| Checkout | RPC `commerce.checkout_cart` | kogu tellimuse loogika ühes transaktsioonis |
+| Import | `/haldus/import` | XLSX/CSV + ZIP kaanepiltidega (failinimed = ISBN) |
+
+Cache-invalidation koodi pole: lehed renderdatakse dünaamiliselt ja loevad
+otse andmebaasist, seega admini muudatused peegelduvad kohe.
+
+## Arendus
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev        # dev server
+npm run lint       # eslint
+npm run typecheck  # tsc --noEmit
+npm run test       # vitest (unit)
+npm run db:types   # DB tüüpide uuendamine Supabase'ist
+npx playwright test # e2e (vajab käivitavat dev serverit, käivitab ise)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Windows / TLS: kõik skriptid kasutavad `NODE_OPTIONS=--use-system-ca`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Andmebaasi migratsioonid
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Migratsioonid on `supabase/migrations/NNN_*.sql` ja rakendatakse käsitsi
+Supabase'i SQL editori kaudu (DDL-juurdepääs pole rakenduse võtmetes).
+Järjekord on numbriline. Pärast rakendamist käivita `npm run db:types`.
 
-## Learn More
+## e2e testid (Playwright)
 
-To learn more about Next.js, take a look at the following resources:
+`e2e/` katab: kataloog DB-st, otsing, JSON-LD, admin→live peegeldus ilma
+deploy'ta, seadete kohene jõustumine, admini UI suitsutest, a11y-skannid.
+Eelduseks on rakendatud migratsioonid (viimased: 034, 035, 036).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Administraatorile
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Tooted**: `/haldus/tooted` — CRUD, laoseis, soodushinnad, kaanepildid
+- **Import**: `/haldus/import` — Excel + ZIP; eelvaade enne rakendamist
+- **Kampaaniad**: `/haldus/kampaaniad`; **Kupongid**: `/haldus/seaded`
+- **Avalehe sisu**: `/haldus/avaleht`; **Lehed/uudised**: `/haldus`
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Maksekeskuse sandbox: [docs/maksekeskus-sandbox.md](docs/maksekeskus-sandbox.md).

@@ -132,14 +132,9 @@ export const SETTINGS_DEFAULTS: StoreSettings = {
   theme: { accentColor: "#4a1aa1", accentColorDark: "#31106c" },
 };
 
-let cached: StoreSettings | null = null;
-let cacheTime = 0;
-const CACHE_TTL = 60_000;
-
 export async function getStoreSettings(): Promise<StoreSettings> {
-  const now = Date.now();
-  if (cached && now - cacheTime < CACHE_TTL) return cached;
-
+  // Taotluselt mälupuhver puudub: admini muudatused peavad olema kohe live'is.
+  // Päring on väike (üks rida), seega koormus on tühine.
   try {
     const db = createAdminClient();
     const { data, error } = await db.schema("content").from("settings")
@@ -149,8 +144,6 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 
     if (error || !data) {
       console.warn("getStoreSettings: falling back to defaults", error?.message);
-      cached = SETTINGS_DEFAULTS;
-      cacheTime = now;
       return SETTINGS_DEFAULTS;
     }
 
@@ -161,7 +154,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     const emailRaw = (data.email as Record<string, unknown> | null);
     const statusTemplatesRaw = (emailRaw?.statusTemplates as Record<string, EmailStatusTemplate> | null);
 
-    cached = {
+    return {
       shipping: {
         rates: shippingRates,
         api: {
@@ -193,8 +186,6 @@ export async function getStoreSettings(): Promise<StoreSettings> {
       },
       theme: SETTINGS_DEFAULTS.theme,
     };
-    cacheTime = now;
-    return cached;
   } catch (err) {
     console.warn("getStoreSettings: error, falling back to defaults", err);
     return SETTINGS_DEFAULTS;
