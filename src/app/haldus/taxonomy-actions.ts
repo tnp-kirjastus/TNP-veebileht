@@ -1,11 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { audit } from "@/lib/audit";
-import { revalidateCampaign, revalidateSeries } from "@/lib/revalidate";
 
 const campaignSchema = z.object({
   id: z.string().uuid().optional(),
@@ -160,8 +158,6 @@ export async function saveCampaign(_state: { error?: string } | undefined, formD
   }
 
   await audit(session.user.id, v.id ? "campaign.updated" : "campaign.created", "content.campaign", result.data.id, { after: { name: v.name_et } });
-  revalidateCampaign();
-  revalidatePath("/haldus/kampaaniad");
   return { success: true, id: result.data.id };
 }
 
@@ -187,8 +183,6 @@ export async function removeProductsFromCampaign(_state: { error?: string } | un
     .eq("campaign_id", v.campaign_id)
     .in("product_id", v.product_ids);
   await audit(session.user.id, "campaign.products_removed", "content.campaign", v.campaign_id);
-  revalidateCampaign();
-  revalidatePath("/haldus/kampaaniad");
   return { success: true };
 }
 
@@ -213,8 +207,6 @@ export async function toggleCampaignActive(formData: FormData) {
     await audit(session.user.id, "campaign.active_toggled", "content.campaign", parsed.data.campaign_id, {
       after: { name: data?.name_et, is_active: parsed.data.is_active },
     });
-    revalidateCampaign();
-    revalidatePath("/haldus/kampaaniad");
   }
 }
 
@@ -230,8 +222,6 @@ export async function deleteCampaign(
   const { data, error } = await db.schema("content").from("campaigns").delete().eq("id", id).select("name_et").single();
   if (error) return { error: "Kampaania kustutamine ebaõnnestus." };
   await audit(session.user.id, "campaign.deleted", "content.campaign", id, { before: { name: data?.name_et } });
-  revalidateCampaign();
-  revalidatePath("/haldus/kampaaniad");
   return { success: true };
 }
 
@@ -252,8 +242,6 @@ export async function saveCategory(_state: { error?: string } | undefined, formD
     : await db.schema("commerce").from("categories").insert(record).select("id").single();
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
   await audit(session.user.id, v.id ? "category.updated" : "category.created", "content.category", result.data.id, { after: { name: v.name_et } });
-  revalidatePath("/raamatud");
-  revalidatePath("/haldus/kategooriad");
   return { success: true, id: result.data.id };
 }
 
@@ -263,7 +251,6 @@ export async function deleteCategory(formData: FormData) {
   const db = createAdminClient();
   const { data } = await db.schema("commerce").from("categories").delete().eq("id", id).select("name_et").single();
   await audit(session.user.id, "category.deleted", "content.category", id, { before: { name: data?.name_et } });
-  revalidatePath("/raamatud");
 }
 
 export async function saveSeries(_state: { error?: string } | undefined, formData: FormData) {
@@ -279,8 +266,6 @@ export async function saveSeries(_state: { error?: string } | undefined, formDat
     : await db.schema("content").from("series").insert(record).select("id").single();
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
   await audit(session.user.id, v.id ? "series.updated" : "series.created", "content.series", result.data.id, { after: { name: v.name_et } });
-  revalidateSeries(v.slug);
-  revalidatePath("/haldus/sarjad");
   return { success: true, id: result.data.id };
 }
 
@@ -290,7 +275,6 @@ export async function deleteSeries(formData: FormData) {
   const db = createAdminClient();
   const { data } = await db.schema("content").from("series").delete().eq("id", id).select("name_et").single();
   await audit(session.user.id, "series.deleted", "content.series", id, { before: { name: data?.name_et } });
-  revalidateSeries();
 }
 
 export async function savePerson(_state: { error?: string } | undefined, formData: FormData) {
@@ -306,8 +290,6 @@ export async function savePerson(_state: { error?: string } | undefined, formDat
     : await db.schema("people").from("people").insert({ ...record, created_at: new Date().toISOString() }).select("id").single();
   if (result.error) return { error: result.error.code === "23505" ? "Selline URL-i nimi on juba kasutusel." : "Salvestamine ebaõnnestus." };
   await audit(session.user.id, v.id ? "person.updated" : "person.created", "people.person", result.data.id, { after: { name: v.name } });
-  revalidatePath("/raamatud");
-  revalidatePath("/haldus/autorid");
   return { success: true, id: result.data.id };
 }
 
@@ -317,5 +299,4 @@ export async function deletePerson(formData: FormData) {
   const db = createAdminClient();
   const { data } = await db.schema("people").from("people").delete().eq("id", id).select("name").single();
   await audit(session.user.id, "person.deleted", "people.person", id, { before: { name: data?.name } });
-  revalidatePath("/raamatud");
 }

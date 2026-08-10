@@ -3,12 +3,15 @@ import Link from "next/link";
 import { LayoutFull, Shell } from "@/components/layout";
 import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { NewsletterSection } from "@/components/store/NewsletterSection";
-import { getPeople, getActiveProducts } from "@/lib/data";
+import { getPeople, getActiveProducts } from "@/lib/db/catalog";
 
 export const metadata: Metadata = {
   title: "Autorid",
   description: "Kõik autorid tähestiku järgi.",
 };
+
+// Kataloog loeb otse andmebaasist — admini muudatused peegelduvad kohe.
+export const dynamic = "force-dynamic";
 
 function getInitial(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -16,9 +19,8 @@ function getInitial(name: string): string {
   return lastName.charAt(0).toUpperCase();
 }
 
-export default function AuthorsPage() {
-  const people = getPeople();
-  const products = getActiveProducts();
+export default async function AuthorsPage() {
+  const [people, products] = await Promise.all([getPeople(), getActiveProducts()]);
 
   const authorBookCounts = new Map<string, number>();
   for (const product of products) {

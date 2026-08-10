@@ -8,9 +8,12 @@ import { NewsletterSection } from "@/components/store/NewsletterSection";
 import { t } from "@/lib/translations";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { filterProductsByPerson, getCatalogueProducts, searchProducts, getCategoryTree, getProductsByCategories, isOnSale, getSalePercent, type Product } from "@/lib/data";
+import { getCategoryTree, searchCatalogue } from "@/lib/db/catalog";
+import { isOnSale, getSalePercent } from "@/lib/product-utils";
+import type { Product } from "@/lib/data-types";
 
-export const revalidate = 3600;
+// Kataloog loeb otse andmebaasist — admini muudatused peegelduvad kohe.
+export const dynamic = "force-dynamic";
 
 interface SearchParams {
   q?: string; category?: string | string[]; origin?: string; sale?: string; upcoming?: string; archive?: string; archived?: string;
@@ -31,16 +34,6 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   };
 }
 
-const CATEGORY_TREE = getCategoryTree().map((category, index) => ({
-  id: String(index + 1), slug: category.slug, name_et: category.name,
-  children: category.children?.map((child, ci) => ({
-    id: `${index + 1}-${ci + 1}`, slug: child.slug, name_et: child.name,
-    children: child.children?.map((cc, cci) => ({
-      id: `${index + 1}-${ci + 1}-${cci + 1}`, slug: cc.slug, name_et: cc.name,
-    })),
-  })),
-}));
-
 function mapProduct(p: Product) {
   const onSale = isOnSale(p);
   return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, isOnSale: onSale, salePercent: getSalePercent(p), isArchived: p.is_archived };
@@ -60,43 +53,50 @@ function buildPageHref(params: SearchParams, page: number) {
   return `/raamatud?${sp.toString()}`;
 }
 
-function BooksContent({ params }: { params: SearchParams }) {
+const PERSON_ROLES = ["author", "translator", "designer", "illustrator", "editor"] as const;
+
+async function BooksContent({ params }: { params: SearchParams }) {
   const showArchived = params.archive === "true" || params.archived === "true";
-  const productScope = showArchived ? "archived" : "active";
-  let results = params.q?.trim() ? searchProducts(params.q.trim(), productScope) : getCatalogueProducts(productScope);
+  const categoryList = params.category ? (Array.isArray(params.category) ? params.category : [params.category]) : [];
 
-  if (params.category) {
-    const categorySlugs = Array.isArray(params.category) ? params.category : [params.category];
-    const catFilteredIds = new Set(getProductsByCategories(categorySlugs, productScope).map((p) => p.id));
-    results = results.filter((p) => catFilteredIds.has(p.id));
-  }
-  if (params.sale_start !== undefined && params.sale_end !== undefined) {
-    if (params.sale_start === "always" && params.sale_end === "open") {
-      results = results.filter((p) => p.sale_price != null && p.sale_start === null && p.sale_end === null);
-    } else {
-      results = results.filter((p) => p.sale_price != null && p.sale_start === params.sale_start && p.sale_end === params.sale_end);
-    }
-  } else if (params.sale === "true") {
-    results = results.filter(isOnSale);
-  }
-  if (params.upcoming === "true") results = results.filter((product) => product.is_upcoming);
-
-  if (params.origin === "estonian") results = results.filter(p => p.origin === "estonian");
-  if (params.origin === "foreign") results = results.filter(p => p.origin === "foreign");
-  for (const role of ["author", "translator", "designer", "illustrator", "editor"] as const) {
+  const people: Record<string, string> = {};
+  for (const role of PERSON_ROLES) {
     const value = params[role];
-    if (value) results = filterProductsByPerson(results, role, value);
+    if (value) people[role] = value;
   }
-
-  const sort = params.sort || "newest";
-  results = [...results].sort((a, b) => {
-    switch (sort) { case "price-asc": return (isOnSale(a) ? a.sale_price! : a.price) - (isOnSale(b) ? b.sale_price! : b.price); case "price-desc": return (isOnSale(b) ? b.sale_price! : b.price) - (isOnSale(a) ? a.sale_price! : a.price); case "az": return a.title_et.localeCompare(b.title_et, "et"); case "za": return b.title_et.localeCompare(a.title_et, "et"); case "oldest": return (a.release_date || "").localeCompare(b.release_date || ""); default: return (b.release_date || "").localeCompare(a.release_date || ""); }
-  });
 
   const parsedPage = Number.parseInt(params.page || "1", 10);
-  const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1;
-  const pageSize = 24, totalCount = results.length, totalPages = Math.ceil(totalCount / pageSize);
-  const paged = results.slice((page - 1) * pageSize, page * pageSize);
+
+  const [categoryTree, result] = await Promise.all([
+    getCategoryTree(),
+    searchCatalogue({
+      q: params.q?.trim() || undefined,
+      categories: categoryList.length ? categoryList : undefined,
+      origin: params.origin === "estonian" || params.origin === "foreign" ? params.origin : undefined,
+      sale: params.sale === "true" || params.sale_start !== undefined || params.sale_end !== undefined,
+      upcoming: params.upcoming === "true",
+      people: Object.keys(people).length ? people : undefined,
+      saleStart: params.sale_start && params.sale_start !== "always" ? params.sale_start : undefined,
+      saleEnd: params.sale_end && params.sale_end !== "open" ? params.sale_end : undefined,
+      saleOpen: params.sale_start === "always" && params.sale_end === "open",
+      scope: showArchived ? "archived" : "active",
+      sort: params.sort || "newest",
+      page: Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1,
+      pageSize: 24,
+    }),
+  ]);
+
+  const { products, totalCount, page, totalPages } = result;
+
+  const categoryTreeForSidebar = categoryTree.map((category, index) => ({
+    id: String(index + 1), slug: category.slug, name_et: category.name,
+    children: category.children?.map((child, ci) => ({
+      id: `${index + 1}-${ci + 1}`, slug: child.slug, name_et: child.name,
+      children: child.children?.map((cc, cci) => ({
+        id: `${index + 1}-${ci + 1}-${cci + 1}`, slug: cc.slug, name_et: cc.name,
+      })),
+    })),
+  }));
 
   const activeLabel = params.q ? `Otsing: "${params.q}"`
     : showArchived
@@ -108,7 +108,7 @@ function BooksContent({ params }: { params: SearchParams }) {
     : params.category
       ? (() => {
           const slugs = Array.isArray(params.category) ? params.category : [params.category];
-          return slugs.map(s => CATEGORY_TREE.find(c => c.slug === s || c.children?.some(cc => cc.slug === s))?.name_et || s).join(", ");
+          return slugs.map(s => categoryTreeForSidebar.find(c => c.slug === s || c.children?.some(cc => cc.slug === s))?.name_et || s).join(", ");
         })()
     : t.books.title;
 
@@ -123,7 +123,7 @@ function BooksContent({ params }: { params: SearchParams }) {
       <Shell>
         <div className="grid grid-cols-[260px_1fr] gap-[38px] pt-8 pb-10 max-[880px]:grid-cols-1">
           <aside className="self-start sticky top-[116px] max-[880px]:relative max-[880px]:top-0">
-            <FilterSidebar categories={CATEGORY_TREE} currentParams={params as Record<string, string | string[] | undefined>} />
+            <FilterSidebar categories={categoryTreeForSidebar} currentParams={params as Record<string, string | string[] | undefined>} />
           </aside>
           <section>
             <div className="grid grid-cols-[1fr_auto] items-center gap-[18px] mb-[22px] max-[640px]:grid-cols-1">
@@ -131,7 +131,7 @@ function BooksContent({ params }: { params: SearchParams }) {
               <Suspense><SortSelect /></Suspense>
             </div>
 
-            {paged.length > 0 ? <ProductGrid products={paged.map(mapProduct)} columns={4} /> : (
+            {products.length > 0 ? <ProductGrid products={products.map(mapProduct)} columns={4} /> : (
               <div className="p-[60px] border border-dashed border-line text-center">
                 <p className="text-xl font-heading mb-3">{t.common.no_results}</p>
                 {params.q && <p className="text-muted mb-6">{t.books.search_no_results}</p>}

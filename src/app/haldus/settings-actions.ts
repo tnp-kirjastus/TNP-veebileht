@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -210,6 +209,5 @@ export async function saveStoreSettings(_state: { error?: string; success?: bool
     return { error: `Salvestamine ebaõnnestus: ${error.message || error.code || "tundmatu viga"}` };
   }
 
-  revalidatePath("/haldus/seaded");
   return { success: true };
 }

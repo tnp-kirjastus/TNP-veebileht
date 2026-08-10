@@ -1,5 +1,5 @@
 export interface Product {
-  id: number;
+  id: string; // uuid (Supabase)
   sku: string;
   title_et: string;
   title_en: string | null;
@@ -23,7 +23,6 @@ export interface Product {
   categories: string[];
   people: Record<string, string[]>;
   editions?: { type: string; date: string }[];
-  latest_release_date?: string;
 }
 
 export interface Category {

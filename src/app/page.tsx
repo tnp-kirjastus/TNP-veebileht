@@ -7,10 +7,12 @@ import { NewsletterSection } from "@/components/store/NewsletterSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { t } from "@/lib/translations";
 import { getHomepageHero, getHomepageCards, getHomepageSections, type HomepageSection, type HomepageCard } from "@/lib/homepage";
-import { getNewProducts, getSaleProducts, getUpcomingProducts, getActiveProducts, isOnSale, type Product } from "@/lib/data";
+import { getNewProducts, getSaleProducts, getUpcomingProducts } from "@/lib/db/catalog";
+import { isOnSale } from "@/lib/product-utils";
+import type { Product } from "@/lib/data-types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { unstable_cache } from "next/cache";
 
+// Kõik andmed tulevad otse andmebaasist — admini muudatused peegelduvad kohe.
 export const dynamic = "force-dynamic";
 
 function mapProduct(p: Product) {
@@ -100,25 +102,22 @@ export default async function HomePage() {
   const newSec = sec("newest", "Uued raamatud", "/raamatud?sort=newest", 5);
   const upcomingSec = sec("upcoming", "Ilmuvad raamatud", "/raamatud?upcoming=true", 5);
 
-  const getCampaignName = unstable_cache(
-    async () => {
-      const db = createAdminClient();
-      const { data } = await db.schema("content").from("campaigns")
-        .select("name_et").eq("is_active", true)
-        .order("starts_at", { ascending: false }).limit(1).maybeSingle();
-      return data?.name_et ?? null;
-    },
-    ["homepage-campaign-name"],
-    { revalidate: 300 }
-  );
-  const activeCampaignName = await getCampaignName();
+  const { data: activeCampaign } = await createAdminClient().schema("content").from("campaigns")
+    .select("name_et").eq("is_active", true)
+    .order("starts_at", { ascending: false }).limit(1).maybeSingle();
+  const activeCampaignName = activeCampaign?.name_et ?? null;
 
   const campaignSec = sec("sale", activeCampaignName || "Kampaania raamatud", "/pakkumised", 5);
 
-  const newBooks = newSec.visible ? getNewProducts(newSec.count).map(mapProduct) : [];
-  const campaignBooks = campaignSec.visible ? getSaleProducts().slice(0, campaignSec.count).map(mapProduct) : [];
-  const upcomingBooks = upcomingSec.visible ? getUpcomingProducts().slice(0, upcomingSec.count).map(mapProduct) : [];
-  const discountBooks = getActiveProducts().filter(p => isOnSale(p)).slice(5, 10).map(mapProduct);
+  const [newProducts, saleProducts, upcomingProducts] = await Promise.all([
+    newSec.visible ? getNewProducts(newSec.count) : Promise.resolve([]),
+    getSaleProducts(), // kampaania-sektsioon + "püsivalt soodsad" ribi
+    upcomingSec.visible ? getUpcomingProducts() : Promise.resolve([]),
+  ]);
+  const newBooks = newProducts.map(mapProduct);
+  const campaignBooks = saleProducts.slice(0, campaignSec.count).map(mapProduct);
+  const upcomingBooks = upcomingProducts.slice(0, upcomingSec.count).map(mapProduct);
+  const discountBooks = saleProducts.slice(5, 10).map(mapProduct);
   const heroConfig = await getHomepageHero();
   const heroHeading = heroConfig?.heading || t.home.hero_title;
   const heroHeadingSize = heroConfig?.headingSize || null;

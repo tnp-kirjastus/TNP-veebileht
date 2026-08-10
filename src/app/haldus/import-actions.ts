@@ -5,8 +5,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { sanitizeRichText } from "@/lib/sanitize";
 import { audit } from "@/lib/audit";
-import { revalidatePath } from "next/cache";
-import { revalidateProduct } from "@/lib/revalidate";
 import { getMediaInfo, processImage, uploadCover, generateObjectKey, isValidZipEntryPath, normalizeIsbn, isbn10To13 } from "@/lib/media";
 import { createHash } from "node:crypto";
 import { extractZip } from "@/lib/zip";
@@ -749,11 +747,6 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     },
     correlationId: batchId,
   });
-
-  revalidatePath("/");
-  revalidatePath("/raamatud");
-  revalidatePath("/arhiiv");
-  revalidatePath("/sarjad");
 
   return {
     success: true,

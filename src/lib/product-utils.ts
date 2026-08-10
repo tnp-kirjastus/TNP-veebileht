@@ -1,14 +1,8 @@
 import type { Product } from "./data-types";
 
 export function getEffectivePrice(p: Product): number {
-  if (
-    p.sale_price !== null &&
-    (!p.sale_start || new Date(p.sale_start) <= new Date()) &&
-    (!p.sale_end || new Date(p.sale_end) >= new Date())
-  ) {
-    return p.sale_price;
-  }
-  return p.price;
+  // Ainus reegel: soodushind kehtib vaid siis, kui isOnSale on tõene.
+  return isOnSale(p) ? p.sale_price! : p.price;
 }
 
 export function isOnSale(p: Product): boolean {

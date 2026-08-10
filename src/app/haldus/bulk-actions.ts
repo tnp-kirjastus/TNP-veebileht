@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -87,7 +86,6 @@ export async function bulkEditProducts(_state: { error?: string; result?: Record
               after: { count: updated, action, fields: fieldChanges },
               correlationId: batchId,
             });
-            revalidatePath("/raamatud");
             return { result: { batchId, action, total: idList.length, updated, skipped: 0, errors: [], fieldChanges } };
           }
         }
@@ -118,7 +116,6 @@ export async function bulkEditProducts(_state: { error?: string; result?: Record
       correlationId: batchId,
     });
 
-    revalidatePath("/raamatud");
     return { result: { batchId, action, total: idList.length, updated: idList.length, skipped: 0, errors: [], fieldChanges } };
   } catch (err) {
     console.error("bulkEditProducts exception:", err);

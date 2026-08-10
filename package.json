@@ -9,12 +9,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "set NODE_OPTIONS=--use-system-ca && node scripts/regenerate-json.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "set NODE_OPTIONS=--use-system-ca && vitest run",
-    "regen-json": "set NODE_OPTIONS=--use-system-ca && node scripts/regenerate-json.mjs"
+    "db:types": "set NODE_OPTIONS=--use-system-ca && node scripts/generate-db-types.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

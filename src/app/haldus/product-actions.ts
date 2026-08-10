@@ -5,7 +5,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { sanitizeRichText } from "@/lib/sanitize";
 import { audit } from "@/lib/audit";
-import { revalidateProduct } from "@/lib/revalidate";
 
 const productSchema = z.object({
   id: z.string().uuid().optional(),
@@ -168,8 +167,6 @@ export async function saveProduct(_state: { error?: string; productId?: string }
     after: { title: v.title_et, sku: v.sku, slug: productSlug, cover_image: String(coverImageFinal ?? "") },
   });
 
-  revalidateProduct(productSlug);
-
   return { success: true, productId };
 }
 
@@ -180,7 +177,6 @@ export async function archiveProduct(formData: FormData) {
   const { data } = await db.schema("commerce").from("products").update({ is_archived: true, updated_at: new Date().toISOString() }).eq("id", id).select("title_et,slug").single();
   if (data) {
     await audit(session.user.id, "product.archived", "commerce.product", id, { after: { title: data.title_et } });
-    revalidateProduct(data.slug);
   }
 }
 
@@ -191,6 +187,5 @@ export async function unarchiveProduct(formData: FormData) {
   const { data } = await db.schema("commerce").from("products").update({ is_archived: false, updated_at: new Date().toISOString() }).eq("id", id).select("title_et,slug").single();
   if (data) {
     await audit(session.user.id, "product.unarchived", "commerce.product", id, { after: { title: data.title_et } });
-    revalidateProduct(data.slug);
   }
 }

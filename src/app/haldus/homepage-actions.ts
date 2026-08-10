@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -70,8 +69,6 @@ export async function saveHeroSettings(_state: { error?: string; success?: boole
       return { error: `Salvestamine ebaõnnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
     }
 
-    revalidatePath("/");
-    revalidatePath("/haldus/avaleht");
     return { success: true };
   } catch (err) {
     console.error("saveHeroSettings unexpected error:", err);
@@ -142,8 +139,6 @@ export async function saveCardsSettings(cards: unknown) {
 
     if (result.error) return { error: `Salvestamine ebaõnnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
 
-    revalidatePath("/");
-    revalidatePath("/haldus/avaleht");
     return { success: true };
   } catch (err) {
     console.error("saveCardsSettings unexpected error:", err);
@@ -167,8 +162,6 @@ export async function saveSectionsSettings(sections: unknown) {
 
     if (result.error) return { error: `Salvestamine ebaõnnestus: ${result.error.message || result.error.code || "tundmatu viga"}` };
 
-    revalidatePath("/");
-    revalidatePath("/haldus/avaleht");
     return { success: true };
   } catch (err) {
     console.error("saveSectionsSettings unexpected error:", err);

@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -67,8 +66,6 @@ export async function savePost(_state: { error?: string } | undefined, formData:
     after: { title: value.title_et, status: value.status },
   });
 
-  revalidatePath("/uudised");
-  revalidatePath(`/uudis/${value.slug}`);
   redirect("/haldus/blogi");
 }
 
@@ -78,5 +75,4 @@ export async function deletePost(formData: FormData) {
   const db = createAdminClient();
   const { data } = await db.schema("content").from("posts").update({ is_published: false, published_at: null }).eq("id", id).select("title_et").single();
   await audit(session.user.id, "blog.post.unpublished", "content.post", id, { after: { title: data?.title_et } });
-  revalidatePath("/uudised");
 }

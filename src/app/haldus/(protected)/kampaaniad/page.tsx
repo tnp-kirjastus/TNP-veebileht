@@ -1,7 +1,8 @@
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { CampaignsPageClient } from "./CampaignsPageClient";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSaleProducts, getSalePercent } from "@/lib/data";
+import { getSaleProducts } from "@/lib/db/catalog";
+import { getSalePercent } from "@/lib/product-utils";
 import { requireAdminSession } from "@/lib/admin-auth";
 
 export interface CampaignGroup {
@@ -51,7 +52,7 @@ export default async function CampaignsAdminPage() {
     from += size;
   }
 
-  const saleProducts = getSaleProducts().sort(
+  const saleProducts = (await getSaleProducts()).sort(
     (a, b) => getSalePercent(b) - getSalePercent(a) || a.title_et.localeCompare(b.title_et, "et")
   );
   const rawGroups = Map.groupBy(saleProducts, (p) => groupKey(p.sale_start, p.sale_end));

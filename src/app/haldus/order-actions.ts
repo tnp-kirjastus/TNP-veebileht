@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -92,7 +91,6 @@ export async function deleteOrders(_state: { error?: string; success?: boolean }
     await audit(session.user.id, "order.deleted", "order", id);
   }
 
-  revalidatePath("/haldus/tellimused");
   return { success: true };
 }
 
@@ -156,7 +154,6 @@ export async function createOrder(_state: { error?: string; success?: boolean } 
     after: { orderNumber, customer: parsed.data.customer_name, total: parsed.data.total, items: parsed.data.items.length },
   });
 
-  revalidatePath("/haldus/tellimused");
   return { success: true };
 }
 
@@ -243,8 +240,6 @@ export async function updateOrderStatus(
     after: { status: parsed.data.status, note: parsed.data.note ?? null },
   });
 
-  revalidatePath(`/haldus/tellimused/${parsed.data.orderId}`);
-  revalidatePath("/haldus/tellimused");
   return { success: true, emailError };
 }
 
@@ -323,7 +318,5 @@ export async function shipOrder(
     after: { carrier: parsed.data.carrier, tracking: parsed.data.trackingNumber },
   });
 
-  revalidatePath(`/haldus/tellimused/${parsed.data.orderId}`);
-  revalidatePath("/haldus/tellimused");
   return { success: true, emailError };
 }

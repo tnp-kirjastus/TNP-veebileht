@@ -3,10 +3,15 @@ import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
 import { ProductGrid } from "@/components/store/ProductGrid";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getActiveProducts, getSeriesBySlug, isOnSale, type Product } from "@/lib/data";
+import { getActiveProducts, getSeriesBySlug } from "@/lib/db/catalog";
+import { isOnSale } from "@/lib/product-utils";
+import type { Product } from "@/lib/data-types";
+
+// Kataloog loeb otse andmebaasist — admini muudatused peegelduvad kohe.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const s = getSeriesBySlug((await params).slug);
+  const s = await getSeriesBySlug((await params).slug);
   return { title: `${s?.name || ""} — Sarjad` };
 }
 
@@ -17,9 +22,11 @@ function map(p: Product) {
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const series = getSeriesBySlug(slug);
+  const series = await getSeriesBySlug(slug);
   if (!series) notFound();
-  const products = getActiveProducts().filter(p => p.series_slug === slug).sort((a, b) => (b.release_date || "").localeCompare(a.release_date || ""));
+  const products = (await getActiveProducts())
+    .filter(p => p.series_slug === slug)
+    .sort((a, b) => (b.release_date || "").localeCompare(a.release_date || ""));
 
   return (
     <LayoutSidebar sidebar={<div className="p-5 text-muted text-sm">Filtrid</div>}>

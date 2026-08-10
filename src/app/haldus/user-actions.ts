@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -49,7 +48,6 @@ export async function createUser(_state: { error?: string; success?: string } | 
     after: { email, role },
   });
 
-  revalidatePath("/haldus/kasutajad");
   return { success: `Kasutaja ${email} loodud rolliga "${role}".` };
 }
 
@@ -93,7 +91,6 @@ export async function updateUser(_state: { error?: string; success?: string } | 
 
   await audit(session.user.id, "user.updated", "auth.user", id, { before, after });
 
-  revalidatePath("/haldus/kasutajad");
   return { success: `Kasutaja ${email} andmed uuendatud.` };
 }
 
@@ -114,5 +111,4 @@ export async function deleteUser(formData: FormData) {
     before: { email: profile.email, role: profile.role },
   });
 
-  revalidatePath("/haldus/kasutajad");
 }
