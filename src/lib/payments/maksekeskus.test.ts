@@ -216,37 +216,30 @@ describe("amount edge cases", () => {
   });
 });
 
-import { calculateShippingCost } from "../shipping/config";
+import { shippingCostForRate, type ShippingRate } from "../shipping/calc";
+
+const OMNIVA: ShippingRate = { carrier: "omniva", method: "parcel_machine", price: 5.0, freeFrom: 40, label_et: "Omniva pakiautomaat" };
+const SMARTPOST: ShippingRate = { carrier: "smartpost", method: "parcel_machine", price: 3.5, freeFrom: 40, label_et: "Smartpost pakiautomaat" };
 
 describe("shipping cost calculation", () => {
-  it("charges 5 EUR for Omniva under 40 EUR cart total", () => {
-    expect(calculateShippingCost("omniva", 39.99)).toBe(5.0);
+  it("charges the rate price under the free-shipping threshold", () => {
+    expect(shippingCostForRate(OMNIVA, 39.99)).toBe(5.0);
+    expect(shippingCostForRate(SMARTPOST, 20)).toBe(3.5);
   });
 
-  it("free delivery for Omniva at 40 EUR and above", () => {
-    expect(calculateShippingCost("omniva", 40)).toBe(0);
-    expect(calculateShippingCost("omniva", 100)).toBe(0);
+  it("free delivery at and above the threshold", () => {
+    expect(shippingCostForRate(OMNIVA, 40)).toBe(0);
+    expect(shippingCostForRate(OMNIVA, 100)).toBe(0);
+    expect(shippingCostForRate(SMARTPOST, 40)).toBe(0);
   });
 
-  it("charges 3.50 EUR for Smartpost under 40 EUR", () => {
-    expect(calculateShippingCost("smartpost", 20)).toBe(3.5);
-  });
-
-  it("free delivery for Smartpost at 40 EUR and above", () => {
-    expect(calculateShippingCost("smartpost", 40)).toBe(0);
-  });
-
-  it("returns 0 for unknown carrier (e.g. courier no longer supported)", () => {
-    expect(calculateShippingCost("courier", 10)).toBe(0);
-  });
-
-  it("returns 0 for completely unknown carrier", () => {
-    expect(calculateShippingCost("dpd", 10)).toBe(0);
+  it("returns 0 for an unknown carrier", () => {
+    expect(shippingCostForRate(undefined, 10)).toBe(0);
   });
 
   it("order total with delivery is exactly subtotal + shipping", () => {
     const subtotal = 35;
-    const shipping = calculateShippingCost("omniva", subtotal);
+    const shipping = shippingCostForRate(OMNIVA, subtotal);
     expect(shipping).toBe(5.0);
     const total = subtotal + shipping;
     expect(total).toBe(40);
@@ -255,7 +248,7 @@ describe("shipping cost calculation", () => {
 
   it("delivery charge rounds correctly to cents", () => {
     const subtotal = 39.99;
-    const shipping = calculateShippingCost("omniva", subtotal);
+    const shipping = shippingCostForRate(OMNIVA, subtotal);
     const total = subtotal + shipping;
     expect(euroDecimalToCents(total.toFixed(2))).toBe(4499);
   });

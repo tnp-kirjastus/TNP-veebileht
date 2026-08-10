@@ -40,7 +40,7 @@ const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
   { value: "preorder", label: "Ettetellimus" },
 ];
 
-export function CreateOrderDialog() {
+export function CreateOrderDialog({ defaultVatPercent = 9 }: { defaultVatPercent?: number }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -50,7 +50,7 @@ export function CreateOrderDialog() {
   const [shippingMethod, setShippingMethod] = useState("omniva");
   const [shippingCost, setShippingCost] = useState(0);
   const [status, setStatus] = useState<OrderStatus>("pending");
-  const [vatPercent, setVatPercent] = useState(9);
+  const [vatPercent, setVatPercent] = useState(defaultVatPercent);
   const [items, setItems] = useState<OrderItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");

@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/lib/cart-context";
-import {
-  SHIPPING_RATES,
-  type ShippingRate,
-} from "@/lib/shipping/config";
+import { shippingCostForRate, type ShippingRate } from "@/lib/shipping/calc";
 import type {
   GroupedMachines,
   ParcelMachine,
@@ -43,9 +40,7 @@ function shippingLabel(rates: ShippingRate[], carrier: ShippingCarrier): string 
 }
 
 function configuredShippingCost(rates: ShippingRate[], carrier: ShippingCarrier, cartTotal: number): number {
-  const rate = shippingRate(rates, carrier);
-  if (!rate || cartTotal >= rate.freeFrom) return 0;
-  return rate.price;
+  return shippingCostForRate(shippingRate(rates, carrier), cartTotal);
 }
 
 export function CheckoutForm({ compact = false }: { compact?: boolean }) {
@@ -57,8 +52,11 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [createAccount, setCreateAccount] = useState(true);
-  const [shippingRates, setShippingRates] = useState<ShippingRate[]>(SHIPPING_RATES);
-  const [vatPercent, setVatPercent] = useState(9);
+  // Tarnehinnad ja käibemaks tulevad alati andmebaasist (/api/storefront-config) —
+  // koodis pole varuväärtusi, sest need võiksid kuvada valesid hindu.
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
+  const [vatPercent, setVatPercent] = useState<number | null>(null);
+  const [configStatus, setConfigStatus] = useState<"loading" | "ok" | "error">("loading");
 
   const [machines, setMachines] = useState<Record<string, GroupedMachines[]> | null>(null);
   const [machinesError, setMachinesError] = useState(false);
@@ -100,17 +98,26 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
     return loadMachines();
   }, [loadMachines]);
 
-  useEffect(() => {
+  const loadConfig = useCallback(() => {
     const controller = new AbortController();
+    setConfigStatus("loading");
     fetch("/api/storefront-config", { signal: controller.signal })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("storefront_config_failed")))
       .then((config: { shippingRates?: ShippingRate[]; vatPercent?: number }) => {
         if (Array.isArray(config.shippingRates) && config.shippingRates.length > 0) setShippingRates(config.shippingRates);
         if (typeof config.vatPercent === "number" && Number.isFinite(config.vatPercent)) setVatPercent(config.vatPercent);
+        setConfigStatus("ok");
       })
-      .catch((cause) => { if (cause?.name !== "AbortError") { /* defaults remain available */ } });
+      .catch((cause) => {
+        if (cause?.name !== "AbortError") setConfigStatus("error");
+      });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState calls are inside async fetch callbacks
+    return loadConfig();
+  }, [loadConfig]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -178,8 +185,8 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
     ? shippingRate(shippingRates, data.shipping_method)!.freeFrom - total
     : 0;
 
-  const KM_PERCENT = vatPercent;
-  const vatAmount = orderTotal - (orderTotal / (1 + KM_PERCENT / 100));
+  const KM_PERCENT = vatPercent ?? 0;
+  const vatAmount = vatPercent === null ? null : orderTotal - (orderTotal / (1 + KM_PERCENT / 100));
 
   const isParcelMachine = data.shipping_method === "omniva" || data.shipping_method === "smartpost";
 
@@ -208,8 +215,20 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  const retriedRef = useRef(false);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const retried = retriedRef.current;
+
+    if (configStatus === "error") {
+      setError("Tarnetingimuste laadimine ebaõnnestus. Kontrolli ühendust ja proovi uuesti.");
+      return;
+    }
+    if (configStatus === "loading") {
+      setError("Laen tarnetingimusi, palun oota hetk…");
+      return;
+    }
 
     if (step < 3) {
       if (step === 2 && isParcelMachine && !selectedMachine) {
@@ -260,6 +279,21 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
         }),
       });
       const result = await response.json();
+
+      // Serveri ostukorv on ainus tõde: kui sessioon on aegunud, sünkime
+      // kohaliku korvi uuesti ja proovime täpselt ühe korra uuesti.
+      if (response.status === 409 && result.error === "cart_not_synced" && !retried) {
+        retriedRef.current = true;
+        for (const item of items) {
+          await fetch("/api/cart", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ slug: item.slug, quantity: item.quantity }),
+          });
+        }
+        return submit(event);
+      }
+
       if (!response.ok) {
         setError(result.error || "Tellimuse loomine ebaõnnestus.");
         setPending(false);
@@ -579,7 +613,7 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                 ) : (
                   <strong>Tasuta tarne</strong>
                 )}
-                {shippingCost === 0 && <> — Toote saatmine on tasuta alates {shippingRate(shippingRates, data.shipping_method)?.freeFrom ?? 40} eurosest ostust.</>}
+                {shippingCost === 0 && shippingRate(shippingRates, data.shipping_method) && <> — Toote saatmine on tasuta alates {shippingRate(shippingRates, data.shipping_method)!.freeFrom} eurosest ostust.</>}
               </div>
 
               <div className="text-sm text-muted">
@@ -646,10 +680,12 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
                     <span>Kokku</span>
                     <strong>{orderTotal.toFixed(2)} €</strong>
                   </div>
-                  <div className="flex justify-between text-xs text-muted">
-                    <span>sh käibemaks ({KM_PERCENT}%)</span>
-                    <span>{vatAmount.toFixed(2)} €</span>
-                  </div>
+                  {vatAmount !== null && (
+                    <div className="flex justify-between text-xs text-muted">
+                      <span>sh käibemaks ({KM_PERCENT}%)</span>
+                      <span>{vatAmount.toFixed(2)} €</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -774,9 +810,9 @@ export function CheckoutForm({ compact = false }: { compact?: boolean }) {
             <p className="text-sm text-muted mt-3">
               Lisa veel {needsMore.toFixed(2)} € eest ja tarne on tasuta
             </p>
-          ) : shippingCost === 0 ? (
+          ) : shippingCost === 0 && shippingRate(shippingRates, data.shipping_method) ? (
             <p className="text-sm text-leaf font-bold mt-3">
-              Tasuta tarne alates {shippingRate(shippingRates, data.shipping_method)?.freeFrom ?? 40} €
+              Tasuta tarne alates {shippingRate(shippingRates, data.shipping_method)!.freeFrom} €
             </p>
           ) : null}
           <p className="text-xs text-muted mt-3">

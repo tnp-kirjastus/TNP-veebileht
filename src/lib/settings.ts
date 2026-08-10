@@ -103,7 +103,7 @@ const DEFAULT_STATUS_TEMPLATES: Record<string, EmailStatusTemplate> = {
   },
 };
 
-const DEFAULTS: StoreSettings = {
+export const SETTINGS_DEFAULTS: StoreSettings = {
   shipping: {
     rates: [
       { carrier: "omniva", method: "parcel_machine", price: 5.0, freeFrom: 40, label_et: "Omniva pakiautomaat" },
@@ -149,13 +149,13 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 
     if (error || !data) {
       console.warn("getStoreSettings: falling back to defaults", error?.message);
-      cached = DEFAULTS;
+      cached = SETTINGS_DEFAULTS;
       cacheTime = now;
-      return DEFAULTS;
+      return SETTINGS_DEFAULTS;
     }
 
     const shippingRaw = (data.shipping as Record<string, unknown> | null);
-    const shippingRates = (shippingRaw?.rates as ShippingRate[] | null) ?? DEFAULTS.shipping.rates;
+    const shippingRates = (shippingRaw?.rates as ShippingRate[] | null) ?? SETTINGS_DEFAULTS.shipping.rates;
     const shippingApiRaw = (shippingRaw?.api as Record<string, unknown> | null);
 
     const emailRaw = (data.email as Record<string, unknown> | null);
@@ -165,39 +165,39 @@ export async function getStoreSettings(): Promise<StoreSettings> {
       shipping: {
         rates: shippingRates,
         api: {
-          maksekeskusLiveUrl: (shippingApiRaw?.maksekeskusLiveUrl as string) || DEFAULTS.shipping.api.maksekeskusLiveUrl,
-          maksekeskusTestUrl: (shippingApiRaw?.maksekeskusTestUrl as string) || DEFAULTS.shipping.api.maksekeskusTestUrl,
-          parcelMachineType: (shippingApiRaw?.parcelMachineType as string) || DEFAULTS.shipping.api.parcelMachineType,
-          parcelMachineCountryFilter: (shippingApiRaw?.parcelMachineCountryFilter as string) || DEFAULTS.shipping.api.parcelMachineCountryFilter,
+          maksekeskusLiveUrl: (shippingApiRaw?.maksekeskusLiveUrl as string) || SETTINGS_DEFAULTS.shipping.api.maksekeskusLiveUrl,
+          maksekeskusTestUrl: (shippingApiRaw?.maksekeskusTestUrl as string) || SETTINGS_DEFAULTS.shipping.api.maksekeskusTestUrl,
+          parcelMachineType: (shippingApiRaw?.parcelMachineType as string) || SETTINGS_DEFAULTS.shipping.api.parcelMachineType,
+          parcelMachineCountryFilter: (shippingApiRaw?.parcelMachineCountryFilter as string) || SETTINGS_DEFAULTS.shipping.api.parcelMachineCountryFilter,
         },
       },
       email: {
-        fromAddress: (emailRaw?.fromAddress as string) || DEFAULTS.email.fromAddress,
-        orderSubject: (emailRaw?.orderSubject as string) || DEFAULTS.email.orderSubject,
-        orderBody: (emailRaw?.orderBody as string) || DEFAULTS.email.orderBody,
-        contactEmail: (emailRaw?.contactEmail as string) || DEFAULTS.email.contactEmail,
-        notifications: (emailRaw?.notifications as Record<string, boolean> | null) ?? DEFAULTS.email.notifications,
-        statusTemplates: statusTemplatesRaw ?? DEFAULTS.email.statusTemplates,
+        fromAddress: (emailRaw?.fromAddress as string) || SETTINGS_DEFAULTS.email.fromAddress,
+        orderSubject: (emailRaw?.orderSubject as string) || SETTINGS_DEFAULTS.email.orderSubject,
+        orderBody: (emailRaw?.orderBody as string) || SETTINGS_DEFAULTS.email.orderBody,
+        contactEmail: (emailRaw?.contactEmail as string) || SETTINGS_DEFAULTS.email.contactEmail,
+        notifications: (emailRaw?.notifications as Record<string, boolean> | null) ?? SETTINGS_DEFAULTS.email.notifications,
+        statusTemplates: statusTemplatesRaw ?? SETTINGS_DEFAULTS.email.statusTemplates,
       },
-      vat: { percent: (data.vat as Record<string, unknown> | null)?.percent as number ?? DEFAULTS.vat.percent },
+      vat: { percent: (data.vat as Record<string, unknown> | null)?.percent as number ?? SETTINGS_DEFAULTS.vat.percent },
       company: {
-        name: ((data.company as Record<string, unknown> | null)?.name as string) || DEFAULTS.company.name,
-        email: ((data.company as Record<string, unknown> | null)?.email as string) || DEFAULTS.company.email,
-        phone: ((data.company as Record<string, unknown> | null)?.phone as string) || DEFAULTS.company.phone,
-        address: ((data.company as Record<string, unknown> | null)?.address as string) || DEFAULTS.company.address,
-        regCode: ((data.company as Record<string, unknown> | null)?.regCode as string) || DEFAULTS.company.regCode,
+        name: ((data.company as Record<string, unknown> | null)?.name as string) || SETTINGS_DEFAULTS.company.name,
+        email: ((data.company as Record<string, unknown> | null)?.email as string) || SETTINGS_DEFAULTS.company.email,
+        phone: ((data.company as Record<string, unknown> | null)?.phone as string) || SETTINGS_DEFAULTS.company.phone,
+        address: ((data.company as Record<string, unknown> | null)?.address as string) || SETTINGS_DEFAULTS.company.address,
+        regCode: ((data.company as Record<string, unknown> | null)?.regCode as string) || SETTINGS_DEFAULTS.company.regCode,
       },
       social: {
-        facebook: ((data.social as Record<string, unknown> | null)?.facebook as string) || DEFAULTS.social.facebook,
-        instagram: ((data.social as Record<string, unknown> | null)?.instagram as string) || DEFAULTS.social.instagram,
+        facebook: ((data.social as Record<string, unknown> | null)?.facebook as string) || SETTINGS_DEFAULTS.social.facebook,
+        instagram: ((data.social as Record<string, unknown> | null)?.instagram as string) || SETTINGS_DEFAULTS.social.instagram,
       },
-      theme: DEFAULTS.theme,
+      theme: SETTINGS_DEFAULTS.theme,
     };
     cacheTime = now;
     return cached;
   } catch (err) {
     console.warn("getStoreSettings: error, falling back to defaults", err);
-    return DEFAULTS;
+    return SETTINGS_DEFAULTS;
   }
 }
 

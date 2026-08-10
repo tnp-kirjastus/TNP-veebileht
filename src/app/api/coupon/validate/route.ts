@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ valid: false, error: "Sisesta sooduskood." }, { status: 400 });
   }
 
-  const coupon = validateCoupon(code, subtotal);
+  const coupon = await validateCoupon(code, subtotal);
   if (coupon) {
     return NextResponse.json({ valid: true, discount: coupon.discount, label: coupon.label });
   }

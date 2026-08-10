@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { OrderDetailClient } from "@/components/admin/OrderDetailClient";
+import { getStoreSettings } from "@/lib/settings";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -11,6 +12,7 @@ interface PageProps {
 
 async function loadOrder(id: string) {
   const db = createAdminClient();
+  const vatPercentFromSettings = (await getStoreSettings()).vat.percent;
 
   const { data: order, error: orderErr } = await db.schema("commerce").from("orders")
     .select("*, order_items(*), order_status_history(*)")
@@ -49,7 +51,8 @@ async function loadOrder(id: string) {
     company_name: (order.company_name as string) || null,
     company_reg_code: (order.company_reg_code as string) || null,
     vat_amount: Number(order.vat_amount ?? 0),
-    vat_percent: Number(order.vat_percent ?? 9),
+    // Legacy tellimustel (enne KM veeru olemasolu) kuvatakse praegune seadete KM
+    vat_percent: Number(order.vat_percent ?? vatPercentFromSettings),
     coupon_code: (order.coupon_code as string) || null,
     coupon_discount: Number(order.coupon_discount ?? 0),
     items: items.map((item) => ({

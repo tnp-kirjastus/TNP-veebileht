@@ -4,6 +4,7 @@ import { OrdersTable } from "@/components/admin/OrdersTable";
 import { CreateOrderDialog } from "@/components/admin/CreateOrderDialog";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/lib/admin-auth";
+import { getStoreSettings } from "@/lib/settings";
 
 export default async function OrdersAdminPage({
   searchParams,
@@ -11,6 +12,7 @@ export default async function OrdersAdminPage({
   searchParams: Promise<{ page?: string; q?: string; status?: string; totalMin?: string; totalMax?: string; dateFrom?: string; dateTo?: string }>;
 }) {
   await requireAdminSession(["editor", "admin"]);
+  const defaultVatPercent = (await getStoreSettings()).vat.percent;
 
   const params = await searchParams;
   const query = (params.q ?? "").trim();
@@ -110,7 +112,7 @@ export default async function OrdersAdminPage({
       <AdminPageHeader
         title="Tellimused"
         description={`${totalCount} tellimust. Maksed, täitmine ja erandite käsitlemine.`}
-        action={<CreateOrderDialog />}
+        action={<CreateOrderDialog defaultVatPercent={defaultVatPercent} />}
       />
 
       {/* Filter bar */}
