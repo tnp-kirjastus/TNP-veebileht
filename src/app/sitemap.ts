@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getActiveProducts, getSeries } from "@/lib/db/catalog";
+import { getAllProducts, getSeries } from "@/lib/db/catalog";
 import { getPublishedPosts } from "@/lib/blog";
 import { siteUrl } from "@/lib/env";
 
@@ -12,7 +12,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [posts, allSeries, products] = await Promise.all([
     getPublishedPosts(500),
     getSeries(),
-    getActiveProducts(),
+    // Kogu tagaloend (sh arhiiv) — läbimüüdud teoste lehed on avalikud
+    // bibliograafilise teabena ja peavad olema otsimootorites leitavad.
+    getAllProducts(),
   ]);
   return [
     ...staticPaths.map((path) => ({ url: `${origin}${path}`, changeFrequency: "weekly" as const })),

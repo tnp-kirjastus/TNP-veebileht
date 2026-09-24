@@ -93,11 +93,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       "@type": "Offer",
       priceCurrency: "EUR",
       price: effectivePrice.toFixed(2),
-      availability: product.is_upcoming && product.allow_preorder
-        ? "https://schema.org/PreOrder"
-        : product.stock > 0
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
+      availability: product.is_archived
+        ? "https://schema.org/OutOfStock"
+        : product.is_upcoming && product.allow_preorder
+          ? "https://schema.org/PreOrder"
+          : product.stock > 0
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
       url: new URL(`/raamat/${product.slug}`, siteUrl()).toString(),
       seller: { "@type": "Organization", name: "Kirjastus Tänapäev", url: siteUrl().toString() },
       shippingDetails: {
@@ -108,7 +110,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           currency: "EUR",
         },
         shippingDestination: { "@type": "DefinedRegion", addressCountry: "EE" },
-        deliveryTime: { "@type": "ShippingDeliveryTime", transitTime: { "@type": "QuantitativeValue", minValue: 2, maxValue: 4, unitCode: "DAY" } },
+        deliveryTime: { "@type": "ShippingDeliveryTime", transitTime: { "@type": "QuantitativeValue", minValue: 3, maxValue: 14, unitCode: "DAY" } },
       },
     },
     ...(product.series_name ? { isPartOf: { "@type": "Collection", name: product.series_name } } : {}),
@@ -132,6 +134,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <h1 className="font-heading text-[clamp(34px,5vw,56px)] leading-[1.05] mb-[2px]">{product.title_et}</h1>
           {authorNames && <p className="text-lg text-muted">{product.people.author?.map((a: string, i: number) => (<span key={a}>{i > 0 && ", "}<Link href={personHref(slugByName, "author", a)} className="hover:text-ink hover:underline transition-colors">{a}</Link></span>))}</p>}
           <div className="text-[28px] font-extrabold">{onSale && product.sale_price ? <span className="flex items-baseline gap-3"><span className="text-muted line-through text-lg font-semibold">{formatEuro(product.price)}</span><span className="text-accent">{formatEuro(product.sale_price)}</span></span> : formatEuro(product.price)}</div>
+          {product.is_archived && (
+            <p className="border border-line bg-soft px-4 py-3 text-sm font-bold text-muted">
+              See raamat on läbi müüdud ega ole hetkel e-poest saadaval. Lehekülg on avalik bibliograafilise teabe jaoks.
+            </p>
+          )}
           <AddToCartButton disabled={product.is_archived || (product.is_upcoming && !product.allow_preorder)} product={{ slug: product.slug, title: product.title_et, author: authorNames, price: product.price, salePrice: product.sale_price, coverImage: product.cover_image, isUpcoming: product.is_upcoming, allowPreorder: product.allow_preorder, stock: product.stock, isArchived: product.is_archived }} />
           {product.description_et && <div className="prose prose-sm max-w-[520px] text-ink/80 prose-a:text-accent" dangerouslySetInnerHTML={{ __html: sanitizeRichText(product.description_et) }} />}
           <div className="mt-2">
@@ -140,7 +147,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               {product.sku && <div><dt className="text-[11px] font-extrabold uppercase text-muted tracking-[0.04em] mt-[10px]">ISBN</dt><dd className="text-[13px] text-[#363b3f]">{product.sku}</dd></div>}
               {product.binding && <div><dt className="text-[11px] font-extrabold uppercase text-muted tracking-[0.04em] mt-[10px]">Köide</dt><dd className="text-[13px] text-[#363b3f]">{product.binding}</dd></div>}
               {product.release_date && <div><dt className="text-[11px] font-extrabold uppercase text-muted tracking-[0.04em] mt-[10px]">Ilmumine</dt><dd className="text-[13px] text-[#363b3f]">{formatDate(product.release_date)}</dd></div>}
-              {product.editions && product.editions.length > 1 && (
+              {product.editions && product.editions.length > 0 && (
                 <div><dt className="text-[11px] font-extrabold uppercase text-muted tracking-[0.04em] mt-[10px]">Kordustrükid</dt><dd className="text-[13px] text-[#363b3f]">{formatEditions(product.editions)}</dd></div>
               )}
               {product.pages && <div><dt className="text-[11px] font-extrabold uppercase text-muted tracking-[0.04em] mt-[10px]">Lehekülgi</dt><dd className="text-[13px] text-[#363b3f]">{product.pages}</dd></div>}

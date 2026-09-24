@@ -127,11 +127,12 @@ async function fetchRowById(id: string): Promise<VProductRow | null> {
 // Üksiktoode ja kaardiloendid
 // ---------------------------------------------------------------------------
 
+// Arhiivis olevad tooted on samuti avatavad — kirjastuse toimetajad kasutavad
+// lehte bibliograafiliste andmete otsimiseks. Tooteleht märgib need "Läbimüüdud".
 export const getProductBySlug = cache(async (slug: string): Promise<Product | null> => {
   const { data, error } = await productsTable()
     .select(`${CARD_COLUMNS},description_et,editions`)
     .eq("slug", slug)
-    .eq("is_archived", false)
     .maybeSingle();
   if (error) throw new Error(`getProductBySlug: ${error.message}`);
   return data ? rowToProduct(data as unknown as VProductRow) : null;
@@ -168,6 +169,20 @@ export async function getSaleProducts(): Promise<Product[]> {
   return (data as unknown as VProductRow[]).map(rowToProduct);
 }
 
+// Püsivalt soodsad: soodushind ilma kampaania-aknata (peegeldab RPC sale_open reeglit).
+export async function getOpenSaleProducts(limit = 10): Promise<Product[]> {
+  const { data, error } = await productsTable()
+    .select(CARD_COLUMNS)
+    .eq("is_archived", false)
+    .not("sale_price", "is", null)
+    .is("sale_start", null)
+    .is("sale_end", null)
+    .order("release_date", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  if (error) throw new Error(`getOpenSaleProducts: ${error.message}`);
+  return (data as unknown as VProductRow[]).map(rowToProduct);
+}
+
 export async function getUpcomingProducts(): Promise<Product[]> {
   const { data, error } = await productsTable()
     .select(CARD_COLUMNS)
@@ -179,21 +194,59 @@ export async function getUpcomingProducts(): Promise<Product[]> {
 }
 
 export async function getActiveProducts(): Promise<Product[]> {
-  const { data, error } = await productsTable()
-    .select(CARD_COLUMNS)
-    .eq("is_archived", false)
-    .order("title_et", { ascending: true });
-  if (error) throw new Error(`getActiveProducts: ${error.message}`);
-  return (data as unknown as VProductRow[]).map(rowToProduct);
+  // PostgREST tagastab korraga max 1000 rida — tsükkel tagab kogu kataloogi.
+  const all: VProductRow[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await productsTable()
+      .select(CARD_COLUMNS)
+      .eq("is_archived", false)
+      .order("title_et", { ascending: true })
+      .range(from, from + 999);
+    if (error) throw new Error(`getActiveProducts: ${error.message}`);
+    if (!data || data.length === 0) break;
+    all.push(...(data as unknown as VProductRow[]));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return all.map(rowToProduct);
+}
+
+// Kõik tooted (sh arhiiv) — sarjade lehtedel ja sitemapis näidatakse
+// kogu tagaloendit; arhiivis tooted kannavad "Läbimüüdud" märget.
+export async function getAllProducts(): Promise<Product[]> {
+  const all: VProductRow[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await productsTable()
+      .select(CARD_COLUMNS)
+      .order("title_et", { ascending: true })
+      .range(from, from + 999);
+    if (error) throw new Error(`getAllProducts: ${error.message}`);
+    if (!data || data.length === 0) break;
+    all.push(...(data as unknown as VProductRow[]));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return all.map(rowToProduct);
 }
 
 export async function getArchivedProducts(): Promise<Product[]> {
-  const { data, error } = await productsTable()
-    .select(CARD_COLUMNS)
-    .eq("is_archived", true)
-    .order("title_et", { ascending: true });
-  if (error) throw new Error(`getArchivedProducts: ${error.message}`);
-  return (data as unknown as VProductRow[]).map(rowToProduct);
+  const all: VProductRow[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await productsTable()
+      .select(CARD_COLUMNS)
+      .eq("is_archived", true)
+      .order("title_et", { ascending: true })
+      .range(from, from + 999);
+    if (error) throw new Error(`getArchivedProducts: ${error.message}`);
+    if (!data || data.length === 0) break;
+    all.push(...(data as unknown as VProductRow[]));
+    if (data.length < 1000) break;
+    from += 1000;
+  }
+  return all.map(rowToProduct);
 }
 
 // ---------------------------------------------------------------------------

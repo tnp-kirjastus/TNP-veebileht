@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { FormField } from "@/components/admin/FormField";
 import { StatusBadge } from "@/components/admin/StatusBadge";
-import { saveHeroSettings, getHomepageSettings, saveCardsSettings, saveSectionsSettings } from "@/app/haldus/homepage-actions";
+import { saveHeroSettings, getHomepageSettings, saveCardsSettings, saveSectionsSettings, getSectionSourceStats } from "@/app/haldus/homepage-actions";
+import { DEFAULT_HOMEPAGE_SECTIONS, SECTION_SOURCE_OPTIONS, type HomepageSection } from "@/lib/homepage-sections";
 
 interface HeroConfig {
   versionName: string;
@@ -35,14 +36,7 @@ interface HeroCard {
   position: number;
 }
 
-interface Section {
-  id: string;
-  heading: string;
-  source: "newest" | "upcoming" | "sale" | "category" | "manual";
-  productCount: number;
-  viewAllHref: string;
-  isVisible: boolean;
-}
+type Section = HomepageSection;
 
 const defaultHero: HeroConfig = {
   versionName: "",
@@ -86,11 +80,11 @@ export default function HomepageAdminPage() {
     { id: "3", label: "Hobi", heading: "Hobiaiandus ja käsitöö", description: "Praktilised nõuanded ja inspiratsioon.", linkHref: "/raamatud?category=hobid", desktopImage: "", mobileImage: "", position: 3 },
   ]);
 
-  const [sections, setSections] = useState<Section[]>([
-    { id: "1", heading: "Uued raamatud", source: "newest", productCount: 8, viewAllHref: "/raamatud", isVisible: true },
-    { id: "2", heading: "Ilmumas", source: "upcoming", productCount: 4, viewAllHref: "/raamatud?upcoming=true", isVisible: true },
-    { id: "3", heading: "Soodus", source: "sale", productCount: 4, viewAllHref: "/pakkumised", isVisible: true },
-  ]);
+  // Vaikesektsioonid on jagatud esilehega — haldur ja esileht lähtuvad samast seisust.
+  const [sections, setSections] = useState<Section[]>(DEFAULT_HOMEPAGE_SECTIONS);
+  const [sectionsSaved, setSectionsSaved] = useState<boolean | null>(null);
+  // Mitu toodet iga allikas praegu annab (värskene seis) — sektsiooni oleku näitamiseks
+  const [sourceStats, setSourceStats] = useState<Record<string, number> | null>(null);
 
   const [cardsSaveMsg, setCardsSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [sectionsSaveMsg, setSectionsSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -158,9 +152,13 @@ export default function HomepageAdminPage() {
       }
       if (data.sections && Array.isArray(data.sections) && data.sections.length > 0) {
         setSections(data.sections as unknown as Section[]);
+        setSectionsSaved(true);
+      } else {
+        setSectionsSaved(false);
       }
       setLoaded(true);
     });
+    getSectionSourceStats().then((stats) => { if (stats) setSourceStats(stats); });
   }, []);
 
   const isPublished = hero.isPublished || state?.success;
@@ -191,6 +189,33 @@ export default function HomepageAdminPage() {
     };
     setCards((prev) => [...prev, newCard]);
   }
+
+  // Sektsiooni kuvamise olek esilehel — sama reegel, mida esileht rakendab:
+  // peidetud → ei kuvata; tundmatu (pärand) allikas → ei kuvata; tühi allikas → ei kuvata.
+  function sectionStatus(section: Section): { tone: "ok" | "warn" | "off" | "legacy"; text: string } | null {
+    if (!section.isVisible) {
+      return { tone: "off", text: "Peidetud — esilehel ei kuvata, kuni „Nähtav“ on märgitud." };
+    }
+    const known = SECTION_SOURCE_OPTIONS.some((o) => o.value === section.source);
+    if (!known) {
+      return { tone: "legacy", text: `Esilehel ei kuvata — allikas „${section.source}“ pole toetatud. Vali uus allikas.` };
+    }
+    if (!sourceStats) return null;
+    const n = sourceStats[section.source] ?? 0;
+    const label = SECTION_SOURCE_OPTIONS.find((o) => o.value === section.source)?.label ?? section.source;
+    if (n === 0) {
+      return { tone: "warn", text: `Esilehel praegu EI kuvata — allikast „${label}“ ei leia hetkel ühtegi toodet.` };
+    }
+    const shown = Math.max(1, Math.min(12, section.productCount || 5));
+    return { tone: "ok", text: `Kuvatakse esilehel — allikast leidub ${n} toodet, näidatakse kuni ${shown}.` };
+  }
+
+  const STATUS_STYLES: Record<string, string> = {
+    ok: "border-leaf/30 bg-leaf/5 text-leaf",
+    warn: "border-amber-300 bg-amber-50 text-amber-700",
+    off: "border-line bg-soft text-muted",
+    legacy: "border-accent/30 bg-accent/5 text-accent",
+  };
 
   function addSection() {
     const newSection: Section = {
@@ -229,8 +254,11 @@ export default function HomepageAdminPage() {
       if (result?.error) {
         setSectionsSaveMsg({ type: "error", text: result.error });
       } else {
-        setSectionsSaveMsg({ type: "success", text: "Sektsioonid salvestatud!" });
+        setSectionsSaveMsg({ type: "success", text: "Sektsioonid salvestatud! Esilehel kuvatakse need, mille olek on allpool „Kuvatakse“." });
+        setSectionsSaved(true);
       }
+      // Värskenda olekunäite (allikates võis toodete arv vahepeal muutuda)
+      getSectionSourceStats().then((stats) => { if (stats) setSourceStats(stats); });
     } catch (err) {
       setSectionsSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Salvestamine ebaõnnestus" });
     } finally {
@@ -453,6 +481,15 @@ export default function HomepageAdminPage() {
       {/* Sections */}
       {tab === "sections" && (
         <div className="grid gap-5 max-w-3xl">
+          <div className="border border-line bg-soft p-4 text-sm grid gap-2">
+            <p><strong>Nii see töötab:</strong> esileht kuvab sektsioone täpselt nii, nagu need siin on — sama pealkiri, sama toodete arv, sama „Vaata kõiki“ link ja sama järjekord (ülevalt alla).</p>
+            <p className="text-muted">Iga sektsiooni üleval on <strong>olekurida</strong>, mis näitab, kas ta esilehel kuvatakse. Sektsiooni, mille allikast ei leia ühtegi toodet (nt „Ilmumas“, kui ilmuvaid raamatuid pole), esilehel ei kuvata — sellisel juhul on olekurida merevaik-kollane. „Nähtav“ linnukesega saab sektsiooni ajutiselt peita.</p>
+          </div>
+          {sectionsSaved === false && (
+            <div className="border border-amber-300 bg-amber-50 p-4 text-sm">
+              <strong>Esilehel kuvatakse praegu vaikesektsioone</strong> (allpool eeltäidetud). Vajuta „Salvesta sektsioonid“, et need haldurisse salvestada — seejärel kajastuvad kõik siinsed muudatused esilehel üks-üheselt.
+            </div>
+          )}
           {sections.map((section) => (
             <div key={section.id} className="border border-line bg-panel p-5 grid gap-4">
               <div className="flex items-center justify-between">
@@ -462,18 +499,29 @@ export default function HomepageAdminPage() {
                   Nähtav
                 </label>
               </div>
+              {(() => {
+                const status = sectionStatus(section);
+                return status ? (
+                  <p className={`border px-3 py-2 text-xs font-bold ${STATUS_STYLES[status.tone]}`}>{status.text}</p>
+                ) : null;
+              })()}
               <div className="grid grid-cols-3 gap-4 max-sm:grid-cols-1">
                 <FormField label="Pealkiri">
                   <input value={section.heading} onChange={(e) => updateSection(section.id, "heading", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal" />
                 </FormField>
                 <FormField label="Allikas">
                   <select value={section.source} onChange={(e) => updateSection(section.id, "source", e.target.value)} className="border border-line bg-paper p-2 text-sm font-normal">
-                    <option value="newest">Uusimad</option>
-                    <option value="upcoming">Ilmumas</option>
-                    <option value="sale">Soodustusega</option>
-                    <option value="category">Kategooriast</option>
-                    <option value="manual">Käsitsi valitud</option>
+                    {SECTION_SOURCE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                    {/* Ajalooline salvestatud väärtus, mida enam valikus ei pakuta */}
+                    {!SECTION_SOURCE_OPTIONS.some((o) => o.value === section.source) && (
+                      <option value={section.source}>(Pärand: {section.source} — ei kuvata esilehel)</option>
+                    )}
                   </select>
+                  <p className="text-xs font-normal text-muted mt-1">
+                    {SECTION_SOURCE_OPTIONS.find((o) => o.value === section.source)?.hint ?? "See allikas ei kuvata esilehel — vali mõni teine."}
+                  </p>
                 </FormField>
                 <FormField label="Toodete arv">
                   <input type="number" min="1" max="12" value={section.productCount} onChange={(e) => updateSection(section.id, "productCount", parseInt(e.target.value) || 4)} className="border border-line bg-paper p-2 text-sm font-normal" />

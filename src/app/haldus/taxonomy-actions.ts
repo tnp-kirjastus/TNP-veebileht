@@ -127,6 +127,9 @@ export async function saveCampaign(_state: { error?: string } | undefined, formD
     if (productsError) return { error: "Toodete eemaldamine kampaaniast ebaõnnestus." };
   }
 
+  // Kampaania kuupäevad kajastatakse toodetel (sale_start/sale_end), kuid
+  // soodushinda automaatselt EI määrata — sale_price tuleb alati kas Exceli
+  // impordi "soodushind" veerust või toote kaardilt, kliendi enda otsusel.
   if (newlyAddedProductIds.length > 0) {
     const saleUpdates: Record<string, unknown> = {};
     if (v.starts_at) saleUpdates.sale_start = v.starts_at;
@@ -134,16 +137,7 @@ export async function saveCampaign(_state: { error?: string } | undefined, formD
 
     if (Object.keys(saleUpdates).length > 0) {
       for (const pid of newlyAddedProductIds) {
-        const { data: prod } = await db.schema("commerce").from("products")
-          .select("price").eq("id", pid).maybeSingle();
-        if (prod) {
-          const currentPrice = Number(prod.price ?? 0);
-          const discountedPrice = Math.round(currentPrice * 0.85 * 100) / 100;
-          await db.schema("commerce").from("products").update({
-            sale_price: discountedPrice,
-            ...saleUpdates,
-          }).eq("id", pid);
-        }
+        await db.schema("commerce").from("products").update(saleUpdates).eq("id", pid);
       }
     }
   }

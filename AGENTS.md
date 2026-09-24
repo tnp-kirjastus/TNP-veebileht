@@ -38,5 +38,20 @@ reintroduce one. Rules that keep the system coherent:
   editor (the app keys have no DDL access). Keep them numbered and forward-only.
 - Import ZIP archives upload browser→Storage directly via signed URLs
   (`src/lib/import-archive.ts`), never through server action payloads.
+- Archived (`is_archived = true`) products are PUBLIC: their detail pages must
+  open (no 404), text search uses `scope: "all"`, and series pages list them
+  with a "Läbimüüdud" badge. The publisher's editors use the site as a
+  bibliographic reference — do not hide the backlist.
+- Reprint dates live in `commerce.products.editions` (JSONB
+  `[{type:"2. trükk", date}]`; `release_date` = first printing). One-off import:
+  `node scripts/import-editions-from-excel.mjs [--preview]`.
+- Campaign admin (`/haldus/kampaaniad`) sets only sale dates on products —
+  never auto-set `sale_price` (prices come from Excel import / product form).
+- Expected delivery time is 3–14 business days (single-person fulfilment) —
+  stated in checkout and product JSON-LD.
+- Homepage product sections are driven 1:1 by `content.homepage.sections`
+  (shared defaults/types in `src/lib/homepage-sections.ts`): heading, count,
+  link and order come from admin — no hidden overrides (e.g. campaign names)
+  or hardcoded strips on the front page. Empty-source sections are skipped.
 - e2e tests (`e2e/`, Playwright) include the admin→live propagation proof.
   Run: `npx playwright test`.

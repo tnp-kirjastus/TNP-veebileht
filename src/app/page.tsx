@@ -7,10 +7,10 @@ import { NewsletterSection } from "@/components/store/NewsletterSection";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { t } from "@/lib/translations";
 import { getHomepageHero, getHomepageCards, getHomepageSections, type HomepageSection, type HomepageCard } from "@/lib/homepage";
-import { getNewProducts, getSaleProducts, getUpcomingProducts } from "@/lib/db/catalog";
+import { SECTION_SOURCE_LINK_LABELS } from "@/lib/homepage-sections";
+import { getNewProducts, getSaleProducts, getOpenSaleProducts, getUpcomingProducts } from "@/lib/db/catalog";
 import { isOnSale } from "@/lib/product-utils";
 import type { Product } from "@/lib/data-types";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 // Kõik andmed tulevad otse andmebaasist — admini muudatused peegelduvad kohe.
 export const dynamic = "force-dynamic";
@@ -88,36 +88,34 @@ function FeaturedCard({ card, index }: { card: HomepageCard; index: number }) {
   );
 }
 
+// Sektsiooni tausta värvide rotatsioon (soe toon iga teise ploki jaoks).
+const SECTION_BG = ["bg-white", "bg-[#fffbf6]", "bg-[#f7f7f7]"];
+
 export default async function HomePage() {
-  const sections = await getHomepageSections();
-  function sec(source: HomepageSection["source"], fallbackHeading: string, fallbackHref: string, fallbackCount: number) {
-    const s = sections.find((x) => x.source === source && x.isVisible);
-    return {
-      heading: s?.heading || fallbackHeading,
-      href: s?.viewAllHref || fallbackHref,
-      count: s?.productCount || fallbackCount,
-      visible: s ? s.isVisible : true,
-    };
-  }
-  const newSec = sec("newest", "Uued raamatud", "/raamatud?sort=newest", 5);
-  const upcomingSec = sec("upcoming", "Ilmuvad raamatud", "/raamatud?upcoming=true", 5);
+  // Esilehe sektsioonid tulevad 1:1 halduri seadetest (või vaikesektsioonidest,
+  // mis on halduriga identsed) — pealkiri, toodete arv, link ja järjekord.
+  const sections = (await getHomepageSections()).filter((s) => s.isVisible);
 
-  const { data: activeCampaign } = await createAdminClient().schema("content").from("campaigns")
-    .select("name_et").eq("is_active", true)
-    .order("starts_at", { ascending: false }).limit(1).maybeSingle();
-  const activeCampaignName = activeCampaign?.name_et ?? null;
-
-  const campaignSec = sec("sale", activeCampaignName || "Kampaania raamatud", "/pakkumised", 5);
-
-  const [newProducts, saleProducts, upcomingProducts] = await Promise.all([
-    newSec.visible ? getNewProducts(newSec.count) : Promise.resolve([]),
-    getSaleProducts(), // kampaania-sektsioon + "püsivalt soodsad" ribi
-    upcomingSec.visible ? getUpcomingProducts() : Promise.resolve([]),
+  // Iga allika koordinaator päritakse korra, ka siis kui seda kasutavad
+  // mitu sektsiooni.
+  const sources = new Set(sections.map((s) => s.source));
+  const [newProducts, saleProducts, openSaleProducts, upcomingProducts] = await Promise.all([
+    sources.has("newest") ? getNewProducts(12) : Promise.resolve([]),
+    sources.has("sale") ? getSaleProducts() : Promise.resolve([]),
+    sources.has("sale_open") ? getOpenSaleProducts(12) : Promise.resolve([]),
+    sources.has("upcoming") ? getUpcomingProducts() : Promise.resolve([]),
   ]);
-  const newBooks = newProducts.map(mapProduct);
-  const campaignBooks = saleProducts.slice(0, campaignSec.count).map(mapProduct);
-  const upcomingBooks = upcomingProducts.slice(0, upcomingSec.count).map(mapProduct);
-  const discountBooks = saleProducts.slice(5, 10).map(mapProduct);
+
+  function productsFor(section: HomepageSection) {
+    const count = Math.max(1, Math.min(12, section.productCount || 5));
+    switch (section.source) {
+      case "newest": return newProducts.slice(0, count).map(mapProduct);
+      case "sale": return saleProducts.slice(0, count).map(mapProduct);
+      case "sale_open": return openSaleProducts.slice(0, count).map(mapProduct);
+      case "upcoming": return upcomingProducts.slice(0, count).map(mapProduct);
+      default: return []; // "category"/"manual" pole esilehel toetatud
+    }
+  }
   const heroConfig = await getHomepageHero();
   const heroHeading = heroConfig?.heading || t.home.hero_title;
   const heroHeadingSize = heroConfig?.headingSize || null;
@@ -188,45 +186,23 @@ export default async function HomePage() {
         </Shell>
       </section>
 
-      {/* #uued - Uued raamatud (white bg) */}
-      {newSec.visible && (
-        <section id="uued" className="py-[40px] bg-white">
-          <Shell>
-            <SectionHeading title={newSec.heading} href={newSec.href} linkLabel="Kõik uued raamatud" />
-            {newBooks.length > 0 ? <ProductGrid products={newBooks} columns={5} variant="home" /> : <ProductGrid products={[]} columns={5} loading />}
-          </Shell>
-        </section>
-      )}
-
-      {/* #kampaania - Kampaania raamatud */}
-      {campaignSec.visible && campaignBooks.length > 0 && (
-        <section id="kampaania" className="py-[40px] bg-[#fffbf6]">
-          <Shell>
-            <SectionHeading title={campaignSec.heading} href={campaignSec.href} linkLabel="Kõik pakkumised" />
-            <ProductGrid products={campaignBooks} columns={5} variant="home" />
-          </Shell>
-        </section>
-      )}
-
-      {/* #ilmuvad - Ilmuvad raamatud */}
-      {upcomingSec.visible && upcomingBooks.length > 0 && (
-        <section id="ilmuvad" className="py-[40px] bg-[#f7f7f7]">
-          <Shell>
-            <SectionHeading title={upcomingSec.heading} href={upcomingSec.href} linkLabel="Kõik ilmuvad" />
-            <ProductGrid products={upcomingBooks} columns={5} variant="home" />
-          </Shell>
-        </section>
-      )}
-
-      {/* #soodsad - Püsivalt soodsad raamatud */}
-      {discountBooks.length > 0 && (
-        <section id="soodsad" className="py-[40px] bg-white">
-          <Shell>
-            <SectionHeading title="Püsivalt soodsad raamatud" href="/pakkumised" linkLabel="Kõik soodsad raamatud" />
-            <ProductGrid products={discountBooks} columns={5} variant="home" />
-          </Shell>
-        </section>
-      )}
+      {/* Sektsioonid — täpselt nii nagu halduris seadistatud */}
+      {sections.map((section, index) => {
+        const products = productsFor(section);
+        if (products.length === 0) return null; // tühja allikaga sektsiooni ei kuvata
+        return (
+          <section key={section.id} className={`py-[40px] ${SECTION_BG[index % SECTION_BG.length]}`}>
+            <Shell>
+              <SectionHeading
+                title={section.heading}
+                href={section.viewAllHref || undefined}
+                linkLabel={SECTION_SOURCE_LINK_LABELS[section.source] ?? "Vaata kõiki"}
+              />
+              <ProductGrid products={products} columns={5} variant="home" />
+            </Shell>
+          </section>
+        );
+      })}
 
       <NewsletterSection />
     </LayoutFull>

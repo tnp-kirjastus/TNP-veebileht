@@ -115,7 +115,9 @@ const cardsSchema = z.array(cardSchema);
 const sectionSchema = z.object({
   id: z.string(),
   heading: z.string(),
-  source: z.enum(["newest", "upcoming", "sale", "category", "manual"]),
+  // "category"/"manual" on ajaloolised väärtused — esileht neid ei kuva,
+  // aga vanu salvestatud sektsioone ei tohi valideerimine tagasi lükata.
+  source: z.enum(["newest", "upcoming", "sale", "sale_open", "category", "manual"]),
   productCount: z.number(),
   viewAllHref: z.string(),
   isVisible: z.boolean(),
@@ -176,4 +178,36 @@ export async function getPublicHomepageHero() {
     .eq("key", "default")
     .maybeSingle();
   return { hero: (data?.hero ?? null) as Record<string, unknown> | null };
+}
+
+/**
+ * Mitu toodet iga sektsiooni-allikas praegu annab — haldur näitab selle
+ * põhjal, kas sektsioon esilehel kuvatakse või mitte (tühja allikaga
+ * sektsiooni ei kuvata).
+ */
+export async function getSectionSourceStats(): Promise<Record<string, number> | null> {
+  try {
+    await requireAdminSession(["viewer", "editor", "admin"]);
+    const db = createAdminClient();
+    const [newest, upcoming, sale, saleOpen] = await Promise.all([
+      db.schema("commerce").from("products").select("id", { count: "exact", head: true })
+        .eq("is_archived", false).not("release_date", "is", null),
+      db.schema("commerce").from("products").select("id", { count: "exact", head: true })
+        .eq("is_archived", false).eq("is_upcoming", true),
+      // v_products arvutab is_on_sale (soodushind + kehtiv aken) samal reeglil nagu pood
+      db.schema("commerce").from("v_products").select("id", { count: "exact", head: true })
+        .eq("is_archived", false).eq("is_on_sale", true),
+      db.schema("commerce").from("products").select("id", { count: "exact", head: true })
+        .eq("is_archived", false).not("sale_price", "is", null).is("sale_start", null).is("sale_end", null),
+    ]);
+    return {
+      newest: newest.count ?? 0,
+      upcoming: upcoming.count ?? 0,
+      sale: sale.count ?? 0,
+      sale_open: saleOpen.count ?? 0,
+    };
+  } catch (err) {
+    console.error("getSectionSourceStats error:", err);
+    return null;
+  }
 }

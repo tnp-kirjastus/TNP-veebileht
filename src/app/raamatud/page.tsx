@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const hasFilters = !!(params.q || params.sort || params.page || params.origin || params.sale || params.upcoming || params.archive || params.archived || params.author || params.translator || params.designer || params.illustrator || params.editor || categoryList.length > 0);
   const canonicalPath = categoryList.length > 0 ? `/raamatud?${categoryList.map(c => `category=${encodeURIComponent(c)}`).join("&")}` : "/raamatud";
   return {
-    title: params.q ? `Otsing: ${params.q}` : categoryList.length > 0 ? `${categoryList.join(", ")} — Raamatud` : "Raamatud",
+    title: params.q ? `Otsing: ${params.q}` : categoryList.length > 0 ? `${categoryList.join(", ")} — Raamatud` : params.sort === "newest" ? "Uued raamatud" : "Raamatud",
     description: "Sirvi raamatuid kategooriate, autorite ja pakkumiste järgi.",
     robots: params.q ? { index: false, follow: true } : undefined,
     alternates: hasFilters ? { canonical: canonicalPath } : undefined,
@@ -79,7 +79,9 @@ async function BooksContent({ params }: { params: SearchParams }) {
       saleStart: params.sale_start && params.sale_start !== "always" ? params.sale_start : undefined,
       saleEnd: params.sale_end && params.sale_end !== "open" ? params.sale_end : undefined,
       saleOpen: params.sale_start === "always" && params.sale_end === "open",
-      scope: showArchived ? "archived" : "active",
+      // Otsing leiab ka arhiivis (läbimüüdud) olevad teosed — need kuvatakse
+      // tulemustes "Läbimüüdud" märgisega. Tavaloetelu jääb aktiivsete põhjal.
+      scope: showArchived ? "archived" : params.q?.trim() ? "all" : "active",
       sort: params.sort || "newest",
       page: Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : 1,
       pageSize: 24,
@@ -87,6 +89,14 @@ async function BooksContent({ params }: { params: SearchParams }) {
   ]);
 
   const { products, totalCount, page, totalPages } = result;
+
+  // Menüü "Uued raamatud" viib lehele /raamatud?sort=newest — kuvame siis
+  // pealkirjaks "Uued raamatud", et see ei näeks välja nagu tavaline kataloog.
+  const isNewBooksView = params.sort === "newest"
+    && !params.q && !params.category && !params.origin && !params.sale
+    && !params.upcoming && !showArchived
+    && params.sale_start === undefined && params.sale_end === undefined
+    && PERSON_ROLES.every((role) => !params[role]);
 
   // "arhiiv" kategooriat külgpaneelis ei kuvata — arhiiviraamatuid filtreerib
   // eraldi "Arhiiv / läbimüüdud" lüliti (scope=archived), kategooria ise on tühi.
@@ -105,6 +115,8 @@ async function BooksContent({ params }: { params: SearchParams }) {
   const activeLabel = params.q ? `Otsing: "${params.q}"`
     : showArchived
       ? "Läbimüüdud"
+    : isNewBooksView
+      ? "Uued raamatud"
     : (params.sale_start !== undefined && params.sale_end !== undefined)
       ? (params.sale_start === "always" && params.sale_end === "open"
           ? "Püsivalt soodsad"

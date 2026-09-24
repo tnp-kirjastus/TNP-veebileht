@@ -91,15 +91,12 @@ export async function getHomepageCards(): Promise<HomepageCard[]> {
   }
 }
 
-export type HomepageSection = {
-  id: string;
-  heading: string;
-  source: "newest" | "upcoming" | "sale" | "category" | "manual";
-  productCount: number;
-  viewAllHref: string;
-  isVisible: boolean;
-};
+export type { HomepageSection } from "@/lib/homepage-sections";
+import { DEFAULT_HOMEPAGE_SECTIONS, type HomepageSection } from "@/lib/homepage-sections";
 
+// Kui halduris pole sektsioone veel salvestatud, kasutatakse vaikesektsioone —
+// samad, mida haldur eeltäidetuna näitab. Nii on esileht ja haldur alati
+// samast seisust lähtuvad.
 export async function getHomepageSections(): Promise<HomepageSection[]> {
   try {
     const db = createAdminClient();
@@ -108,10 +105,10 @@ export async function getHomepageSections(): Promise<HomepageSection[]> {
       .eq("key", "default")
       .maybeSingle();
     const sections = data?.sections as Record<string, unknown>[] | null;
-    if (!sections || !Array.isArray(sections)) return [];
+    if (!sections || !Array.isArray(sections) || sections.length === 0) return DEFAULT_HOMEPAGE_SECTIONS;
     return sections as unknown as HomepageSection[];
   } catch (err) {
     console.error("getHomepageSections error:", err);
-    return [];
+    return DEFAULT_HOMEPAGE_SECTIONS;
   }
 }
