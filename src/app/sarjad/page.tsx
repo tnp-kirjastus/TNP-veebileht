@@ -11,7 +11,7 @@ import type { Product } from "@/lib/data-types";
 // Kataloog loeb otse andmebaasist — admini muudatused peegelduvad kohe.
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Sarjad" };
-function card(product: Product) { const sale = isOnSale(product); return { slug: product.slug, title: product.title_et, author: product.people.author?.join(", ") || "", price: product.price, salePrice: product.sale_price, effectivePrice: sale ? product.sale_price! : product.price, coverImage: product.cover_image, isUpcoming: product.is_upcoming, isOnSale: sale, salePercent: getSalePercent(product), isArchived: product.is_archived }; }
+function card(product: Product) { const sale = isOnSale(product); return { slug: product.slug, title: product.title_et, author: product.people.author?.join(", ") || "", price: product.price, salePrice: product.sale_price, effectivePrice: sale ? product.sale_price! : product.price, coverImage: product.cover_image, isUpcoming: product.is_upcoming, allowPreorder: product.allow_preorder, isOnSale: sale, salePercent: getSalePercent(product), isArchived: product.is_archived }; }
 
 // Müügil olevad ees, seejärel arhiivis teosed ("Läbimüüdud" märgisega).
 function byAvailabilityThenDate(a: Product, b: Product) {

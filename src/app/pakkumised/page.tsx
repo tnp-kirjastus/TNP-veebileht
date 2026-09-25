@@ -12,7 +12,7 @@ import type { Product } from "@/lib/data-types";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Soodus" };
 
-function card(product: Product) { const sale = isOnSale(product); return { slug: product.slug, title: product.title_et, author: product.people.author?.join(", ") || "", price: product.price, salePrice: product.sale_price, effectivePrice: sale ? product.sale_price! : product.price, coverImage: product.cover_image, isUpcoming: product.is_upcoming, isOnSale: sale, salePercent: getSalePercent(product) }; }
+function card(product: Product) { const sale = isOnSale(product); return { slug: product.slug, title: product.title_et, author: product.people.author?.join(", ") || "", price: product.price, salePrice: product.sale_price, effectivePrice: sale ? product.sale_price! : product.price, coverImage: product.cover_image, isUpcoming: product.is_upcoming, allowPreorder: product.allow_preorder, isOnSale: sale, salePercent: getSalePercent(product) }; }
 
 export default async function CampaignsPage() {
   const products = (await getSaleProducts()).sort((a, b) => getSalePercent(b) - getSalePercent(a) || a.title_et.localeCompare(b.title_et, "et"));

@@ -335,6 +335,7 @@ interface SearchRpcRow {
   sale_end: string | null;
   cover_image: string | null;
   is_upcoming: boolean;
+  allow_preorder: boolean | null;
   is_archived: boolean;
   stock: number;
   is_on_sale: boolean;
@@ -362,7 +363,9 @@ function searchRowToProduct(r: SearchRpcRow): Product {
     origin: r.origin === "estonian" ? "estonian" : "foreign",
     is_upcoming: r.is_upcoming,
     is_archived: r.is_archived,
-    allow_preorder: false,
+    // Migratsioonist 039 — kuni see on rakendamata, jääb väärtus false'ks
+    // (ilmuvad tooted kuvatakse siis loeteludes ilma hinnata).
+    allow_preorder: r.allow_preorder ?? false,
     cover_image: r.cover_image,
     series_name: null,
     series_slug: null,

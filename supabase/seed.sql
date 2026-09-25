@@ -23,7 +23,7 @@ FROM (VALUES
   ('noortekirjandus',    'Noortekirjandus',           'ilukirjandus', 5),
   ('luule',              'Luule',                     'ilukirjandus', 6),
   ('huumor',             'Huumor',                    'ilukirjandus', 7),
-  ('laste-ilukirjandus',                'Ilukirjandus',               'lasteraamatud', 1),
+  ('laste-ilukirjandus',                'Laste ilukirjandus',         'lasteraamatud', 1),
   ('laste-teatmekirjandus',             'Teatmekirjandus',            'lasteraamatud', 2),
   ('lastekirjanduskeskus-soovitab',     'Lastekirjanduskeskus soovitab','lasteraamatud', 3),
   ('teatmeteosed',       'Teatmeteosed',              'kultuur', 1),

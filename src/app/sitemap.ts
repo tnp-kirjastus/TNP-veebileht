@@ -19,7 +19,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticPaths.map((path) => ({ url: `${origin}${path}`, changeFrequency: "weekly" as const })),
     ...allSeries.map((s) => ({ url: `${origin}/sarjad/${s.slug}`, changeFrequency: "weekly" as const })),
-    ...products.map((product) => ({ url: `${origin}/raamat/${product.slug}`, changeFrequency: "weekly" as const, lastModified: product.release_date ? new Date(product.release_date) : undefined })),
+    // Arhiivis (läbimüüdud) teosed jäävad indekseeritavaks, kuid madalama
+    // prioriteediga — need ei pea otsingutulemustes kõrgel kohal olema.
+    ...products.map((product) => ({ url: `${origin}/raamat/${product.slug}`, changeFrequency: "weekly" as const, priority: product.is_archived ? 0.3 : 0.8, lastModified: product.release_date ? new Date(product.release_date) : undefined })),
     ...posts.map((post) => ({ url: `${origin}/uudis/${post.slug}`, changeFrequency: "monthly" as const, lastModified: post.published_at ? new Date(post.published_at) : undefined })),
   ];
 }

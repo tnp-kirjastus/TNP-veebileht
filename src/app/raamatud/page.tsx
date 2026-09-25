@@ -36,7 +36,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 
 function mapProduct(p: Product) {
   const onSale = isOnSale(p);
-  return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, isOnSale: onSale, salePercent: getSalePercent(p), isArchived: p.is_archived };
+  return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, allowPreorder: p.allow_preorder, isOnSale: onSale, salePercent: getSalePercent(p), isArchived: p.is_archived };
 }
 
 function buildPageHref(params: SearchParams, page: number) {

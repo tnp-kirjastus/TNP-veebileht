@@ -274,6 +274,8 @@ export default function ImportPage() {
                   { key: "release_date", label: "Ilmumisaeg" },
                   { key: "origin", label: "Päritolu (Eesti/Välismaa)" },
                   { key: "is_archived", label: "Arhiiv (x = jah)" },
+                  { key: "is_upcoming", label: "Ilmumas (x = jah)" },
+                  { key: "allow_preorder", label: "Ettetellimus (x = jah)" },
                 ] as const).map(({ key, label }) => (
                   <label key={key} className="grid gap-1 text-xs font-bold">
                     {label}

@@ -41,10 +41,23 @@ reintroduce one. Rules that keep the system coherent:
 - Archived (`is_archived = true`) products are PUBLIC: their detail pages must
   open (no 404), text search uses `scope: "all"`, and series pages list them
   with a "Läbimüüdud" badge. The publisher's editors use the site as a
-  bibliographic reference — do not hide the backlist.
+  bibliographic reference — do not hide the backlist. Archived products show
+  NO price (page, cards, JSON-LD `offers`) and stay indexed with lower
+  sitemap priority.
+- Upcoming (`is_upcoming = true`) products WITHOUT preorder
+  (`allow_preorder = false`) show NO price until release (page, cards,
+  JSON-LD `offers`). Preorderable upcoming books show price (incl. sale price).
 - Reprint dates live in `commerce.products.editions` (JSONB
   `[{type:"2. trükk", date}]`; `release_date` = first printing). One-off import:
-  `node scripts/import-editions-from-excel.mjs [--preview]`.
+  `node scripts/import-editions-from-excel.mjs [--preview]`. The admin Excel
+  import parses the release-date column (`DD.MM.YYYY`, `|`-separated reprint
+  lists → earliest date) via `src/lib/import-parse.ts`; it never touches
+  `editions`.
+- Admin Excel import (`/haldus/import`) also maps flag columns
+  `is_upcoming` ("Ilmumas") and `allow_preorder` ("Ettetellimus") — `x` = true,
+  empty = false. Category matching is by exact `name_et` — names must stay
+  unique (the children's-fiction subcategory is "Laste ilukirjandus",
+  distinct from root "Ilukirjandus").
 - Campaign admin (`/haldus/kampaaniad`) sets only sale dates on products —
   never auto-set `sale_price` (prices come from Excel import / product form).
 - Expected delivery time is 3–14 business days (single-person fulfilment) —

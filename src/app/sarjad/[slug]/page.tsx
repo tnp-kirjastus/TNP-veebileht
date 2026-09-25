@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 function map(p: Product) {
   const o = isOnSale(p);
-  return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: o ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, isOnSale: o, salePercent: o && p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0, isArchived: p.is_archived };
+  return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: o ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, allowPreorder: p.allow_preorder, isOnSale: o, salePercent: o && p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0, isArchived: p.is_archived };
 }
 
 // Kogu sari on nähtav: müügil olevad ees, seejärel arhiivis (läbimüüdud)

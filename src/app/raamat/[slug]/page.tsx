@@ -51,7 +51,7 @@ function personHref(slugByName: Map<string, string>, role: string, name: string)
 
 function mapProduct(p: Product) {
   const onSale = isOnSale(p);
-  return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, isOnSale: onSale, salePercent: onSale && p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0 };
+  return { slug: p.slug, title: p.title_et, author: p.people.author?.join(", ") || "", price: p.price, salePrice: p.sale_price, effectivePrice: onSale ? p.sale_price! : p.price, coverImage: p.cover_image, isUpcoming: p.is_upcoming, allowPreorder: p.allow_preorder, isOnSale: onSale, salePercent: onSale && p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0 };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -77,6 +77,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const sameAuthorCards = sameAuthor.map(mapProduct);
   const sameSeriesCards = sameSeries.map(mapProduct);
   const effectivePrice = onSale && product.sale_price ? product.sale_price : product.price;
+  // Hinda ei kuvata läbimüüdud (arhiivis) teostel ega ilmuvatel raamatutel,
+  // millel ettetellimist pole — hind avaldatakse alles ilmumisel. Samuti jääb
+  // siis JSON-LD pakkumine (offers) ära, et Google hinda otsingutulemustes
+  // ei näitaks.
+  const hidePrice = product.is_archived || (product.is_upcoming && !product.allow_preorder);
   const primaryCategory = product.categories[0];
   const primaryCategorySlug = categories.find((category) => category.name === primaryCategory)?.slug;
   const primaryAuthor = product.people.author?.[0];
@@ -89,30 +94,30 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     image: product.cover_image ? coverAbsoluteUrl(product.cover_image) ?? undefined : undefined,
     description: plainText(product.description_et),
     brand: { "@type": "Brand", name: "Tänapäev" },
-    offers: {
-      "@type": "Offer",
-      priceCurrency: "EUR",
-      price: effectivePrice.toFixed(2),
-      availability: product.is_archived
-        ? "https://schema.org/OutOfStock"
-        : product.is_upcoming && product.allow_preorder
+    ...(hidePrice ? {} : {
+      offers: {
+        "@type": "Offer",
+        priceCurrency: "EUR",
+        price: effectivePrice.toFixed(2),
+        availability: product.is_upcoming && product.allow_preorder
           ? "https://schema.org/PreOrder"
           : product.stock > 0
             ? "https://schema.org/InStock"
             : "https://schema.org/OutOfStock",
-      url: new URL(`/raamat/${product.slug}`, siteUrl()).toString(),
-      seller: { "@type": "Organization", name: "Kirjastus Tänapäev", url: siteUrl().toString() },
-      shippingDetails: {
-        "@type": "OfferShippingDetails",
-        shippingRate: {
-          "@type": "MonetaryAmount",
-          value: Number.isFinite(cheapestShipping) ? cheapestShipping.toFixed(2) : "0.00",
-          currency: "EUR",
+        url: new URL(`/raamat/${product.slug}`, siteUrl()).toString(),
+        seller: { "@type": "Organization", name: "Kirjastus Tänapäev", url: siteUrl().toString() },
+        shippingDetails: {
+          "@type": "OfferShippingDetails",
+          shippingRate: {
+            "@type": "MonetaryAmount",
+            value: Number.isFinite(cheapestShipping) ? cheapestShipping.toFixed(2) : "0.00",
+            currency: "EUR",
+          },
+          shippingDestination: { "@type": "DefinedRegion", addressCountry: "EE" },
+          deliveryTime: { "@type": "ShippingDeliveryTime", transitTime: { "@type": "QuantitativeValue", minValue: 3, maxValue: 14, unitCode: "DAY" } },
         },
-        shippingDestination: { "@type": "DefinedRegion", addressCountry: "EE" },
-        deliveryTime: { "@type": "ShippingDeliveryTime", transitTime: { "@type": "QuantitativeValue", minValue: 3, maxValue: 14, unitCode: "DAY" } },
       },
-    },
+    }),
     ...(product.series_name ? { isPartOf: { "@type": "Collection", name: product.series_name } } : {}),
     ...(product.pages ? { material: product.binding ?? undefined, depth: { "@type": "QuantitativeValue", value: product.pages, unitText: "lehekülge" } } : {}),
     ...(product.people.author?.length ? { author: product.people.author.map((name) => ({ "@type": "Person", name })) } : {}),
@@ -123,7 +128,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       {/* Product hero — breadcrumbs INSIDE the same section */}
       <section className="relative grid grid-cols-[1fr_1fr] gap-12 py-[10px] pb-[50px] items-stretch max-[900px]:grid-cols-1">
-        {onSale && salePercent > 0 && (
+        {onSale && salePercent > 0 && !product.is_archived && (
           <span className="absolute top-[12px] left-[12px] bg-accent text-white font-heading text-base font-bold px-[10px] py-1 rounded-md z-[1]">-{salePercent}%</span>
         )}
         <div className="grid place-items-center bg-soft px-10 py-[60px] max-[900px]:py-8 max-[600px]:px-6 max-[600px]:py-[30px]">
@@ -133,10 +138,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <Breadcrumbs crumbs={[{ label: "Esileht", href: "/" }, { label: "Raamatud", href: "/raamatud" }, { label: product.title_et }]} />
           <h1 className="font-heading text-[clamp(34px,5vw,56px)] leading-[1.05] mb-[2px]">{product.title_et}</h1>
           {authorNames && <p className="text-lg text-muted">{product.people.author?.map((a: string, i: number) => (<span key={a}>{i > 0 && ", "}<Link href={personHref(slugByName, "author", a)} className="hover:text-ink hover:underline transition-colors">{a}</Link></span>))}</p>}
-          <div className="text-[28px] font-extrabold">{onSale && product.sale_price ? <span className="flex items-baseline gap-3"><span className="text-muted line-through text-lg font-semibold">{formatEuro(product.price)}</span><span className="text-accent">{formatEuro(product.sale_price)}</span></span> : formatEuro(product.price)}</div>
+          {!hidePrice && (
+            <div className="text-[28px] font-extrabold">{onSale && product.sale_price ? <span className="flex items-baseline gap-3"><span className="text-muted line-through text-lg font-semibold">{formatEuro(product.price)}</span><span className="text-accent">{formatEuro(product.sale_price)}</span></span> : formatEuro(product.price)}</div>
+          )}
           {product.is_archived && (
             <p className="border border-line bg-soft px-4 py-3 text-sm font-bold text-muted">
-              See raamat on läbi müüdud ega ole hetkel e-poest saadaval. Lehekülg on avalik bibliograafilise teabe jaoks.
+              See raamat on läbi müüdud. Lehekülg on avalik bibliograafilise teabe jaoks.
             </p>
           )}
           <AddToCartButton disabled={product.is_archived || (product.is_upcoming && !product.allow_preorder)} product={{ slug: product.slug, title: product.title_et, author: authorNames, price: product.price, salePrice: product.sale_price, coverImage: product.cover_image, isUpcoming: product.is_upcoming, allowPreorder: product.allow_preorder, stock: product.stock, isArchived: product.is_archived }} />

@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 import { extractZip } from "@/lib/zip";
 import { createArchiveUploadUrl, downloadArchive, deleteArchive } from "@/lib/import-archive";
 import { slugify } from "@/lib/slugify";
+import { parseFlag, parseReleaseDate } from "@/lib/import-parse";
 
 const rowSchema = z.record(z.string(), z.any());
 const importSchema = z.object({
@@ -70,6 +71,7 @@ interface ExistingProduct {
   origin: string;
   is_archived: boolean;
   is_upcoming: boolean;
+  allow_preorder: boolean;
 }
 
 function findCoverColumn(mapping: Record<string, string>): string | null {
@@ -179,7 +181,7 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
   const allExisting: ExistingProduct[] = [];
   let eFrom = 0;
   while (true) {
-    const { data } = await db.schema("commerce").from("products").select("id,sku,slug,title_et,price,sale_price,stock,cover_image,binding,pages,release_date,origin,is_archived,is_upcoming").range(eFrom, eFrom + 999);
+    const { data } = await db.schema("commerce").from("products").select("id,sku,slug,title_et,price,sale_price,stock,cover_image,binding,pages,release_date,origin,is_archived,is_upcoming,allow_preorder").range(eFrom, eFrom + 999);
     if (!data || data.length === 0) break;
     allExisting.push(...data as ExistingProduct[]);
     if (data.length < 1000) break;
@@ -330,9 +332,9 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
 
     const releaseDateFieldC = mapping.release_date || mapping.releaseDate || null;
     if (releaseDateFieldC && row[releaseDateFieldC] != null) {
-      const newVal = String(row[releaseDateFieldC]).trim();
-      const oldVal = String(existingProduct.release_date ?? "");
-      if (newVal !== oldVal) {
+      const newVal = parseReleaseDate(row[releaseDateFieldC]);
+      const oldVal = String(existingProduct.release_date ?? "").slice(0, 10);
+      if (newVal && newVal !== oldVal) {
         changes.push({ field: "release_date", before: oldVal, after: newVal });
       }
     }
@@ -349,10 +351,25 @@ export async function compareImport(_state: unknown, formData: FormData): Promis
 
     const isArchivedFieldC = mapping.is_archived || mapping.isArchived || null;
     if (isArchivedFieldC && row[isArchivedFieldC] != null) {
-      const raw = String(row[isArchivedFieldC]).toLowerCase();
-      const newVal = raw === "x" || raw === "true" || raw === "yes" || raw === "jah";
+      const newVal = parseFlag(row[isArchivedFieldC]);
       if (newVal !== Boolean(existingProduct.is_archived)) {
         changes.push({ field: "is_archived", before: String(existingProduct.is_archived), after: String(newVal) });
+      }
+    }
+
+    const isUpcomingFieldC = mapping.is_upcoming || mapping.isUpcoming || null;
+    if (isUpcomingFieldC && row[isUpcomingFieldC] != null) {
+      const newVal = parseFlag(row[isUpcomingFieldC]);
+      if (newVal !== Boolean(existingProduct.is_upcoming)) {
+        changes.push({ field: "is_upcoming", before: String(existingProduct.is_upcoming), after: String(newVal) });
+      }
+    }
+
+    const allowPreorderFieldC = mapping.allow_preorder || mapping.allowPreorder || null;
+    if (allowPreorderFieldC && row[allowPreorderFieldC] != null) {
+      const newVal = parseFlag(row[allowPreorderFieldC]);
+      if (newVal !== Boolean(existingProduct.allow_preorder)) {
+        changes.push({ field: "allow_preorder", before: String(existingProduct.allow_preorder), after: String(newVal) });
       }
     }
 
@@ -421,6 +438,8 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
     const releaseDateField = mapping.release_date || mapping.releaseDate || null;
     const originField = mapping.origin || null;
     const isArchivedField = mapping.is_archived || mapping.isArchived || null;
+    const isUpcomingField = mapping.is_upcoming || mapping.isUpcoming || null;
+    const allowPreorderField = mapping.allow_preorder || mapping.allowPreorder || null;
     const saleStartField = mapping.sale_start || mapping.saleStart || null;
     const saleEndField = mapping.sale_end || mapping.saleEnd || null;
 
@@ -561,7 +580,7 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
           if (!isNaN(pn)) update.pages = pn;
         }
         if (releaseDateField && row[releaseDateField] != null) {
-          const v = String(row[releaseDateField]).trim();
+          const v = parseReleaseDate(row[releaseDateField]);
           if (v) update.release_date = v;
         }
         if (originField && row[originField] != null) {
@@ -570,8 +589,13 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
           else if (v) update.origin = "foreign";
         }
         if (isArchivedField && row[isArchivedField] != null) {
-          const v = String(row[isArchivedField]).toLowerCase();
-          update.is_archived = v === "x" || v === "true" || v === "yes" || v === "jah";
+          update.is_archived = parseFlag(row[isArchivedField]);
+        }
+        if (isUpcomingField && row[isUpcomingField] != null) {
+          update.is_upcoming = parseFlag(row[isUpcomingField]);
+        }
+        if (allowPreorderField && row[allowPreorderField] != null) {
+          update.allow_preorder = parseFlag(row[allowPreorderField]);
         }
 
         // Series
@@ -650,12 +674,17 @@ export async function applyImport(_state: unknown, formData: FormData): Promise<
           if (!isNaN(pn)) insert.pages = pn;
         }
         if (releaseDateField && row[releaseDateField] != null) {
-          const v = String(row[releaseDateField]).trim();
+          const v = parseReleaseDate(row[releaseDateField]);
           if (v) insert.release_date = v;
         }
         if (isArchivedField && row[isArchivedField] != null) {
-          const v = String(row[isArchivedField]).toLowerCase();
-          insert.is_archived = v === "x" || v === "true" || v === "yes" || v === "jah";
+          insert.is_archived = parseFlag(row[isArchivedField]);
+        }
+        if (isUpcomingField && row[isUpcomingField] != null) {
+          insert.is_upcoming = parseFlag(row[isUpcomingField]);
+        }
+        if (allowPreorderField && row[allowPreorderField] != null) {
+          insert.allow_preorder = parseFlag(row[allowPreorderField]);
         }
 
         const { data: inserted, error: insErr } = await db.schema("commerce").from("products").insert(insert).select("id,slug").single();

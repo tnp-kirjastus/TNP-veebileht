@@ -22,6 +22,8 @@ export interface ProductCardData {
   coverImage?: string | null;
   is_upcoming?: boolean;
   isUpcoming?: boolean;
+  allow_preorder?: boolean;
+  allowPreorder?: boolean;
   is_on_sale?: boolean;
   isOnSale?: boolean;
   sale_percent?: number;
@@ -47,9 +49,13 @@ export function ProductCard({
   const effectivePrice = product.effective_price ?? product.effectivePrice ?? price;
   const coverImage = product.cover_image || product.coverImage || "";
   const isUpcoming = product.is_upcoming || product.isUpcoming || false;
+  const allowPreorder = product.allow_preorder ?? product.allowPreorder ?? false;
   const isOnSale = product.is_on_sale || product.isOnSale || false;
   const salePercent = product.sale_percent ?? product.salePercent ?? 0;
   const isArchived = product.is_archived ?? product.isArchived ?? false;
+  // Ilmuvad raamatud, millel ettetellimist pole, kuvatakse ilma hinnata —
+  // hind avaldatakse alles ilmumisel.
+  const hidePrice = isArchived || (isUpcoming && !allowPreorder);
   const imgWidth = variant === "home" ? "w-[86%]" : "w-[75%]";
   const titleSize = variant === "home" ? "text-[20px]" : "text-[19px]";
 
@@ -98,7 +104,9 @@ export function ProductCard({
 
         <div className="grid grid-cols-[1fr_auto] gap-[10px] items-center mt-2">
           <div className="flex items-baseline gap-2">
-            {isArchived ? <span className="text-[15px] font-extrabold text-muted">Läbimüüdud</span> : isOnSale && salePrice ? (
+            {isArchived ? <span className="text-[15px] font-extrabold text-muted">Läbimüüdud</span> : hidePrice ? (
+              <span className="text-[15px] font-extrabold text-muted">Ilmumas</span>
+            ) : isOnSale && salePrice ? (
               <>
                 <span className="text-[15px] text-muted line-through font-semibold">{Number(price).toFixed(2)} €</span>
                 <span className="text-[17px] font-extrabold text-ink">{Number(salePrice).toFixed(2)} €</span>
